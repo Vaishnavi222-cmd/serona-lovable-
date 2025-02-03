@@ -20,11 +20,11 @@ export default {
     extend: {
       colors: {
         sirona: {
-          pink: "#D946EF",
-          purple: "#8B5CF6",
-          dark: "#1A1F2C",
-          light: "#C992E0",
-          accent: "#6E59A5"
+          primary: "#F1F0FB",
+          secondary: "#6366F1",
+          accent: "#4F46E5",
+          dark: "#1E1B4B",
+          light: "#C7D2FE"
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

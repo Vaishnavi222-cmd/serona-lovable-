@@ -22,7 +22,7 @@ const Hero = () => {
 
   return (
     <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-[#C992E0]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-sirona-primary to-sirona-light opacity-50" />
       
       <div className="container mx-auto px-6 py-24 relative z-10">
         <div className="text-center" ref={logoRef}>
@@ -45,8 +45,8 @@ const Hero = () => {
           <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
             <a
               href="#features"
-              className="inline-block px-8 py-4 bg-white/10 backdrop-blur-lg text-sirona-dark rounded-full
-                        font-medium transition-all duration-300 hover:bg-white/20 hover:scale-105
+              className="inline-block px-8 py-4 bg-sirona-secondary text-white rounded-full
+                        font-medium transition-all duration-300 hover:bg-sirona-accent hover:scale-105
                         border border-white/20"
             >
               Discover More

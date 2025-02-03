@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-[#C992E0] text-sirona-dark antialiased;
+    @apply bg-sirona-primary text-sirona-dark antialiased;
   }
 }
 
@@ -28,10 +28,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(110, 89, 165, 0.5);
+  background: rgba(99, 102, 241, 0.5);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(110, 89, 165, 0.7);
+  background: rgba(99, 102, 241, 0.7);
 }

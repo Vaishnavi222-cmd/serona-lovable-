@@ -2,10 +2,10 @@ import { Zap, Shield, Cpu, Globe } from 'lucide-react';
 
 const Features = () => {
   return (
-    <section id="features" className="py-24 relative">
+    <section id="features" className="py-24 relative bg-gradient-to-b from-sirona-light to-sirona-primary">
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1 bg-sirona-purple/10 rounded-full text-sirona-purple text-sm font-medium mb-4">
+          <span className="inline-block px-4 py-1 bg-sirona-secondary/10 rounded-full text-sirona-secondary text-sm font-medium mb-4">
             Features
           </span>
           <h2 className="text-4xl font-bold text-sirona-dark mb-4">
@@ -44,8 +44,8 @@ const Features = () => {
 };
 
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
-  <div className="group p-8 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 transition-all duration-300 hover:scale-105">
-    <div className="w-12 h-12 rounded-xl bg-sirona-purple/10 flex items-center justify-center text-sirona-purple mb-6 group-hover:bg-sirona-purple group-hover:text-white transition-all duration-300">
+  <div className="group p-8 rounded-2xl bg-white/80 backdrop-blur-lg border border-sirona-secondary/20 transition-all duration-300 hover:scale-105">
+    <div className="w-12 h-12 rounded-xl bg-sirona-secondary/10 flex items-center justify-center text-sirona-secondary mb-6 group-hover:bg-sirona-secondary group-hover:text-white transition-all duration-300">
       {icon}
     </div>
     <h3 className="text-xl font-semibold text-sirona-dark mb-3">{title}</h3>
