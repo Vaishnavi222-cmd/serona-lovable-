@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 const Hero = () => {
-  const logoRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -13,8 +13,8 @@ const Hero = () => {
       { threshold: 0.1 }
     );
 
-    if (logoRef.current) {
-      observer.observe(logoRef.current);
+    if (contentRef.current) {
+      observer.observe(contentRef.current);
     }
 
     return () => observer.disconnect();
@@ -22,34 +22,23 @@ const Hero = () => {
 
   return (
     <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-sirona-primary to-sirona-light opacity-50" />
-      
       <div className="container mx-auto px-6 py-24 relative z-10">
-        <div className="text-center" ref={logoRef}>
-          <div className="w-32 h-32 mx-auto mb-8 opacity-0 transform translate-y-4 transition-all duration-1000">
-            <img
-              src="/lovable-uploads/7437e344-eb2a-4e4e-99cb-7ea5d8c0045f.png"
-              alt="Sirona AI Logo"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold text-sirona-dark mb-6 opacity-0 animate-fade-up" style={{ animationDelay: '0.3s' }}>
-            Welcome to Sirona AI
+        <div className="text-center" ref={contentRef}>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 opacity-0 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+            Welcome
           </h1>
           
-          <p className="text-xl md:text-2xl text-sirona-dark/80 max-w-2xl mx-auto mb-12 opacity-0 animate-fade-up" style={{ animationDelay: '0.6s' }}>
-            Experience the future of artificial intelligence with our cutting-edge solutions
+          <p className="text-xl md:text-2xl max-w-2xl mx-auto mb-12 opacity-0 animate-fade-up" style={{ animationDelay: '0.6s' }}>
+            Start building your new website
           </p>
           
           <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
             <a
               href="#features"
-              className="inline-block px-8 py-4 bg-sirona-secondary text-white rounded-full
-                        font-medium transition-all duration-300 hover:bg-sirona-accent hover:scale-105
-                        border border-white/20"
+              className="inline-block px-8 py-4 bg-black text-white rounded-full
+                        font-medium transition-all duration-300 hover:bg-gray-800 hover:scale-105"
             >
-              Discover More
+              Get Started
             </a>
           </div>
         </div>

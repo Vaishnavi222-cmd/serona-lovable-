@@ -19,13 +19,6 @@ export default {
     },
     extend: {
       colors: {
-        sirona: {
-          primary: "#F1F0FB",
-          secondary: "#6366F1",
-          accent: "#4F46E5",
-          dark: "#1E1B4B",
-          light: "#C7D2FE"
-        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
