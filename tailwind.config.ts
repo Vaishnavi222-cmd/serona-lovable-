@@ -19,6 +19,13 @@ export default {
     },
     extend: {
       colors: {
+        serona: {
+          primary: "#40E0D0", // Teal/aqua from logo
+          secondary: "#FFFFFF", // White
+          dark: "#222222", // Dark gray
+          light: "#F1F0FB", // Light background
+          accent: "#2CB5A8", // Darker teal for hover states
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

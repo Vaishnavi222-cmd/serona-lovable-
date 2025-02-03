@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-white text-gray-900 antialiased;
+    @apply bg-serona-light text-serona-dark antialiased;
   }
 }
 
@@ -24,14 +24,13 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  @apply bg-serona-dark/10;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 5px;
+  @apply bg-serona-primary/50 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  @apply bg-serona-primary/70;
 }
