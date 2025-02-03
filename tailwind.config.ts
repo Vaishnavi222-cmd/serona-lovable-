@@ -79,19 +79,10 @@ export default {
             opacity: "1",
           },
         },
-        "logo-shine": {
-          "0%": {
-            "background-position": "200% 0",
-          },
-          "100%": {
-            "background-position": "-200% 0",
-          },
-        },
       },
       animation: {
         "fade-up": "fade-up 0.5s ease-out forwards",
         "fade-in": "fade-in 0.3s ease-out forwards",
-        "logo-shine": "logo-shine 8s linear infinite",
       },
     },
   },
