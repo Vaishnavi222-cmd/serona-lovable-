@@ -1,4 +1,4 @@
-import { Cpu, Bot, Circuit, Globe } from 'lucide-react';
+import { Cpu, Bot, Globe, ArrowRight } from 'lucide-react';
 
 const Features = () => {
   return (
@@ -28,7 +28,7 @@ const Features = () => {
             description="Advanced algorithms that learn and adapt"
           />
           <FeatureCard
-            icon={<Circuit className="w-6 h-6" />}
+            icon={<ArrowRight className="w-6 h-6" />}
             title="Neural Networks"
             description="Deep learning solutions for complex problems"
           />
