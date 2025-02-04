@@ -22,7 +22,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-serona-dark">
+    <section className="min-h-[70vh] flex items-center justify-center relative overflow-hidden bg-serona-dark">
       <div className="absolute inset-0 bg-[url('/photo-1485827404703-89b55fcc595e')] bg-cover bg-center opacity-10" />
       
       <div className="container mx-auto px-6 py-24 relative z-10">
@@ -42,8 +42,8 @@ const Hero = () => {
           <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
             <a
               href="#features"
-              className="inline-block px-8 py-4 bg-serona-primary text-serona-dark rounded-full
-                        font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105"
+              className="inline-block px-16 py-4 bg-serona-primary text-serona-dark rounded-full
+                        font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105 min-w-[250px]"
             >
               Explore AI Solutions
             </a>

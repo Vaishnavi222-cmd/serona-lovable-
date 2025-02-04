@@ -22,7 +22,7 @@ export default {
         serona: {
           primary: "#40E0D0", // Teal/aqua from logo
           secondary: "#FFFFFF", // White
-          dark: "#222222", // Dark gray
+          dark: "#69717b", // Updated from #222222
           light: "#F1F0FB", // Light background
           accent: "#2CB5A8", // Darker teal for hover states
         },

@@ -21,21 +21,25 @@ const Features = () => {
             icon={<Bot className="w-6 h-6" />}
             title="AI Automation"
             description="Streamline your workflows with intelligent automation"
+            image="/photo-1485827404703-89b55fcc595e"
           />
           <FeatureCard
             icon={<Cpu className="w-6 h-6" />}
             title="Machine Learning"
             description="Advanced algorithms that learn and adapt"
+            image="/photo-1485827404703-89b55fcc595e"
           />
           <FeatureCard
             icon={<ArrowRight className="w-6 h-6" />}
             title="Neural Networks"
             description="Deep learning solutions for complex problems"
+            image="/photo-1485827404703-89b55fcc595e"
           />
           <FeatureCard
             icon={<Globe className="w-6 h-6" />}
             title="Global Scale"
             description="AI solutions that scale globally"
+            image="/photo-1485827404703-89b55fcc595e"
           />
         </div>
       </div>
@@ -43,11 +47,12 @@ const Features = () => {
   );
 };
 
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
+const FeatureCard = ({ icon, title, description, image }: { icon: React.ReactNode; title: string; description: string; image: string }) => (
   <div className="group p-8 rounded-2xl bg-serona-secondary/80 backdrop-blur-lg border border-serona-primary/20 transition-all duration-300 hover:scale-105">
     <div className="w-12 h-12 rounded-xl bg-serona-primary/10 flex items-center justify-center text-serona-primary mb-6 group-hover:bg-serona-primary group-hover:text-serona-secondary transition-all duration-300">
       {icon}
     </div>
+    <img src={image} alt={title} className="w-full h-32 object-cover rounded-lg mb-6" />
     <h3 className="text-xl font-semibold text-serona-dark mb-3">{title}</h3>
     <p className="text-serona-dark/70">{description}</p>
   </div>
