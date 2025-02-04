@@ -1,6 +1,3 @@
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-
 const products = [
   {
     id: 1,
@@ -28,7 +25,6 @@ const products = [
 const Recommendations = () => {
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
       <main className="flex-1 container mx-auto px-4 py-12">
         <h1 className="text-4xl font-bold text-serona-dark mb-8">Our Recommendations</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -56,7 +52,6 @@ const Recommendations = () => {
           ))}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
