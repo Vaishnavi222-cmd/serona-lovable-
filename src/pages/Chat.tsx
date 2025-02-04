@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Plus } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -17,7 +17,8 @@ const Chat = () => {
         {/* Sidebar */}
         <aside className="w-64 bg-white border-r border-gray-200 hidden md:block">
           <div className="p-4">
-            <button className="w-full py-2 px-4 bg-serona-primary text-white rounded-lg hover:bg-serona-accent transition-colors">
+            <button className="w-full py-2 px-4 bg-serona-primary text-white rounded-lg hover:bg-serona-accent transition-colors flex items-center justify-center gap-2">
+              <Plus className="w-4 h-4" />
               New Chat
             </button>
             <div className="mt-4 space-y-2">
