@@ -1,35 +1,39 @@
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+
 const products = [
   {
     id: 1,
     name: "AI Development Kit",
-    description: "Complete toolkit for AI development",
+    description: "Complete toolkit for AI development with advanced neural network capabilities and machine learning algorithms.",
     price: "$299",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
   },
   {
     id: 2,
     name: "Neural Network Package",
-    description: "Advanced neural network solutions",
+    description: "Advanced neural network solutions for complex data analysis and pattern recognition.",
     price: "$199",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1"
   },
   {
     id: 3,
     name: "Machine Learning Bundle",
-    description: "Comprehensive ML resources",
+    description: "Comprehensive ML resources including pre-trained models and development tools.",
     price: "$249",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
   }
 ];
 
 const Recommendations = () => {
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1 container mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold text-serona-dark mb-8">Our Recommendations</h1>
+      <Navbar />
+      <main className="flex-1 container mx-auto px-4 py-24">
+        <h1 className="text-4xl font-bold text-serona-dark mb-12 text-center">Our Recommendations</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div key={product.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform">
               <img
                 src={product.image}
                 alt={product.name}
@@ -52,6 +56,7 @@ const Recommendations = () => {
           ))}
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

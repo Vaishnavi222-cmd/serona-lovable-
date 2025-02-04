@@ -16,9 +16,9 @@ const Contact = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-4xl font-bold text-serona-dark mb-8">Contact Us</h1>
+      <main className="flex-1 container mx-auto px-4 py-24">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+          <h1 className="text-4xl font-bold text-serona-dark mb-8 text-center">Contact Us</h1>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-serona-dark mb-2">Name</label>
