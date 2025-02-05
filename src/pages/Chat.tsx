@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Send, Plus, Menu, MessageSquare, User } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 
 const Chat = () => {
   const [message, setMessage] = useState('');
@@ -29,7 +29,7 @@ const Chat = () => {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
-      <div className="flex-1 flex h-[calc(100vh-64px)] relative">
+      <div className="flex-1 flex h-[calc(100vh-64px)] relative pt-16 md:pt-0">
         {/* Sidebar */}
         <aside 
           className={`${
@@ -39,13 +39,19 @@ const Chat = () => {
           <div className="p-4">
             <button 
               className="w-full py-3 px-4 bg-serona-primary text-serona-dark rounded-lg hover:bg-serona-accent transition-colors flex items-center justify-center gap-2 font-medium"
+              onClick={() => {
+                toast({
+                  title: "New Chat",
+                  description: "Starting a new chat session",
+                });
+              }}
             >
               <Plus className="w-4 h-4" />
               New Chat
             </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <ScrollArea className="flex-1">
             <div className="px-2 space-y-2">
               {chats.map((chat) => (
                 <button
@@ -61,7 +67,7 @@ const Chat = () => {
                 </button>
               ))}
             </div>
-          </div>
+          </ScrollArea>
         </aside>
 
         {/* Main Chat Area */}
@@ -78,7 +84,7 @@ const Chat = () => {
           </div>
           
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <ScrollArea className="flex-1">
             <div className="max-w-4xl mx-auto px-4 py-6">
               <div className="space-y-6">
                 {/* AI Message */}
@@ -102,18 +108,23 @@ const Chat = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </ScrollArea>
 
           {/* Message Input */}
           <div className="sticky bottom-0 bg-white border-t p-4">
             <div className="max-w-4xl mx-auto relative">
-              <input
-                type="text"
+              <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Type your message..."
-                className="w-full p-4 pr-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-serona-primary bg-white shadow-sm"
+                className="w-full p-4 pr-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-serona-primary bg-white shadow-sm min-h-[60px] resize-none"
+                rows={1}
               />
               <button 
                 onClick={handleSend}
