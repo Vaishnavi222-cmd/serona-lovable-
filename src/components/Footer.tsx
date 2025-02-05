@@ -1,4 +1,5 @@
-import { Github, Twitter, Linkedin } from 'lucide-react';
+import { Github, Twitter, Linkedin, MessageSquare, Mail, ShoppingCart } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -19,20 +20,39 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2">
-              <li><a href="/" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Home</a></li>
-              <li><a href="/about" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">About</a></li>
-              <li><a href="/services" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Services</a></li>
-              <li><a href="/contact" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Contact</a></li>
+              <li>
+                <Link to="/" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link to="/chat" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Chat
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link to="/recommendations" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Recommendations
+                </Link>
+              </li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-lg font-semibold mb-4">Services</h4>
             <ul className="space-y-2">
-              <li><a href="/services#ai-solutions" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">AI Solutions</a></li>
-              <li><a href="/services#machine-learning" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Machine Learning</a></li>
-              <li><a href="/services#automation" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Automation</a></li>
-              <li><a href="/services#consulting" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Consulting</a></li>
+              <li><a href="#ai-solutions" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">AI Solutions</a></li>
+              <li><a href="#machine-learning" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Machine Learning</a></li>
+              <li><a href="#automation" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Automation</a></li>
+              <li><a href="#consulting" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Consulting</a></li>
             </ul>
           </div>
           

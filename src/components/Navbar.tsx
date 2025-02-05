@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Cpu } from 'lucide-react';
+import { MessageSquare, Mail, ShoppingCart } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -27,12 +27,20 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/">Home</NavLink>
-            <NavLink to="/about">About</NavLink>
-            <NavLink to="/services">Services</NavLink>
-            <NavLink to="/contact">Contact</NavLink>
+            <NavLink to="/chat">
+              <MessageSquare className="w-4 h-4 inline-block mr-1" />
+              Chat
+            </NavLink>
+            <NavLink to="/contact">
+              <Mail className="w-4 h-4 inline-block mr-1" />
+              Contact
+            </NavLink>
+            <NavLink to="/recommendations">
+              <ShoppingCart className="w-4 h-4 inline-block mr-1" />
+              Recommendations
+            </NavLink>
             <button className="px-6 py-2 bg-serona-primary text-serona-dark rounded-full hover:bg-serona-accent transition-colors duration-300">
               Get Started
             </button>
@@ -46,7 +54,7 @@ const Navbar = () => {
 const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
   <Link
     to={to}
-    className="text-serona-secondary hover:text-serona-primary transition-colors duration-300 font-medium"
+    className="text-serona-secondary hover:text-serona-primary transition-colors duration-300 font-medium flex items-center"
   >
     {children}
   </Link>
