@@ -27,14 +27,14 @@ const Chat = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-serona-light">
       <Navbar />
-      <div className="flex-1 flex h-[calc(100vh-64px)] relative pt-16 md:pt-0">
+      <div className="flex-1 flex h-[calc(100vh-64px)] relative pt-16">
         {/* Sidebar */}
         <aside 
           className={`${
             isSidebarOpen ? 'w-80' : 'w-0'
-          } bg-serona-dark transition-all duration-300 overflow-hidden flex flex-col h-full fixed left-0 top-16 bottom-0 z-20 md:relative md:top-0`}
+          } bg-serona-dark/95 backdrop-blur-md transition-all duration-300 overflow-hidden flex flex-col h-full fixed left-0 top-16 bottom-0 z-20 md:relative md:top-0`}
         >
           <div className="p-4">
             <button 
@@ -51,8 +51,8 @@ const Chat = () => {
             </button>
           </div>
           
-          <ScrollArea className="flex-1">
-            <div className="px-2 space-y-2">
+          <ScrollArea className="flex-1 px-2">
+            <div className="space-y-2">
               {chats.map((chat) => (
                 <button
                   key={chat.id}
@@ -71,21 +71,22 @@ const Chat = () => {
         </aside>
 
         {/* Main Chat Area */}
-        <main className={`flex-1 flex flex-col bg-white ${isSidebarOpen ? 'md:ml-80' : ''} relative`}>
+        <main className={`flex-1 flex flex-col bg-white relative ${isSidebarOpen ? 'md:ml-80' : ''}`}>
           {/* Header */}
           <div className="sticky top-16 md:top-0 z-10 bg-white border-b flex items-center h-14 px-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 hover:bg-serona-light rounded-lg transition-colors"
+              aria-label="Toggle Sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="ml-4 font-semibold">AI Assistant</h1>
+            <h1 className="ml-4 font-semibold text-serona-dark">AI Assistant</h1>
           </div>
           
           {/* Messages Area */}
-          <ScrollArea className="flex-1">
-            <div className="max-w-4xl mx-auto px-4 py-6">
+          <ScrollArea className="flex-1 px-4 md:px-0">
+            <div className="max-w-3xl mx-auto px-4 py-6">
               <div className="space-y-6">
                 {/* AI Message */}
                 <div className="flex gap-4 animate-fade-up">
@@ -112,7 +113,7 @@ const Chat = () => {
 
           {/* Message Input */}
           <div className="sticky bottom-0 bg-white border-t p-4">
-            <div className="max-w-4xl mx-auto relative">
+            <div className="max-w-3xl mx-auto relative">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -129,6 +130,7 @@ const Chat = () => {
               <button 
                 onClick={handleSend}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-serona-primary hover:text-serona-accent transition-colors"
+                aria-label="Send message"
               >
                 <Send className="w-5 h-5" />
               </button>
