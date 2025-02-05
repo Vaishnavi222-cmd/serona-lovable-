@@ -9,6 +9,7 @@
 
   body {
     @apply bg-serona-light text-serona-dark antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
