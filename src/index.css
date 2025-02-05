@@ -19,18 +19,37 @@
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-serona-dark/10;
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-serona-dark/5;
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-serona-primary/50 rounded-full;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-serona-primary/30 rounded-full hover:bg-serona-primary/50 transition-colors;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-serona-primary/70;
+/* Mobile optimization */
+@media (max-width: 768px) {
+  .navbar, .footer {
+    @apply bg-serona-dark/95 backdrop-blur-md;
+  }
+}
+
+/* Animations */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.3s ease-out forwards;
 }

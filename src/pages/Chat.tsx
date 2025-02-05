@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Plus, Menu, MessageSquare } from 'lucide-react';
+import { Send, Plus, Menu, MessageSquare, User } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -9,10 +9,10 @@ const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { toast } = useToast();
   const [chats] = useState([
-    { id: 1, title: "Understanding AI Basics", active: true },
-    { id: 2, title: "Machine Learning Discussion", active: false },
-    { id: 3, title: "Neural Networks Explained", active: false },
-    { id: 4, title: "Data Processing Methods", active: false },
+    { id: 1, title: "Deep Personality Analysis", active: true },
+    { id: 2, title: "Career Guidance Session", active: false },
+    { id: 3, title: "Mental Health Support", active: false },
+    { id: 4, title: "Life Goals Planning", active: false },
   ]);
 
   const handleSend = () => {
@@ -23,19 +23,18 @@ const Chat = () => {
       });
       return;
     }
-    // Handle message sending logic here
     setMessage('');
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
-      <div className="pt-16 flex h-[calc(100vh-64px)]">
+      <div className="flex-1 flex h-[calc(100vh-64px)] relative">
         {/* Sidebar */}
         <aside 
           className={`${
             isSidebarOpen ? 'w-80' : 'w-0'
-          } bg-serona-dark transition-all duration-300 overflow-hidden flex flex-col h-full`}
+          } bg-serona-dark transition-all duration-300 overflow-hidden flex flex-col h-full fixed left-0 top-16 bottom-0 z-20 md:relative md:top-0`}
         >
           <div className="p-4">
             <button 
@@ -46,7 +45,7 @@ const Chat = () => {
             </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="px-2 space-y-2">
               {chats.map((chat) => (
                 <button
@@ -66,27 +65,39 @@ const Chat = () => {
         </aside>
 
         {/* Main Chat Area */}
-        <main className="flex-1 flex flex-col bg-white">
-          <div className="p-4 border-b flex items-center">
+        <main className={`flex-1 flex flex-col bg-white ${isSidebarOpen ? 'md:ml-80' : ''} relative`}>
+          {/* Header */}
+          <div className="sticky top-16 md:top-0 z-10 bg-white border-b flex items-center h-14 px-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 hover:bg-serona-light rounded-lg transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
+            <h1 className="ml-4 font-semibold">AI Assistant</h1>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4">
-            {/* Chat messages would go here */}
-            <div className="max-w-4xl mx-auto">
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="max-w-4xl mx-auto px-4 py-6">
               <div className="space-y-6">
-                {/* Example messages */}
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-serona-primary flex items-center justify-center text-white">
+                {/* AI Message */}
+                <div className="flex gap-4 animate-fade-up">
+                  <div className="w-8 h-8 rounded-full bg-serona-primary flex items-center justify-center text-white shrink-0">
                     AI
                   </div>
-                  <div className="flex-1 bg-serona-light rounded-lg p-4">
-                    <p>Hello! How can I assist you today?</p>
+                  <div className="flex-1 bg-serona-light rounded-lg p-4 leading-relaxed">
+                    <p>Hello! I'm your AI assistant. How can I help you today?</p>
+                  </div>
+                </div>
+
+                {/* User Message */}
+                <div className="flex gap-4 animate-fade-up">
+                  <div className="w-8 h-8 rounded-full bg-serona-dark flex items-center justify-center text-white shrink-0">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 bg-serona-dark/5 rounded-lg p-4">
+                    <p>Can you help me with career guidance?</p>
                   </div>
                 </div>
               </div>
@@ -94,15 +105,15 @@ const Chat = () => {
           </div>
 
           {/* Message Input */}
-          <div className="border-t p-4">
+          <div className="sticky bottom-0 bg-white border-t p-4">
             <div className="max-w-4xl mx-auto relative">
               <input
                 type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 placeholder="Type your message..."
-                className="w-full p-4 pr-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-serona-primary bg-white"
+                className="w-full p-4 pr-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-serona-primary bg-white shadow-sm"
               />
               <button 
                 onClick={handleSend}

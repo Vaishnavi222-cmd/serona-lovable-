@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="bg-serona-dark text-serona-secondary">
-      <div className="container mx-auto px-6 py-12">
+    <footer className="bg-serona-dark/95 backdrop-blur-md text-serona-secondary">
+      <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <img
@@ -72,8 +72,8 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="mt-12 pt-8 border-t border-serona-secondary/20">
-          <p className="text-center text-serona-secondary/70">
+        <div className="mt-8 pt-6 border-t border-serona-secondary/20">
+          <p className="text-center text-serona-secondary/70 text-sm">
             © {new Date().getFullYear()} Serona AI. All rights reserved.
           </p>
         </div>
