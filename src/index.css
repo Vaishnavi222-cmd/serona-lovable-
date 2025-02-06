@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-serona-light text-serona-dark antialiased;
+    @apply bg-white text-gray-900 antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
@@ -25,17 +25,17 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-serona-dark/5;
+  @apply bg-gray-100;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-serona-primary/30 rounded-full hover:bg-serona-primary/50 transition-colors;
+  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
 }
 
 /* Mobile optimization */
 @media (max-width: 768px) {
   .navbar, .footer {
-    @apply bg-serona-dark/80 backdrop-blur-md;
+    @apply bg-gray-900/80 backdrop-blur-md;
   }
   
   .chat-sidebar {
@@ -65,7 +65,7 @@
 
 /* Chat UI Specific Styles */
 .message-input {
-  @apply w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-serona-primary bg-white;
+  @apply w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19c37d] bg-white;
 }
 
 .chat-container {
