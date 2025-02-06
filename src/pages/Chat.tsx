@@ -25,50 +25,55 @@ const Chat = () => {
     setMessage('');
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
     <div className="flex h-screen bg-white dark:bg-[#343541] overflow-hidden">
-      {/* Sidebar - Fixed position on mobile, regular position on desktop */}
+      {/* Sidebar */}
       <aside 
         className={`
-          fixed md:relative
-          ${isSidebarOpen ? 'w-72' : 'w-0 -translate-x-full md:translate-x-0 md:w-0'}
-          h-full z-50 transition-all duration-300
-          bg-[#202123] flex flex-col
-          md:min-w-[260px] md:w-[260px]
+          fixed md:relative z-[60]
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          h-full transition-transform duration-300 ease-in-out
+          bg-[#202123] md:w-[260px] w-[80%] max-w-[260px]
         `}
       >
-        <div className="p-2">
-          <button 
-            className="w-full h-12 flex items-center gap-3 px-3 text-sm text-white 
-                     bg-transparent hover:bg-gray-700/50 rounded-lg 
-                     border border-white/20 transition-colors"
-            onClick={() => {
-              toast({
-                title: "New Chat",
-                description: "Starting a new chat session",
-              });
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            New chat
-          </button>
-        </div>
-        
-        <ScrollArea className="flex-1 px-2 py-2">
-          <div className="space-y-1">
-            {chats.map((chat) => (
-              <button
-                key={chat.id}
-                className={`w-full h-12 flex items-center gap-3 px-3 text-sm rounded-lg transition-colors
-                  ${chat.active 
-                    ? 'bg-gray-800 text-white' 
-                    : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-              >
-                <MessageSquare className="w-4 h-4 shrink-0" />
-                <span className="truncate text-left flex-1">{chat.title}</span>
-              </button>
-            ))}
+        <ScrollArea className="h-full">
+          <div className="p-2">
+            <button 
+              className="w-full h-12 flex items-center gap-3 px-3 text-sm text-white 
+                       bg-transparent hover:bg-gray-700/50 rounded-lg 
+                       border border-white/20 transition-colors"
+              onClick={() => {
+                toast({
+                  title: "New Chat",
+                  description: "Starting a new chat session",
+                });
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              New chat
+            </button>
+          </div>
+          
+          <div className="px-2 py-2">
+            <div className="space-y-1">
+              {chats.map((chat) => (
+                <button
+                  key={chat.id}
+                  className={`w-full h-12 flex items-center gap-3 px-3 text-sm rounded-lg transition-colors
+                    ${chat.active 
+                      ? 'bg-gray-800 text-white' 
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                >
+                  <MessageSquare className="w-4 h-4 shrink-0" />
+                  <span className="truncate text-left flex-1">{chat.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </ScrollArea>
       </aside>
@@ -79,7 +84,7 @@ const Chat = () => {
         <div className="absolute top-0 left-0 right-0 z-40 bg-white/80 dark:bg-[#343541]/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700/50">
           <div className="flex items-center h-12 px-4">
             <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              onClick={toggleSidebar}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-md transition-colors md:hidden"
               aria-label="Toggle Sidebar"
             >
@@ -157,7 +162,7 @@ const Chat = () => {
       {/* Overlay for mobile when sidebar is open */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          className="fixed inset-0 bg-black/40 z-50 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
