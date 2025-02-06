@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-white text-gray-900 antialiased;
+    @apply bg-white text-gray-900 antialiased overflow-hidden;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
@@ -30,21 +30,6 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-gray-600 rounded-full hover:bg-gray-500 transition-colors;
-}
-
-/* Mobile optimization */
-@media (max-width: 768px) {
-  .navbar, .footer {
-    @apply bg-gray-900/80 backdrop-blur-md;
-  }
-  
-  .chat-sidebar {
-    @apply fixed left-0 top-0 bottom-0 z-50;
-  }
-  
-  .chat-main {
-    @apply w-full;
-  }
 }
 
 /* Animations */
