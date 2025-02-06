@@ -34,7 +34,7 @@ const Chat = () => {
         <aside 
           className={`${
             isSidebarOpen ? 'w-72' : 'w-0'
-          } bg-[#202123] transition-all duration-300 overflow-hidden flex flex-col h-full fixed left-0 top-16 bottom-0 z-20 md:relative md:top-0 border-r border-gray-200/10`}
+          } bg-[#202123] transition-all duration-300 overflow-hidden flex flex-col h-full fixed left-0 top-16 bottom-0 z-20 md:relative md:top-0`}
         >
           <div className="p-3">
             <button 
@@ -51,14 +51,14 @@ const Chat = () => {
             </button>
           </div>
           
-          <ScrollArea className="flex-1">
-            <div className="px-2 space-y-1">
+          <ScrollArea className="flex-1 px-2">
+            <div className="space-y-1">
               {chats.map((chat) => (
                 <button
                   key={chat.id}
                   className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors ${
                     chat.active 
-                      ? 'bg-serona-primary/20 text-serona-primary' 
+                      ? 'bg-gray-800 text-white' 
                       : 'text-gray-300 hover:bg-gray-800'
                   }`}
                 >
@@ -86,7 +86,7 @@ const Chat = () => {
           
           {/* Messages Area */}
           <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="max-w-2xl mx-auto w-full px-4 py-6">
+            <div className="max-w-3xl mx-auto w-full p-4 md:p-8">
               <div className="space-y-6">
                 {/* AI Message */}
                 <div className="flex gap-4 animate-fade-up">
@@ -113,7 +113,7 @@ const Chat = () => {
 
           {/* Message Input */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
-            <div className="max-w-2xl mx-auto relative">
+            <div className="max-w-3xl mx-auto relative">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
