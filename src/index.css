@@ -25,11 +25,11 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-gray-800;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  @apply bg-gray-600 rounded-full hover:bg-gray-500 transition-colors;
 }
 
 /* Mobile optimization */
@@ -39,7 +39,7 @@
   }
   
   .chat-sidebar {
-    @apply fixed left-0 top-16 bottom-0 z-50;
+    @apply fixed left-0 top-0 bottom-0 z-50;
   }
   
   .chat-main {
@@ -65,7 +65,7 @@
 
 /* Chat UI Specific Styles */
 .message-input {
-  @apply w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19c37d] bg-white;
+  @apply w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19c37d] bg-white dark:bg-[#40414f];
 }
 
 .chat-container {
@@ -74,4 +74,17 @@
 
 .messages-container {
   @apply flex-1 overflow-y-auto px-4 py-6;
+}
+
+/* Dark mode styles */
+.dark {
+  @apply bg-[#343541] text-gray-100;
+}
+
+.dark .message-input {
+  @apply bg-[#40414f] border-gray-700 text-white;
+}
+
+.dark .chat-sidebar {
+  @apply bg-[#202123] border-gray-700;
 }
