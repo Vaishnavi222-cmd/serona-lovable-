@@ -1,4 +1,5 @@
-import { Github, Twitter, Linkedin, MessageSquare, Mail, ShoppingCart } from 'lucide-react';
+
+import { MessageSquare, Mail, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer = () => {
@@ -21,25 +22,22 @@ const Footer = () => {
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
+                <Link to="/" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
                   Home
                 </Link>
               </li>
               <li>
-                <Link to="/chat" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
+                <Link to="/chat" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
                   Chat
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
+                <Link to="/contact" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
                   Contact
                 </Link>
               </li>
               <li>
-                <Link to="/recommendations" className="text-serona-secondary/70 hover:text-serona-primary transition-colors flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" />
+                <Link to="/recommendations" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
                   Recommendations
                 </Link>
               </li>
@@ -49,26 +47,37 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">Services</h4>
             <ul className="space-y-2">
-              <li><a href="#ai-solutions" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">AI Solutions</a></li>
-              <li><a href="#machine-learning" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Machine Learning</a></li>
-              <li><a href="#automation" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Automation</a></li>
-              <li><a href="#consulting" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">Consulting</a></li>
+              <li><span className="text-serona-secondary/70">Personality Insights</span></li>
+              <li><span className="text-serona-secondary/70">Career Guidance</span></li>
+              <li><span className="text-serona-secondary/70">Relationship Advice</span></li>
+              <li><span className="text-serona-secondary/70">Self Improvement Help</span></li>
             </ul>
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold mb-4">Connect</h4>
-            <div className="flex space-x-4">
-              <a href="#" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                <Github className="w-6 h-6" />
-              </a>
-              <a href="#" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                <Twitter className="w-6 h-6" />
-              </a>
-              <a href="#" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                <Linkedin className="w-6 h-6" />
-              </a>
-            </div>
+            <h4 className="text-lg font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/disclaimer" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Disclaimer
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Refund & Cancellation
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
         

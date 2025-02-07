@@ -1,15 +1,12 @@
 
-import { Brain, Briefcase, Heart, Bot } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Link } from 'react-router-dom';
 
 const Features = () => {
   return (
     <section id="features" className="py-24 relative bg-serona-light px-4 md:px-6">
       <div className="container mx-auto">
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1 bg-serona-primary/10 rounded-full text-serona-primary text-sm font-medium mb-4">
-            Features
-          </span>
           <h2 className="text-3xl md:text-4xl font-bold text-serona-dark mb-4">
             What Serona AI Offers
           </h2>
@@ -17,28 +14,24 @@ const Features = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           <FeatureCard
-            icon={<Brain className="w-6 h-6" />}
             title="Understand Your Personality"
             description="AI-generated behavior analysis for deeper self-awareness"
-            image="/photo-1488590528505-98d2b5aba04b"
+            image="https://images.unsplash.com/photo-1649972904349-6e44c42644a7"
           />
           <FeatureCard
-            icon={<Briefcase className="w-6 h-6" />}
             title="Get Career & Life Guidance"
             description="Smart career & decision-making advice tailored to you"
-            image="/photo-1649972904349-6e44c42644a7"
+            image="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
           />
           <FeatureCard
-            icon={<Heart className="w-6 h-6" />}
             title="Improve Relationships"
             description="Enhance emotional intelligence & communication skills"
-            image="/photo-1518770660439-4636190af475"
+            image="https://images.unsplash.com/photo-1518770660439-4636190af475"
           />
           <FeatureCard
-            icon={<Bot className="w-6 h-6" />}
             title="AI-Powered Deep Analysis"
             description="Context-aware conversations for personal growth"
-            image="/photo-1461749280684-dccba630e2f6"
+            image="https://images.unsplash.com/photo-1461749280684-dccba630e2f6"
           />
         </div>
 
@@ -77,25 +70,22 @@ const Features = () => {
 
         {/* Bottom CTA */}
         <div className="text-center">
-          <a
-            href="#get-started"
+          <Link
+            to="/chat"
             className="inline-block px-8 py-4 bg-serona-primary text-serona-dark rounded-full
                       font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105"
           >
             Start Now!
-          </a>
+          </Link>
         </div>
       </div>
     </section>
   );
 };
 
-const FeatureCard = ({ icon, title, description, image }: { icon: React.ReactNode; title: string; description: string; image: string }) => (
+const FeatureCard = ({ title, description, image }: { title: string; description: string; image: string }) => (
   <div className="group p-6 rounded-2xl bg-serona-secondary/80 backdrop-blur-lg border border-serona-primary/20 transition-all duration-300 hover:scale-105">
-    <div className="w-12 h-12 rounded-xl bg-serona-primary/10 flex items-center justify-center text-serona-primary mb-6 group-hover:bg-serona-primary group-hover:text-serona-secondary transition-all duration-300">
-      {icon}
-    </div>
-    <img src={image} alt={title} className="w-full h-40 object-cover rounded-lg mb-6" />
+    <img src={image} alt={title} className="w-full h-48 object-cover rounded-lg mb-6" />
     <h3 className="text-xl font-semibold text-serona-dark mb-3">{title}</h3>
     <p className="text-serona-dark/70">{description}</p>
   </div>

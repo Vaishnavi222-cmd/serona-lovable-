@@ -1,7 +1,9 @@
+
 import { useState } from 'react';
-import { Send, Plus, Menu, MessageSquare, User } from 'lucide-react';
+import { Send, Menu, MessageSquare, User } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Navbar from "../components/Navbar";
 
 const Chat = () => {
   const [message, setMessage] = useState('');
@@ -25,77 +27,17 @@ const Chat = () => {
     setMessage('');
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
   return (
     <div className="flex h-screen bg-white dark:bg-[#343541] overflow-hidden">
-      {/* Sidebar */}
-      <aside 
-        className={`
-          fixed md:relative z-[60]
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          h-full transition-transform duration-300 ease-in-out
-          bg-[#202123] md:w-[260px] w-[80%] max-w-[260px]
-        `}
-      >
-        <ScrollArea className="h-full">
-          <div className="p-2">
-            <button 
-              className="w-full h-12 flex items-center gap-3 px-3 text-sm text-white 
-                       bg-transparent hover:bg-gray-700/50 rounded-lg 
-                       border border-white/20 transition-colors"
-              onClick={() => {
-                toast({
-                  title: "New Chat",
-                  description: "Starting a new chat session",
-                });
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              New chat
-            </button>
-          </div>
-          
-          <div className="px-2 py-2">
-            <div className="space-y-1">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  className={`w-full h-12 flex items-center gap-3 px-3 text-sm rounded-lg transition-colors
-                    ${chat.active 
-                      ? 'bg-gray-800 text-white' 
-                      : 'text-gray-300 hover:bg-gray-700/50'
-                    }`}
-                >
-                  <MessageSquare className="w-4 h-4 shrink-0" />
-                  <span className="truncate text-left flex-1">{chat.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </ScrollArea>
-      </aside>
+      {/* Navbar */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <Navbar />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen relative bg-white dark:bg-[#343541]">
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-40 bg-white/80 dark:bg-[#343541]/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center h-12 px-4">
-            <button
-              onClick={toggleSidebar}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-md transition-colors md:hidden"
-              aria-label="Toggle Sidebar"
-            >
-              <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            </button>
-            <h1 className="ml-4 font-medium text-gray-700 dark:text-gray-200">AI Assistant</h1>
-          </div>
-        </div>
-
+      <main className="flex-1 flex flex-col h-screen relative bg-white dark:bg-[#343541] mt-16">
         {/* Messages Area with ScrollArea */}
-        <ScrollArea className="flex-1 pt-12 pb-36">
+        <ScrollArea className="flex-1 pt-4 pb-36">
           <div className="max-w-2xl mx-auto w-full p-4 md:p-8 space-y-6">
             {/* AI Message */}
             <div className="flex gap-4 animate-fade-up">
@@ -116,7 +58,7 @@ const Chat = () => {
               </div>
               <div className="flex-1 space-y-2">
                 <p className="prose dark:prose-invert prose-p:leading-relaxed prose-p:my-0">
-                  Can you help me with career guidance?
+                  Can you help me with personality analysis?
                 </p>
               </div>
             </div>
@@ -135,7 +77,7 @@ const Chat = () => {
                   handleSend();
                 }
               }}
-              placeholder="Message ChatGPT..."
+              placeholder="Message Serona AI..."
               className="w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19c37d] 
                        bg-white dark:bg-[#40414f] border border-gray-200 dark:border-gray-700/50 
                        shadow-[0_0_10px_rgba(0,0,0,0.05)] resize-none dark:text-white 
@@ -158,14 +100,6 @@ const Chat = () => {
           </div>
         </div>
       </main>
-
-      {/* Overlay for mobile when sidebar is open */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-50 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 };

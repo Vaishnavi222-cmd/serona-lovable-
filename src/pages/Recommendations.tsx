@@ -1,56 +1,51 @@
+
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
-const products = [
+const recommendations = [
   {
     id: 1,
-    name: "AI Development Kit",
-    description: "Complete toolkit for AI development with advanced neural network capabilities and machine learning algorithms.",
-    price: "$299",
+    name: "Understanding Your Personality Type",
+    description: "A comprehensive guide to personality analysis and self-discovery, helping you understand your core traits and behavioral patterns.",
     image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
   },
   {
     id: 2,
-    name: "Neural Network Package",
-    description: "Advanced neural network solutions for complex data analysis and pattern recognition.",
-    price: "$199",
-    image: "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1"
+    name: "Career Development Masterclass",
+    description: "Learn how to align your personality traits with career choices and develop a successful professional path.",
+    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
   },
   {
     id: 3,
-    name: "Machine Learning Bundle",
-    description: "Comprehensive ML resources including pre-trained models and development tools.",
-    price: "$249",
-    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
+    name: "Emotional Intelligence in Relationships",
+    description: "Enhance your relationship skills through understanding emotional patterns and improving communication.",
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475"
+  },
+  {
+    id: 4,
+    name: "The Art of Self-Improvement",
+    description: "A comprehensive guide to personal growth, habit formation, and achieving your life goals.",
+    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6"
   }
 ];
 
 const Recommendations = () => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-24">
-        <h1 className="text-4xl font-bold text-serona-dark mb-12 text-center">Our Recommendations</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform">
+        <h1 className="text-4xl font-bold text-serona-dark mb-12 text-center">Recommended Resources</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {recommendations.map((item) => (
+            <div key={item.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform">
               <img
-                src={product.image}
-                alt={product.name}
+                src={item.image}
+                alt={item.name}
                 className="w-full h-48 object-cover"
               />
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-serona-dark mb-2">{product.name}</h3>
-                <p className="text-gray-600 mb-4">{product.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-serona-primary">{product.price}</span>
-                  <a
-                    href="#"
-                    className="px-4 py-2 bg-serona-primary text-white rounded-lg hover:bg-serona-accent transition-colors"
-                  >
-                    Buy Now
-                  </a>
-                </div>
+                <h3 className="text-xl font-semibold text-serona-dark mb-2">{item.name}</h3>
+                <p className="text-gray-600">{item.description}</p>
               </div>
             </div>
           ))}

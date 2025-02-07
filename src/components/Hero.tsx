@@ -1,5 +1,6 @@
 
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Brain } from 'lucide-react';
 
 const Hero = () => {
@@ -41,14 +42,14 @@ const Hero = () => {
           </p>
           
           <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
-            <a
-              href="#features"
+            <Link
+              to="/chat"
               className="inline-block px-8 md:px-32 py-4 bg-serona-primary text-serona-dark rounded-full
                         font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105 
                         w-full md:w-auto min-w-0 md:min-w-[400px] mx-auto"
             >
               Get Started!
-            </a>
+            </Link>
           </div>
         </div>
       </div>
