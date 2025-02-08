@@ -33,7 +33,7 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#9b87f5]/10">
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
@@ -46,7 +46,7 @@ const Chat = () => {
       <div className={`chat-sidebar ${!isSidebarOpen ? 'closed' : ''}`}>
         <div className="p-4">
           <Button 
-            className="w-full bg-[#9b87f5] hover:bg-[#7E69AB] text-white border-none"
+            className="w-full bg-[#1EAEDB] hover:bg-[#0FA0CE] text-white border-none"
             onClick={() => {}}
           >
             <Plus className="mr-2 h-4 w-4" /> New Chat
@@ -68,20 +68,27 @@ const Chat = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen relative">
-        {/* Navbar */}
+        {/* Navbar with Logo */}
         <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200 px-4 py-2">
-          <Navbar />
+          <div className="flex items-center justify-between">
+            <img 
+              src="/lovable-uploads/8ee7e32d-1c38-47e6-8e4e-c5cd0225a84c.png" 
+              alt="Logo" 
+              className="h-8 w-8"
+            />
+            <Navbar />
+          </div>
         </div>
 
         {/* Messages Area */}
         <ScrollArea className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="max-w-3xl mx-auto w-full p-4 space-y-6">
+          <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* AI Message */}
-            <div className="flex gap-4 animate-fade-up">
-              <div className="w-8 h-8 rounded-sm bg-[#9b87f5] flex items-center justify-center text-white shrink-0">
+            <div className="flex gap-6 animate-fade-up">
+              <div className="w-8 h-8 rounded-lg bg-[#40E0D0] flex items-center justify-center text-white shrink-0">
                 AI
               </div>
-              <div className="flex-1 space-y-2 glass-card rounded-lg p-4 shadow-sm">
+              <div className="flex-1 space-y-2 glass-card rounded-2xl p-6 shadow-sm">
                 <p className="text-gray-800">
                   Hello! I'm your AI assistant. How can I help you today?
                 </p>
@@ -89,21 +96,21 @@ const Chat = () => {
             </div>
 
             {/* User Message */}
-            <div className="flex gap-4 animate-fade-up justify-end">
-              <div className="flex-1 space-y-2 bg-[#9b87f5]/10 rounded-lg p-4 shadow-sm">
+            <div className="flex gap-6 animate-fade-up justify-end">
+              <div className="flex-1 space-y-2 bg-gray-100 rounded-2xl p-6 shadow-sm">
                 <p className="text-gray-800">
                   Can you help me with personality analysis?
                 </p>
               </div>
-              <div className="w-8 h-8 rounded-sm bg-[#7E69AB] flex items-center justify-center text-white shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-white shrink-0">
                 <User className="w-5 h-5" />
               </div>
             </div>
           </div>
         </ScrollArea>
 
-        {/* Message Input */}
-        <div className="chat-input-container">
+        {/* Centered Message Input */}
+        <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-3xl w-full p-4 mb-8">
           <div className="relative">
             <textarea
               value={message}
@@ -115,7 +122,7 @@ const Chat = () => {
                 }
               }}
               placeholder="Message Serona AI..."
-              className="w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9b87f5] 
+              className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#40E0D0] 
                        bg-white border border-gray-200
                        shadow-[0_0_10px_rgba(0,0,0,0.05)] resize-none text-gray-800
                        placeholder-gray-400 min-h-[44px] max-h-[200px]"
@@ -123,7 +130,7 @@ const Chat = () => {
             />
             <button 
               onClick={handleSend}
-              className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-[#9b87f5] 
+              className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-[#40E0D0] 
                        transition-colors rounded"
               aria-label="Send message"
             >
