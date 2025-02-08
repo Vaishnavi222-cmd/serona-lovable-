@@ -46,7 +46,7 @@ const Chat = () => {
       <div className={`chat-sidebar ${!isSidebarOpen ? 'closed' : ''}`}>
         <div className="p-4">
           <Button 
-            className="w-full bg-[#1EAEDB] hover:bg-[#0FA0CE] text-white border-none"
+            className="w-full bg-[#1EAEDB] hover:bg-[#0FA0CE] text-white"
             onClick={() => {}}
           >
             <Plus className="mr-2 h-4 w-4" /> New Chat
@@ -89,28 +89,13 @@ const Chat = () => {
                 AI
               </div>
               <div className="flex-1 space-y-2 glass-card rounded-2xl p-6 shadow-sm">
-                <p className="text-gray-800">
-                  Hello! I'm your AI assistant. How can I help you today?
-                </p>
-              </div>
-            </div>
-
-            {/* User Message */}
-            <div className="flex gap-6 animate-fade-up justify-end">
-              <div className="flex-1 space-y-2 bg-gray-100 rounded-2xl p-6 shadow-sm">
-                <p className="text-gray-800">
-                  Can you help me with personality analysis?
-                </p>
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-white shrink-0">
-                <User className="w-5 h-5" />
               </div>
             </div>
           </div>
         </ScrollArea>
 
         {/* Centered Message Input */}
-        <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-3xl w-full p-4 mb-8">
+        <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-4xl w-full p-4 mb-8">
           <div className="relative">
             <textarea
               value={message}
@@ -130,11 +115,11 @@ const Chat = () => {
             />
             <button 
               onClick={handleSend}
-              className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-[#40E0D0] 
-                       transition-colors rounded"
+              className="absolute right-3 bottom-3 p-2 rounded-full hover:bg-gray-100 
+                       transition-colors"
               aria-label="Send message"
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-5 h-5 text-[#1EAEDB]" />
             </button>
           </div>
         </div>
