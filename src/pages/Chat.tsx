@@ -1,15 +1,17 @@
 
 import { useState } from 'react';
-import { Send, Menu, MessageSquare, User, Plus, X } from 'lucide-react';
+import { Send, Menu, MessageSquare, Plus, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
 
 const Chat = () => {
   const [message, setMessage] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [chats] = useState([
     { id: 1, title: "Deep Personality Analysis", active: true },
     { id: 2, title: "Career Guidance Session", active: false },
@@ -37,16 +39,19 @@ const Chat = () => {
       {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className="sidebar-toggle"
+        className="fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-gray-800" /> : <Menu className="w-6 h-6 text-gray-800" />}
       </button>
 
-      {/* Sidebar */}
-      <div className={`chat-sidebar ${!isSidebarOpen ? 'closed' : ''}`}>
+      {/* Sidebar - Mobile Optimized */}
+      <div 
+        className={`fixed md:relative chat-sidebar ${!isSidebarOpen ? 'closed' : ''} 
+                   ${isMobile ? 'w-full md:w-64' : 'w-64'} z-40`}
+      >
         <div className="p-4">
           <Button 
-            className="w-full bg-[#1EAEDB] hover:bg-[#0FA0CE] text-white"
+            className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB] text-white"
             onClick={() => {}}
           >
             <Plus className="mr-2 h-4 w-4" /> New Chat
@@ -66,10 +71,10 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen relative">
+      {/* Main Content - Mobile Optimized */}
+      <div className="flex-1 flex flex-col h-screen relative w-full">
         {/* Navbar with Logo */}
-        <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200 px-4 py-2">
+        <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200 px-4 py-2 sticky top-0 z-30">
           <div className="flex items-center justify-between">
             <img 
               src="/lovable-uploads/8ee7e32d-1c38-47e6-8e4e-c5cd0225a84c.png" 
@@ -94,9 +99,9 @@ const Chat = () => {
           </div>
         </ScrollArea>
 
-        {/* Centered Message Input */}
-        <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-4xl w-full p-4 mb-8">
-          <div className="relative">
+        {/* Message Input - Mobile Optimized */}
+        <div className="sticky bottom-0 left-0 right-0 mx-auto w-full p-4 bg-white">
+          <div className="relative max-w-4xl mx-auto">
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -107,9 +112,8 @@ const Chat = () => {
                 }
               }}
               placeholder="Message Serona AI..."
-              className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#40E0D0] 
-                       bg-white border border-gray-200
-                       shadow-[0_0_10px_rgba(0,0,0,0.05)] resize-none text-gray-800
+              className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
+                       bg-white border border-gray-200 shadow-sm resize-none text-gray-800
                        placeholder-gray-400 min-h-[44px] max-h-[200px]"
               rows={1}
             />
