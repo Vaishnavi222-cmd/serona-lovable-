@@ -33,20 +33,20 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#343541]">
+    <div className="flex h-screen overflow-hidden bg-[#9b87f5]/10">
       {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
         className="sidebar-toggle"
       >
-        {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+        {isSidebarOpen ? <X className="w-6 h-6 text-gray-800" /> : <Menu className="w-6 h-6 text-gray-800" />}
       </button>
 
       {/* Sidebar */}
       <div className={`chat-sidebar ${!isSidebarOpen ? 'closed' : ''}`}>
         <div className="p-4">
           <Button 
-            className="w-full bg-transparent border border-white/20 hover:bg-white/10 text-white"
+            className="w-full bg-[#9b87f5] hover:bg-[#7E69AB] text-white border-none"
             onClick={() => {}}
           >
             <Plus className="mr-2 h-4 w-4" /> New Chat
@@ -69,20 +69,20 @@ const Chat = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen relative">
         {/* Navbar */}
-        <div className="bg-[#343541] border-b border-gray-700/50 px-4 py-2">
+        <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200 px-4 py-2">
           <Navbar />
         </div>
 
         {/* Messages Area */}
-        <ScrollArea className="flex-1 overflow-y-auto">
+        <ScrollArea className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-6">
             {/* AI Message */}
             <div className="flex gap-4 animate-fade-up">
-              <div className="w-8 h-8 rounded-sm bg-[#19c37d] flex items-center justify-center text-white shrink-0">
+              <div className="w-8 h-8 rounded-sm bg-[#9b87f5] flex items-center justify-center text-white shrink-0">
                 AI
               </div>
-              <div className="flex-1 space-y-2 bg-gray-800/50 rounded-lg p-4 shadow-sm">
-                <p className="text-gray-100">
+              <div className="flex-1 space-y-2 glass-card rounded-lg p-4 shadow-sm">
+                <p className="text-gray-800">
                   Hello! I'm your AI assistant. How can I help you today?
                 </p>
               </div>
@@ -90,12 +90,12 @@ const Chat = () => {
 
             {/* User Message */}
             <div className="flex gap-4 animate-fade-up justify-end">
-              <div className="flex-1 space-y-2 bg-blue-600/10 rounded-lg p-4 shadow-sm">
-                <p className="text-gray-100">
+              <div className="flex-1 space-y-2 bg-[#9b87f5]/10 rounded-lg p-4 shadow-sm">
+                <p className="text-gray-800">
                   Can you help me with personality analysis?
                 </p>
               </div>
-              <div className="w-8 h-8 rounded-sm bg-[#3b3b3f] flex items-center justify-center text-white shrink-0">
+              <div className="w-8 h-8 rounded-sm bg-[#7E69AB] flex items-center justify-center text-white shrink-0">
                 <User className="w-5 h-5" />
               </div>
             </div>
@@ -115,15 +115,15 @@ const Chat = () => {
                 }
               }}
               placeholder="Message Serona AI..."
-              className="w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19c37d] 
-                       bg-[#40414f] border border-gray-700/50 
-                       shadow-[0_0_10px_rgba(0,0,0,0.05)] resize-none text-white 
+              className="w-full p-4 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9b87f5] 
+                       bg-white border border-gray-200
+                       shadow-[0_0_10px_rgba(0,0,0,0.05)] resize-none text-gray-800
                        placeholder-gray-400 min-h-[44px] max-h-[200px]"
               rows={1}
             />
             <button 
               onClick={handleSend}
-              className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-[#19c37d] 
+              className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-[#9b87f5] 
                        transition-colors rounded"
               aria-label="Send message"
             >

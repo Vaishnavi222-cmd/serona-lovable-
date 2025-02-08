@@ -16,7 +16,7 @@
 
 @layer utilities {
   .glass-card {
-    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+    @apply bg-white/80 backdrop-blur-sm border border-gray-200;
   }
 }
 
@@ -26,11 +26,11 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-800;
+  @apply bg-gray-100;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-600 rounded-full hover:bg-gray-500 transition-colors;
+  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
 }
 
 /* Animations */
@@ -62,26 +62,13 @@
   @apply max-w-3xl mx-auto w-full p-4 mb-8;
 }
 
-/* Dark mode styles */
-.dark {
-  @apply bg-[#343541] text-gray-100;
-}
-
-.dark .message-input {
-  @apply bg-[#40414f] border-gray-700 text-white;
-}
-
-.dark .chat-sidebar {
-  @apply bg-[#202123] border-gray-700;
-}
-
 /* Sidebar styles */
 .sidebar-toggle {
-  @apply fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-700/50 transition-colors;
+  @apply fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors;
 }
 
 .chat-sidebar {
-  @apply fixed top-0 left-0 h-full w-64 bg-[#202123] text-white transition-all duration-300 ease-in-out transform z-40;
+  @apply fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out transform z-40;
 }
 
 .chat-sidebar.closed {
@@ -93,10 +80,9 @@
 }
 
 .chat-item {
-  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-white/10 cursor-pointer transition-colors;
+  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors;
 }
 
 .chat-item.active {
-  @apply bg-white/20;
+  @apply bg-[#9b87f5]/10;
 }
-
