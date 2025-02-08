@@ -4,7 +4,6 @@ import { Send, Menu, MessageSquare, Plus, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
-import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
 
 const Chat = () => {
@@ -44,11 +43,10 @@ const Chat = () => {
         {isSidebarOpen ? <X className="w-6 h-6 text-gray-800" /> : <Menu className="w-6 h-6 text-gray-800" />}
       </button>
 
-      {/* Sidebar - Mobile Optimized */}
-      <div 
-        className={`fixed md:relative chat-sidebar ${!isSidebarOpen ? 'closed' : ''} 
-                   ${isMobile ? 'w-full md:w-64' : 'w-64'} z-40`}
-      >
+      {/* Sidebar */}
+      <div className={`fixed md:relative w-64 h-full bg-white border-r border-gray-200 
+                      transition-all duration-300 ease-in-out transform 
+                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}>
         <div className="p-4">
           <Button 
             className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB] text-white"
@@ -58,11 +56,12 @@ const Chat = () => {
           </Button>
         </div>
         
-        <div className="chat-list">
+        <div className="flex flex-col gap-2 p-2">
           {chats.map((chat) => (
             <div
               key={chat.id}
-              className={`chat-item ${chat.active ? 'active' : ''}`}
+              className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors
+                         ${chat.active ? 'bg-gray-100' : ''}`}
             >
               <MessageSquare className="w-4 h-4" />
               <span className="text-sm truncate">{chat.title}</span>
@@ -71,22 +70,10 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Main Content - Mobile Optimized */}
-      <div className="flex-1 flex flex-col h-screen relative w-full">
-        {/* Navbar with Logo */}
-        <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200 px-4 py-2 sticky top-0 z-30">
-          <div className="flex items-center justify-between">
-            <img 
-              src="/lovable-uploads/8ee7e32d-1c38-47e6-8e4e-c5cd0225a84c.png" 
-              alt="Logo" 
-              className="h-8 w-8"
-            />
-            <Navbar />
-          </div>
-        </div>
-
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-screen relative">
         {/* Messages Area */}
-        <ScrollArea className="flex-1 overflow-y-auto custom-scrollbar">
+        <ScrollArea className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* AI Message */}
             <div className="flex gap-6 animate-fade-up">
@@ -99,9 +86,9 @@ const Chat = () => {
           </div>
         </ScrollArea>
 
-        {/* Message Input - Mobile Optimized */}
-        <div className="sticky bottom-0 left-0 right-0 mx-auto w-full p-4 bg-white">
-          <div className="relative max-w-4xl mx-auto">
+        {/* Message Input */}
+        <div className="p-4 bg-white">
+          <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
