@@ -13,7 +13,7 @@ const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [chats] = useState([
+  const [chats, setChats] = useState([
     { id: 1, title: "Deep Personality Analysis", active: true },
     { id: 2, title: "Career Guidance Session", active: false },
     { id: 3, title: "Mental Health Support", active: false },
@@ -32,15 +32,17 @@ const Chat = () => {
   };
 
   const handleNewChat = () => {
+    const newChats = [...chats].map(chat => ({ ...chat, active: false }));
     const newChat = {
       id: chats.length + 1,
       title: "New Chat",
       active: true
     };
-    // Set all other chats to inactive
-    chats.forEach(chat => chat.active = false);
-    // Add new chat to the list
-    chats.unshift(newChat);
+    setChats([newChat, ...newChats]);
+    toast({
+      title: "New chat created",
+      description: "Started a new conversation",
+    });
   };
 
   const toggleSidebar = () => {
@@ -51,7 +53,7 @@ const Chat = () => {
     <div className="flex h-screen overflow-hidden">
       <button
         onClick={toggleSidebar}
-        className="fixed top-14 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-20 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
         style={{ background: 'transparent' }}
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
@@ -59,7 +61,8 @@ const Chat = () => {
 
       <div className={`fixed md:relative w-64 h-full bg-black text-white 
                       transition-all duration-300 ease-in-out transform 
-                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40 overflow-y-auto`}>
+                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}
+           style={{ overflowY: 'auto' }}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-700">
             <div className="relative">
@@ -88,7 +91,7 @@ const Chat = () => {
 
           <div className="p-4">
             <Button 
-              className="w-full bg-serona-primary hover:bg-serona-accent text-serona-dark"
+              className="w-full bg-[#40E0D0] hover:bg-[#2CB5A8] text-[#35393d]"
               onClick={handleNewChat}
             >
               <Plus className="mr-2 h-4 w-4" /> New Chat
@@ -120,13 +123,13 @@ const Chat = () => {
           <Navbar />
         </div>
 
-        <ScrollArea className="flex-1 overflow-y-auto bg-white custom-scrollbar">
+        <ScrollArea className="flex-1 bg-white custom-scrollbar" style={{ overflowY: 'auto' }}>
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* Chat messages will go here */}
           </div>
         </ScrollArea>
 
-        <div className="p-4 bg-white sticky bottom-0 left-0 right-0">
+        <div className="p-4 bg-white fixed bottom-0 left-0 right-0 md:static">
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
