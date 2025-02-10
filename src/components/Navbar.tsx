@@ -57,7 +57,7 @@ const Navbar = () => {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-serona-dark/95 backdrop-blur-lg py-4 animate-fade-up">
+          <div className="md:hidden absolute top-full left-0 right-0 bg-serona-dark py-4 animate-fade-up">
             <div className="flex flex-col space-y-4 px-4">
               <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)}>Home</NavLink>
               <NavLink to="/chat" onClick={() => setIsMobileMenuOpen(false)}>
