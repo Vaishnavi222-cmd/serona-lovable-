@@ -37,8 +37,8 @@ const Hero = () => {
             Welcome to Serona AI
           </h1>
           
-          <p className="text-lg md:text-2xl text-serona-secondary/80 max-w-2xl mx-auto mb-12 opacity-0 animate-fade-up" style={{ animationDelay: '0.6s' }}>
-            AI-driven insights into your personality, career, and relationships
+          <p className="text-lg md:text-2xl text-serona-secondary/80 max-w-3xl mx-auto mb-12 opacity-0 animate-fade-up" style={{ animationDelay: '0.6s' }}>
+            Your AI-Powered Guide for Self-Discovery & Growth. Serona AI analyzes your behavior and thinking patterns to provide personalized guidance, helping you navigate life's challenges with confidence.
           </p>
           
           <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
@@ -48,7 +48,7 @@ const Hero = () => {
                         font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105 
                         w-full md:w-auto min-w-0 md:min-w-[400px] mx-auto"
             >
-              Get Started!
+              ➡️ Start Your Journey Today!
             </Link>
           </div>
         </div>

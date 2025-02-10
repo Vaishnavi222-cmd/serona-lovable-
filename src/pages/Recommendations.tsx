@@ -1,6 +1,9 @@
 
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from 'react';
+import { X } from 'lucide-react';
 
 const recommendations = [
   {
@@ -30,6 +33,8 @@ const recommendations = [
 ];
 
 const Recommendations = () => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
@@ -37,7 +42,11 @@ const Recommendations = () => {
         <h1 className="text-4xl font-bold text-serona-dark mb-12 text-center">Recommended Resources</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {recommendations.map((item) => (
-            <div key={item.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform">
+            <div 
+              key={item.id} 
+              className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => setIsDialogOpen(true)}
+            >
               <img
                 src={item.image}
                 alt={item.name}
@@ -50,6 +59,25 @@ const Recommendations = () => {
             </div>
           ))}
         </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>Coming Soon!</span>
+                <button
+                  onClick={() => setIsDialogOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-center py-4">
+              We are currently working on our eBooks and guides. Coming soon!
+            </p>
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>
