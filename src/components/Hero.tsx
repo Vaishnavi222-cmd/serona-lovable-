@@ -24,16 +24,16 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="min-h-[80vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6">
+    <section className="min-h-[75vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6">
       <div className="absolute inset-0 bg-[url('/photo-1485827404703-89b55fcc595e')] bg-cover bg-center opacity-10" />
       
-      <div className="container mx-auto relative z-10 py-12">
+      <div className="container mx-auto relative z-10 py-16">
         <div className="text-center" ref={contentRef}>
-          <div className="mb-8">
-            <Brain className="w-16 h-16 mx-auto text-serona-primary animate-pulse" />
+          <div className="mb-10">
+            <Brain className="w-20 h-20 mx-auto text-serona-primary animate-pulse" />
           </div>
           
-          <h1 className="text-4xl md:text-7xl font-bold text-serona-secondary mb-6 opacity-0 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+          <h1 className="text-4xl md:text-7xl font-bold text-serona-secondary mb-8 opacity-0 animate-fade-up" style={{ animationDelay: '0.3s' }}>
             Welcome to Serona AI
           </h1>
           
