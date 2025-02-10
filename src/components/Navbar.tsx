@@ -45,8 +45,9 @@ const Navbar = () => {
           </div>
 
           <button 
-            className="md:hidden text-serona-secondary hover:text-serona-primary transition-colors p-2 hover:bg-transparent focus:bg-transparent active:bg-transparent"
+            className="md:hidden text-serona-secondary hover:text-serona-primary transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            style={{ background: 'transparent' }}
           >
             {isMobileMenuOpen ? (
               <X className="w-6 h-6" />
