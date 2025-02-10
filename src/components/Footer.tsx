@@ -1,5 +1,4 @@
 
-import { MessageSquare, Mail, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer = () => {
@@ -16,42 +15,6 @@ const Footer = () => {
             <p className="text-serona-secondary/70">
               Empowering the future with artificial intelligence solutions.
             </p>
-          </div>
-          
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link to="/chat" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                  Chat
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link to="/recommendations" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
-                  Recommendations
-                </Link>
-              </li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Services</h4>
-            <ul className="space-y-2">
-              <li><span className="text-serona-secondary/70">Personality Insights</span></li>
-              <li><span className="text-serona-secondary/70">Career Guidance</span></li>
-              <li><span className="text-serona-secondary/70">Relationship Advice</span></li>
-              <li><span className="text-serona-secondary/70">Self Improvement Help</span></li>
-            </ul>
           </div>
           
           <div>
@@ -75,6 +38,42 @@ const Footer = () => {
               <li>
                 <Link to="/refund" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
                   Refund & Cancellation
+                </Link>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Services</h4>
+            <ul className="space-y-2">
+              <li><span className="text-serona-secondary/70">Personality Insights</span></li>
+              <li><span className="text-serona-secondary/70">Career Guidance</span></li>
+              <li><span className="text-serona-secondary/70">Relationship Advice</span></li>
+              <li><span className="text-serona-secondary/70">Self Improvement Help</span></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link to="/chat" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Chat
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link to="/recommendations" className="text-serona-secondary/70 hover:text-serona-primary transition-colors">
+                  Recommendations
                 </Link>
               </li>
             </ul>

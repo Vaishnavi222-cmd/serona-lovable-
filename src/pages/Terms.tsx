@@ -11,32 +11,44 @@ const Terms = () => {
         <div className="prose max-w-3xl">
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-serona-dark mb-4">1. Agreement to Terms</h2>
-            <p className="text-lg text-serona-dark/80">
-              By using Serona AI, you agree to engage with the platform for self-improvement purposes only. Any misuse of the AI, including inappropriate behavior, may result in immediate service termination.
+            <p className="text-lg text-serona-dark/80 mb-6">
+              By accessing Serona AI, you agree to use it for self-discovery and informational purposes only.
+              Misuse of the platform, including inappropriate or harmful behavior, may result in account suspension or termination.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-serona-dark mb-4">2. Service Usage</h2>
+            <p className="text-lg text-serona-dark/80 mb-4">
+              Serona AI offers a free tier with limited daily messages and a premium plan with unlimited access.
+            </p>
+            <p className="text-lg text-serona-dark/80 mb-4">User Guidelines:</p>
             <ul className="list-disc pl-6 mb-6 text-serona-dark/80">
-              <li>Free-tier users have limited daily messages</li>
-              <li>Premium subscribers receive unlimited access</li>
-              <li>Users must be 18 years or older to use the service</li>
-              <li>Users are responsible for maintaining account security</li>
+              <li>Users must be 18 years or older to access the platform.</li>
+              <li>You are responsible for maintaining the security of your account credentials.</li>
+              <li>The AI should not be used for illegal activities, spreading misinformation, or harassment.</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-serona-dark mb-4">3. Content Guidelines</h2>
-            <p className="text-lg text-serona-dark/80">
-              Users must not use Serona AI for:
-            </p>
+            <h2 className="text-2xl font-semibold text-serona-dark mb-4">3. Content & Conduct Guidelines</h2>
+            <p className="text-lg text-serona-dark/80 mb-4">Users must not engage in the following:</p>
             <ul className="list-disc pl-6 mb-6 text-serona-dark/80">
-              <li>Generating harmful or malicious content</li>
-              <li>Spreading misinformation</li>
-              <li>Harassing or threatening others</li>
-              <li>Any illegal activities</li>
+              <li>Using the AI to generate harmful, illegal, or offensive content.</li>
+              <li>Spreading misinformation or deceptive claims.</li>
+              <li>Harassment, threats, or cyberbullying.</li>
+              <li>Attempting to manipulate AI behavior for unethical purposes.</li>
             </ul>
+            <p className="text-lg text-serona-dark/80 mb-6">
+              Serona AI reserves the right to suspend or terminate accounts violating these terms.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-serona-dark mb-4">4. Support & Contact Information</h2>
+            <p className="text-lg text-serona-dark/80">
+              For any concerns, visit our Contact Us page or reach out to support@seronaai.tech.
+            </p>
           </section>
         </div>
       </main>

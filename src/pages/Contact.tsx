@@ -1,3 +1,4 @@
+
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useToast } from "@/components/ui/use-toast";
@@ -18,7 +19,11 @@ const Contact = () => {
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-24">
         <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-4xl font-bold text-serona-dark mb-8 text-center">Contact Us</h1>
+          <h1 className="text-4xl font-bold text-serona-dark mb-4 text-center">Contact Us – We're Here to Help!</h1>
+          <p className="text-lg text-serona-dark/80 mb-8 text-center">
+            Have a question or need assistance? Reach out to us, and we'll get back to you as soon as possible.
+          </p>
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-serona-dark mb-2">Name</label>
@@ -54,6 +59,17 @@ const Contact = () => {
               Send Message
             </button>
           </form>
+
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <div className="text-center space-y-4">
+              <p className="text-serona-dark/80">
+                📩 Email us at: <a href="mailto:support@seronaai.tech" className="text-serona-primary">support@seronaai.tech</a>
+              </p>
+              <p className="text-serona-dark/80">
+                ⏳ We aim to respond within 24-48 hours.
+              </p>
+            </div>
+          </div>
         </div>
       </main>
       <Footer />
