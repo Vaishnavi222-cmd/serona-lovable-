@@ -7,11 +7,7 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <img
-              src="/lovable-uploads/d085d564-8a24-4e71-b13a-ebd553eca1ca.png"
-              alt="Serona AI Logo"
-              className="h-10 w-auto"
-            />
+            <span className="text-xl font-bold text-serona-primary">Serona AI</span>
             <p className="text-serona-secondary/70">
               Empowering the future with artificial intelligence solutions.
             </p>

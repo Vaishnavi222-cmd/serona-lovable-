@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare, Mail, ShoppingCart, Menu as MenuIcon, X } from 'lucide-react';
@@ -21,11 +22,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
-            <img
-              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-              alt="Serona AI Logo"
-              className="h-8 w-auto"
-            />
+            <span className="text-serona-primary font-bold text-xl">Serona AI</span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
