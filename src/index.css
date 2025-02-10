@@ -26,11 +26,11 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-gray-800;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  @apply bg-gray-600 rounded-full hover:bg-gray-500 transition-colors;
 }
 
 /* Animations */
@@ -48,4 +48,3 @@
 .animate-fade-up {
   animation: fade-up 0.3s ease-out forwards;
 }
-

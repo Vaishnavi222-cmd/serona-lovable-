@@ -1,13 +1,15 @@
 
 import { useState } from 'react';
-import { Send, Menu, MessageSquare, Plus, X } from 'lucide-react';
+import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
 
 const Chat = () => {
   const [message, setMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -44,34 +46,76 @@ const Chat = () => {
       </button>
 
       {/* Sidebar */}
-      <div className={`fixed md:relative w-64 h-full bg-white border-r border-gray-200 
+      <div className={`fixed md:relative w-64 h-full bg-black text-white
                       transition-all duration-300 ease-in-out transform 
-                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}>
-        <div className="p-4">
-          <Button 
-            className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB] text-white"
-            onClick={() => {}}
-          >
-            <Plus className="mr-2 h-4 w-4" /> New Chat
-          </Button>
-        </div>
-        
-        <div className="flex flex-col gap-2 p-2">
-          {chats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors
-                         ${chat.active ? 'bg-gray-100' : ''}`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-sm truncate">{chat.title}</span>
+                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}>
+        <div className="flex flex-col h-full">
+          {/* Search Bar */}
+          <div className="p-4 border-b border-gray-700">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10"
+              />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             </div>
-          ))}
+          </div>
+
+          {/* Serona AI Brand */}
+          <div className="p-4 flex items-center gap-3 border-b border-gray-700">
+            <img
+              src="/lovable-uploads/e9d1da42-053d-4845-a9e7-0ee69461b35f.png"
+              alt="Serona AI"
+              className="w-8 h-8"
+            />
+            <span className="text-lg font-semibold">Serona AI</span>
+          </div>
+
+          {/* New Chat Button */}
+          <div className="p-4">
+            <Button 
+              className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
+              onClick={() => {}}
+            >
+              <Plus className="mr-2 h-4 w-4" /> New Chat
+            </Button>
+          </div>
+          
+          {/* Chat List */}
+          <ScrollArea className="flex-1 custom-scrollbar">
+            <div className="flex flex-col gap-2 p-2">
+              {chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
+                             ${chat.active ? 'bg-gray-800' : ''}`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="text-sm truncate">{chat.title}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen relative">
+        {/* Header */}
+        <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <img
+              src="/lovable-uploads/e9d1da42-053d-4845-a9e7-0ee69461b35f.png"
+              alt="Logo"
+              className="h-8 w-8 ml-12"
+            />
+          </div>
+          <Navbar />
+        </div>
+
         {/* Messages Area */}
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
