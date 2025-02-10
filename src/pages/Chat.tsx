@@ -42,11 +42,11 @@ const Chat = () => {
         onClick={toggleSidebar}
         className="fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
       >
-        {isSidebarOpen ? <X className="w-6 h-6 text-gray-800" /> : <Menu className="w-6 h-6 text-gray-800" />}
+        {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
       {/* Sidebar */}
-      <div className={`fixed md:relative w-64 h-full bg-black text-white
+      <div className={`fixed md:relative w-64 h-full bg-black text-white 
                       transition-all duration-300 ease-in-out transform 
                       ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}>
         <div className="flex flex-col h-full">
@@ -83,7 +83,7 @@ const Chat = () => {
               <Plus className="mr-2 h-4 w-4" /> New Chat
             </Button>
           </div>
-          
+
           {/* Chat List */}
           <ScrollArea className="flex-1 custom-scrollbar">
             <div className="flex flex-col gap-2 p-2">
@@ -117,7 +117,7 @@ const Chat = () => {
         </div>
 
         {/* Messages Area */}
-        <ScrollArea className="flex-1 overflow-y-auto">
+        <ScrollArea className="flex-1 overflow-y-auto bg-white">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* AI Message */}
             <div className="flex gap-6 animate-fade-up">
