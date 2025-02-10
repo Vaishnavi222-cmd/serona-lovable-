@@ -40,7 +40,7 @@ const Chat = () => {
       {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-5 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
@@ -75,7 +75,7 @@ const Chat = () => {
           {/* Serona AI Brand */}
           <div className="p-4 flex items-center gap-3 border-b border-gray-700">
             <img
-              src="/lovable-uploads/e9d1da42-053d-4845-a9e7-0ee69461b35f.png"
+              src="/lovable-uploads/d8b2ad73-4464-4f87-9b00-45c2a93902b0.png"
               alt="Serona AI"
               className="w-8 h-8"
             />
@@ -116,7 +116,7 @@ const Chat = () => {
         <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <img
-              src="/lovable-uploads/e9d1da42-053d-4845-a9e7-0ee69461b35f.png"
+              src="/lovable-uploads/d8b2ad73-4464-4f87-9b00-45c2a93902b0.png"
               alt="Logo"
               className="h-8 w-8 ml-12"
             />
