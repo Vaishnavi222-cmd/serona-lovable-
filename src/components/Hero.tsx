@@ -24,10 +24,10 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="h-[70vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6">
+    <section className="min-h-[75vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6 pb-16">
       <div className="absolute inset-0 bg-[url('/photo-1485827404703-89b55fcc595e')] bg-cover bg-center opacity-10" />
       
-      <div className="container mx-auto relative z-10">
+      <div className="container mx-auto relative z-10 py-8">
         <div className="text-center" ref={contentRef}>
           <div className="mb-10">
             <Brain className="w-20 h-20 mx-auto text-serona-primary animate-pulse" />
