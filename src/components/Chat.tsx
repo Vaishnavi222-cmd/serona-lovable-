@@ -43,6 +43,7 @@ const Chat = () => {
       title: "New chat created",
       description: "Started a new conversation",
     });
+    setIsSidebarOpen(true); // Open sidebar when creating new chat
   };
 
   const toggleSidebar = () => {
@@ -50,24 +51,25 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Three-dot menu button - Adjusted position to prevent overlap */}
+    <div className="flex h-screen overflow-hidden bg-white">
+      {/* Three-dot menu button - Fixed position */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-28 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
         style={{ background: 'transparent' }}
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
-      {/* Sidebar with scrollbar */}
+      {/* Sidebar */}
       <div 
         className={`fixed md:relative w-64 h-full bg-black text-white 
                    transition-all duration-300 ease-in-out transform 
-                   ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40
-                   overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent`}
+                   ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} 
+                   z-40 flex flex-col`}
       >
         <div className="flex flex-col h-full">
+          {/* Search bar */}
           <div className="p-4 border-b border-gray-700">
             <div className="relative">
               <input
@@ -89,54 +91,60 @@ const Chat = () => {
             </div>
           </div>
 
+          {/* Brand */}
           <div className="p-4 flex items-center gap-3 border-b border-gray-700">
             <span className="text-lg font-semibold">Serona AI</span>
           </div>
 
+          {/* New Chat Button - Matched color with Get Started */}
           <div className="p-4">
             <Button 
-              className="w-full bg-[#1EAEDB] hover:bg-[#1795BD] text-white"
+              className="w-full bg-[#1EAEDB] hover:bg-[#1795BD] text-white font-semibold"
               onClick={handleNewChat}
             >
               <Plus className="mr-2 h-4 w-4" /> New Chat
             </Button>
           </div>
 
-          {/* Chat list with scrollbar */}
-          <ScrollArea className="flex-1 custom-scrollbar overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-            <div className="flex flex-col gap-2 p-2">
-              {chats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
-                             ${chat.active ? 'bg-gray-800' : ''}`}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span className="text-sm truncate">{chat.title}</span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
+          {/* Chat list with custom scrollbar */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <ScrollArea className="h-full">
+              <div className="flex flex-col gap-2 p-2">
+                {chats.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
+                               ${chat.active ? 'bg-gray-800' : ''}`}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="text-sm truncate">{chat.title}</span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col h-screen relative">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-screen">
+        {/* Header */}
         <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold ml-20">Serona AI</span>
+            <span className="text-lg font-semibold ml-12 md:ml-16">Serona AI</span>
           </div>
           <Navbar />
         </div>
 
-        {/* Main chat area with scrollbar */}
-        <ScrollArea className="flex-1 bg-white custom-scrollbar overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent">
+        {/* Messages Area with custom scrollbar */}
+        <ScrollArea className="flex-1 bg-white">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* Chat messages will go here */}
           </div>
         </ScrollArea>
 
-        {/* Message input box - Adjusted for mobile */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
+        {/* Message input box - Fixed for mobile */}
+        <div className={`bg-white border-t border-gray-200 p-4 ${isMobile ? 'fixed bottom-0 left-0 right-0' : ''}`}>
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
