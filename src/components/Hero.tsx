@@ -24,10 +24,10 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="min-h-[75vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6 pb-16">
+    <section className="min-h-screen md:min-h-[85vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6 py-20">
       <div className="absolute inset-0 bg-[url('/photo-1485827404703-89b55fcc595e')] bg-cover bg-center opacity-10" />
       
-      <div className="container mx-auto relative z-10 py-8">
+      <div className="container mx-auto relative z-10">
         <div className="text-center" ref={contentRef}>
           <div className="mb-10">
             <Brain className="w-20 h-20 mx-auto text-serona-primary animate-pulse" />
@@ -41,7 +41,7 @@ const Hero = () => {
             Your AI-Powered Guide for Self-Discovery & Growth. Serona AI analyzes your behavior and thinking patterns to provide personalized guidance, helping you navigate life's challenges with confidence.
           </p>
           
-          <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
+          <div className="opacity-0 animate-fade-up mb-8" style={{ animationDelay: '0.9s' }}>
             <Link
               to="/chat"
               className="inline-block px-6 md:px-32 py-3 md:py-4 bg-serona-primary text-serona-dark rounded-full
