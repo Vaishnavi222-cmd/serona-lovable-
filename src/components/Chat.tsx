@@ -53,16 +53,17 @@ const Chat = () => {
     <div className="flex h-screen overflow-hidden">
       <button
         onClick={toggleSidebar}
-        className="fixed top-20 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-24 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
         style={{ background: 'transparent' }}
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
+      {/* Sidebar with scrollbar */}
       <div className={`fixed md:relative w-64 h-full bg-black text-white 
                       transition-all duration-300 ease-in-out transform 
-                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}
-           style={{ overflowY: 'auto' }}>
+                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40
+                      overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent`}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-700">
             <div className="relative">
@@ -91,14 +92,14 @@ const Chat = () => {
 
           <div className="p-4">
             <Button 
-              className="w-full bg-[#40E0D0] hover:bg-[#2CB5A8] text-[#35393d]"
+              className="w-full bg-[#1EAEDB] hover:bg-[#1795BD] text-white"
               onClick={handleNewChat}
             >
               <Plus className="mr-2 h-4 w-4" /> New Chat
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 custom-scrollbar">
+          <ScrollArea className="flex-1 custom-scrollbar overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
             <div className="flex flex-col gap-2 p-2">
               {chats.map((chat) => (
                 <div
@@ -118,18 +119,20 @@ const Chat = () => {
       <div className="flex-1 flex flex-col h-screen relative">
         <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold ml-12">Serona AI</span>
+            <span className="text-lg font-semibold ml-16">Serona AI</span>
           </div>
           <Navbar />
         </div>
 
-        <ScrollArea className="flex-1 bg-white custom-scrollbar" style={{ overflowY: 'auto' }}>
+        {/* Main chat area with scrollbar */}
+        <ScrollArea className="flex-1 bg-white custom-scrollbar overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* Chat messages will go here */}
           </div>
         </ScrollArea>
 
-        <div className="p-4 bg-white fixed bottom-0 left-0 right-0 md:static">
+        {/* Message input box - fixed for mobile */}
+        <div className="p-4 bg-white w-full bottom-0 left-0 right-0 md:static fixed">
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
