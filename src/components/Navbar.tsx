@@ -22,7 +22,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
             <img
-              src="/lovable-uploads/7437e344-eb2a-4e4e-99cb-7ea5d8c0045f.png"
+              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
               alt="Serona AI Logo"
               className="h-8 w-auto"
             />
@@ -47,7 +47,6 @@ const Navbar = () => {
             </button>
           </div>
 
-          {/* Mobile Menu Button */}
           <button 
             className="md:hidden p-2 text-serona-secondary hover:text-serona-primary transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -60,7 +59,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-serona-dark/95 backdrop-blur-lg py-4 animate-fade-up">
             <div className="flex flex-col space-y-4 px-4">
