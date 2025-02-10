@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "../components/Navbar";
@@ -51,19 +51,22 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Three-dot menu button - Adjusted position to prevent overlap */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-24 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-28 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
         style={{ background: 'transparent' }}
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
       {/* Sidebar with scrollbar */}
-      <div className={`fixed md:relative w-64 h-full bg-black text-white 
-                      transition-all duration-300 ease-in-out transform 
-                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40
-                      overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent`}>
+      <div 
+        className={`fixed md:relative w-64 h-full bg-black text-white 
+                   transition-all duration-300 ease-in-out transform 
+                   ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40
+                   overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent`}
+      >
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-700">
             <div className="relative">
@@ -99,6 +102,7 @@ const Chat = () => {
             </Button>
           </div>
 
+          {/* Chat list with scrollbar */}
           <ScrollArea className="flex-1 custom-scrollbar overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
             <div className="flex flex-col gap-2 p-2">
               {chats.map((chat) => (
@@ -119,7 +123,7 @@ const Chat = () => {
       <div className="flex-1 flex flex-col h-screen relative">
         <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold ml-16">Serona AI</span>
+            <span className="text-lg font-semibold ml-20">Serona AI</span>
           </div>
           <Navbar />
         </div>
@@ -131,8 +135,8 @@ const Chat = () => {
           </div>
         </ScrollArea>
 
-        {/* Message input box - fixed for mobile */}
-        <div className="p-4 bg-white w-full bottom-0 left-0 right-0 md:static fixed">
+        {/* Message input box - Adjusted for mobile */}
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
