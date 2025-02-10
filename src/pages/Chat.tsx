@@ -58,9 +58,17 @@ const Chat = () => {
                 placeholder="Search chats..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10"
+                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10 pr-10"
               />
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-2.5"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -119,14 +127,6 @@ const Chat = () => {
         {/* Messages Area */}
         <ScrollArea className="flex-1 overflow-y-auto bg-white">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
-            {/* AI Message */}
-            <div className="flex gap-6 animate-fade-up">
-              <div className="w-8 h-8 rounded-lg bg-[#40E0D0] flex items-center justify-center text-white shrink-0">
-                AI
-              </div>
-              <div className="flex-1 space-y-2 glass-card rounded-2xl p-6 shadow-sm">
-              </div>
-            </div>
           </div>
         </ScrollArea>
 
