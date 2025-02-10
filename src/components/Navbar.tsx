@@ -22,7 +22,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
             <img
-              src="/lovable-uploads/d085d564-8a24-4e71-b13a-ebd553eca1ca.png"
+              src="/lovable-uploads/7437e344-eb2a-4e4e-99cb-7ea5d8c0045f.png"
               alt="Serona AI Logo"
               className="h-8 w-auto"
             />
