@@ -44,9 +44,9 @@ const Hero = () => {
           <div className="opacity-0 animate-fade-up" style={{ animationDelay: '0.9s' }}>
             <Link
               to="/chat"
-              className="inline-block px-8 md:px-32 py-4 bg-serona-primary text-serona-dark rounded-full
+              className="inline-block px-6 md:px-32 py-3 md:py-4 bg-serona-primary text-serona-dark rounded-full
                         font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105 
-                        w-full md:w-auto min-w-0 md:min-w-[400px] mx-auto"
+                        w-full md:w-auto text-base md:text-lg min-w-0 md:min-w-[400px] mx-auto"
             >
               ➡️ Start Your Journey Today!
             </Link>

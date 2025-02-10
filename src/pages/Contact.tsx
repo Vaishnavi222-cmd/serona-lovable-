@@ -62,10 +62,10 @@ const Contact = () => {
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="text-center space-y-2">
-              <p className="text-serona-dark/80 text-sm">
+              <p className="text-serona-dark/80 text-base md:text-lg">
                 📩 Email us at: <a href="mailto:support@seronaai.tech" className="text-serona-primary">support@seronaai.tech</a>
               </p>
-              <p className="text-serona-dark/80 text-sm">
+              <p className="text-serona-dark/80 text-base md:text-lg">
                 ⏳ We aim to respond within 24-48 hours.
               </p>
             </div>

@@ -61,9 +61,9 @@ const Recommendations = () => {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
+              <DialogTitle className="flex items-center justify-between text-xl font-semibold">
                 <span>Coming Soon!</span>
                 <button
                   onClick={() => setIsDialogOpen(false)}
@@ -73,9 +73,11 @@ const Recommendations = () => {
                 </button>
               </DialogTitle>
             </DialogHeader>
-            <p className="text-center py-4">
-              We are currently working on our eBooks and guides. Coming soon!
-            </p>
+            <div className="p-6">
+              <p className="text-center text-lg text-gray-700">
+                We are currently working on our eBooks and guides. Coming soon!
+              </p>
+            </div>
           </DialogContent>
         </Dialog>
       </main>
