@@ -1,9 +1,8 @@
 
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const recommendations = [
   {
@@ -33,7 +32,30 @@ const recommendations = [
 ];
 
 const Recommendations = () => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isDetailsPage = location.pathname.includes('/details');
+
+  if (isDetailsPage) {
+    return (
+      <div className="min-h-screen flex flex-col bg-white">
+        <Navbar />
+        <main className="flex-1 container mx-auto px-4 py-24 flex flex-col items-center justify-center">
+          <h2 className="text-3xl font-bold text-serona-dark mb-8 text-center">Coming Soon!</h2>
+          <p className="text-xl text-gray-700 mb-12 text-center">
+            We are currently working on our eBooks and guides. Stay tuned!
+          </p>
+          <button
+            onClick={() => navigate('/recommendations')}
+            className="px-6 py-3 bg-serona-primary text-serona-dark rounded-full font-medium hover:bg-serona-accent transition-colors"
+          >
+            ← Go Back
+          </button>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -45,7 +67,7 @@ const Recommendations = () => {
             <div 
               key={item.id} 
               className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform cursor-pointer"
-              onClick={() => setIsDialogOpen(true)}
+              onClick={() => navigate('/recommendations/details')}
             >
               <img
                 src={item.image}
@@ -59,27 +81,6 @@ const Recommendations = () => {
             </div>
           ))}
         </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between text-xl font-semibold">
-                <span>Coming Soon!</span>
-                <button
-                  onClick={() => setIsDialogOpen(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="p-6">
-              <p className="text-center text-lg text-gray-700">
-                We are currently working on our eBooks and guides. Coming soon!
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
       </main>
       <Footer />
     </div>

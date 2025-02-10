@@ -1,4 +1,3 @@
-
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -117,8 +116,9 @@ const Features = () => {
         <div className="text-center">
           <Link
             to="/chat"
-            className="inline-block px-8 py-4 bg-serona-primary text-serona-dark rounded-full
-                      font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105"
+            className="inline-block px-6 md:px-32 py-3 md:py-4 bg-serona-primary text-serona-dark rounded-full
+                      font-medium transition-all duration-300 hover:bg-serona-accent hover:scale-105 
+                      w-full md:w-auto text-base md:text-lg min-w-0 md:min-w-[400px] mx-auto"
           >
             ➡️ Start Your Journey Today!
           </Link>
