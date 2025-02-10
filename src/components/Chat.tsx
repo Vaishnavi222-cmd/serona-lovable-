@@ -31,6 +31,18 @@ const Chat = () => {
     setMessage('');
   };
 
+  const handleNewChat = () => {
+    const newChat = {
+      id: chats.length + 1,
+      title: "New Chat",
+      active: true
+    };
+    // Set all other chats to inactive
+    chats.forEach(chat => chat.active = false);
+    // Add new chat to the list
+    chats.unshift(newChat);
+  };
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -39,14 +51,15 @@ const Chat = () => {
     <div className="flex h-screen overflow-hidden">
       <button
         onClick={toggleSidebar}
-        className="fixed top-5 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-14 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        style={{ background: 'transparent' }}
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
       <div className={`fixed md:relative w-64 h-full bg-black text-white 
                       transition-all duration-300 ease-in-out transform 
-                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}>
+                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40 overflow-y-auto`}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-700">
             <div className="relative">
@@ -75,8 +88,8 @@ const Chat = () => {
 
           <div className="p-4">
             <Button 
-              className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
-              onClick={() => {}}
+              className="w-full bg-serona-primary hover:bg-serona-accent text-serona-dark"
+              onClick={handleNewChat}
             >
               <Plus className="mr-2 h-4 w-4" /> New Chat
             </Button>
@@ -107,12 +120,13 @@ const Chat = () => {
           <Navbar />
         </div>
 
-        <ScrollArea className="flex-1 overflow-y-auto bg-white">
+        <ScrollArea className="flex-1 overflow-y-auto bg-white custom-scrollbar">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
+            {/* Chat messages will go here */}
           </div>
         </ScrollArea>
 
-        <div className="p-4 bg-white">
+        <div className="p-4 bg-white sticky bottom-0 left-0 right-0">
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
