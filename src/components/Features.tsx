@@ -130,7 +130,7 @@ const Features = () => {
 
 const FeatureCard = ({ title, description, image }: { title: string; description: string; image: string }) => (
   <div className="group p-6 rounded-2xl bg-serona-secondary/80 backdrop-blur-lg border border-serona-primary/20 transition-all duration-300 hover:scale-105">
-    <img src={image} alt={title} className="w-full h-48 object-cover rounded-lg mb-6" />
+    <img src={image} alt={title} className="w-full h-48 object-cover rounded-lg mb-6" loading="lazy" />
     <h3 className="text-xl font-semibold text-serona-dark mb-3">{title}</h3>
     <p className="text-serona-dark/70 whitespace-pre-line">{description}</p>
   </div>
