@@ -46,7 +46,7 @@ const Chat = () => {
       </button>
 
       {/* Sidebar with ScrollArea */}
-      <div className={`fixed md:relative w-64 h-full bg-black text-white 
+      <div className={`fixed md:relative w-64 h-full bg-black text-white overflow-y-auto
                       transition-all duration-300 ease-in-out transform 
                       ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}>
         <div className="flex flex-col h-full">
@@ -93,7 +93,7 @@ const Chat = () => {
           </div>
 
           {/* Chat List with ScrollArea */}
-          <ScrollArea className="flex-1 px-2">
+          <ScrollArea className="flex-1 px-2 custom-scrollbar">
             <div className="space-y-2 py-2">
               {chats.map((chat) => (
                 <div
@@ -125,14 +125,14 @@ const Chat = () => {
         </div>
 
         {/* Messages Area with ScrollArea */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* Messages will be rendered here */}
           </div>
         </ScrollArea>
 
-        {/* Message Input - Fixed positioning adjusted for mobile */}
-        <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4">
+        {/* Message Input - Fixed positioning for mobile */}
+        <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4 z-20">
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
