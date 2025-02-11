@@ -45,7 +45,7 @@ const Chat = () => {
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
-      {/* Sidebar */}
+      {/* Sidebar with ScrollArea */}
       <div className={`fixed md:relative w-64 h-full bg-black text-white 
                       transition-all duration-300 ease-in-out transform 
                       ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}>
@@ -92,9 +92,9 @@ const Chat = () => {
             </Button>
           </div>
 
-          {/* Chat List */}
-          <ScrollArea className="flex-1 custom-scrollbar">
-            <div className="flex flex-col gap-2 p-2">
+          {/* Chat List with ScrollArea */}
+          <ScrollArea className="flex-1 px-2">
+            <div className="space-y-2 py-2">
               {chats.map((chat) => (
                 <div
                   key={chat.id}
@@ -111,7 +111,7 @@ const Chat = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen relative">
+      <div className="flex-1 flex flex-col h-screen relative bg-white">
         {/* Header */}
         <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
@@ -124,14 +124,15 @@ const Chat = () => {
           <Navbar />
         </div>
 
-        {/* Messages Area */}
-        <ScrollArea className="flex-1 overflow-y-auto bg-white">
+        {/* Messages Area with ScrollArea */}
+        <ScrollArea className="flex-1">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
+            {/* Messages will be rendered here */}
           </div>
         </ScrollArea>
 
-        {/* Message Input */}
-        <div className="p-4 bg-white">
+        {/* Message Input - Fixed positioning adjusted for mobile */}
+        <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4">
           <div className="max-w-4xl mx-auto relative">
             <textarea
               value={message}
