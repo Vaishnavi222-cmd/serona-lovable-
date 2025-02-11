@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 const Chat = () => {
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [chats] = useState([
@@ -36,19 +36,19 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar Toggle Button */}
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Sidebar Toggle Button - Moved outside the header */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-5 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        className="fixed top-5 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors md:left-6"
       >
         {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
 
-      {/* Sidebar with ScrollArea */}
-      <div className={`fixed md:relative w-64 h-full bg-black text-white overflow-y-auto
+      {/* Sidebar */}
+      <div className={`fixed md:relative w-64 h-screen bg-black text-white overflow-y-auto z-40
                       transition-all duration-300 ease-in-out transform 
-                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} z-40`}>
+                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}>
         <div className="flex flex-col h-full">
           {/* Search Bar */}
           <div className="p-4 border-b border-gray-700">
@@ -92,7 +92,7 @@ const Chat = () => {
             </Button>
           </div>
 
-          {/* Chat List with ScrollArea */}
+          {/* Chat List */}
           <ScrollArea className="flex-1 px-2 custom-scrollbar">
             <div className="space-y-2 py-2">
               {chats.map((chat) => (
@@ -118,22 +118,22 @@ const Chat = () => {
             <img
               src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
               alt="Logo"
-              className="h-8 w-8 ml-12"
+              className="h-8 w-8 ml-16 md:ml-20"
             />
           </div>
           <Navbar />
         </div>
 
-        {/* Messages Area with ScrollArea */}
+        {/* Messages Area */}
         <ScrollArea className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
             {/* Messages will be rendered here */}
           </div>
         </ScrollArea>
 
-        {/* Message Input - Fixed positioning for mobile */}
+        {/* Message Input */}
         <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4 z-20">
-          <div className="max-w-4xl mx-auto relative">
+          <div className="max-w-4xl mx-auto flex items-center gap-2">
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
