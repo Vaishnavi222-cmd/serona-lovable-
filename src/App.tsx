@@ -16,27 +16,29 @@ import Refund from "./pages/Refund";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <BrowserRouter>
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/recommendations" element={<Recommendations />} />
-          <Route path="/recommendations/details" element={<Recommendations />} />
-          <Route path="/disclaimer" element={<Disclaimer />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/refund" element={<Refund />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/recommendations/details" element={<Recommendations />} />
+            <Route path="/disclaimer" element={<Disclaimer />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/refund" element={<Refund />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </BrowserRouter>
     </QueryClientProvider>
-  </BrowserRouter>
-);
+  );
+};
 
 export default App;
