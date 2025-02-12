@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useAuthState } from '@/hooks/use-auth-state';
+import { supabase } from "@/integrations/supabase/client";
 import { AuthForm } from './AuthForm';
 import { GoogleSignIn } from './GoogleSignIn';
 import { AuthMessages } from './AuthMessages';
