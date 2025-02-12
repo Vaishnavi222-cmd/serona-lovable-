@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, LogOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const {
@@ -26,9 +27,43 @@ const Auth = () => {
     handleAuthSuccess,
   } = useAuthState();
 
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Close dialog handler
   const handleClose = () => {
     navigate('/chat');
+  };
+
+  // Logout handler
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setIsAuthenticated(false);
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out",
+      });
+      navigate('/chat');
+    }
   };
 
   // Email validation
@@ -78,21 +113,26 @@ const Auth = () => {
     }
     
     startLoading();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      handleAuthError(error);
-    } else {
+      if (error) {
+        throw error;
+      }
+
       handleAuthSuccess('Account created successfully! Please check your email for verification.');
       setMode('signin');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      handleAuthError(error);
     }
   };
 
@@ -110,36 +150,31 @@ const Auth = () => {
     }
   };
 
-  // Handle session changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        navigate('/chat');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg relative animate-fade-in">
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          className="absolute right-4 top-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Close dialog"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
+        {/* Header with close and logout buttons */}
+        <div className="absolute right-4 top-4 flex items-center gap-2">
+          {isAuthenticated && (
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+              aria-label="Sign out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            onClick={handleClose}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Close dialog"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
 
         <div className="p-8">
           <div className="text-center mb-8">
-            <img
-              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-              alt="Logo"
-              className="mx-auto h-12 w-12 mb-4"
-            />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}
             </h2>
