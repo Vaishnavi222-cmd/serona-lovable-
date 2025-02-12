@@ -12,6 +12,7 @@ interface MessageInputProps {
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false); // Prevent re-triggering auth
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,11 +27,14 @@ export function MessageInput({ onSend }: MessageInputProps) {
 
   const handleSend = async () => {
     if (!message.trim()) return; // Prevent empty messages
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setShowAuthDialog(true); // Open AuthDialog only when sending a message
-      return;
+
+    if (!authChecked) { // Only check authentication once per session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setShowAuthDialog(true);
+        setAuthChecked(true); // Prevent re-triggering
+        return;
+      }
     }
 
     onSend(message);
