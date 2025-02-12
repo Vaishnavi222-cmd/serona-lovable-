@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ export function MessageInput({ onSend }: MessageInputProps) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setShowAuthDialog(false); // Close dialog if user logs in
+        setShowAuthDialog(false); // Only close dialog on successful auth
       }
     });
 
@@ -29,7 +30,7 @@ export function MessageInput({ onSend }: MessageInputProps) {
     
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      setShowAuthDialog(true); // Open AuthDialog only when sending a message
+      setShowAuthDialog(true); // Show AuthDialog only when trying to send a message
       return;
     }
 
