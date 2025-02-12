@@ -6,9 +6,13 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+type AuthMode = 'signin' | 'signup';
+
 const Auth = () => {
+  const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -36,11 +40,25 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      toast({
+        title: "Error signing up",
+        description: "Please enter your full name",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
     });
 
     if (error) {
@@ -54,8 +72,26 @@ const Auth = () => {
         title: "Success!",
         description: "Check your email for the confirmation link.",
       });
+      setMode('signin');
     }
     setLoading(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/chat`,
+      },
+    });
+
+    if (error) {
+      toast({
+        title: "Error signing in with Google",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -67,59 +103,122 @@ const Auth = () => {
             alt="Logo"
             className="mx-auto h-12 w-12"
           />
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">Welcome to Serona AI</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in or create an account</p>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+            {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            {mode === 'signin' 
+              ? 'Sign in to your account' 
+              : 'Sign up for a new account'}
+          </p>
         </div>
 
-        <form className="mt-8 space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="mt-1"
-                placeholder="Enter your email"
-              />
-            </div>
+        <div>
+          <Button
+            onClick={handleGoogleSignIn}
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <img
+              src="https://www.google.com/favicon.ico"
+              alt="Google"
+              className="w-4 h-4"
+            />
+            Continue with Google
+          </Button>
 
+          <div className="mt-6 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            </div>
+          </div>
+        </div>
+
+        <form className="mt-6 space-y-6" onSubmit={mode === 'signin' ? handleSignIn : handleSignUp}>
+          {mode === 'signup' && (
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                Full Name
               </label>
               <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 required
                 className="mt-1"
-                placeholder="Enter your password"
+                placeholder="Enter your full name"
               />
             </div>
+          )}
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email address
+            </label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="mt-1"
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="mt-1"
+              placeholder="Enter your password"
+            />
           </div>
 
           <div className="flex flex-col space-y-4">
             <Button
-              onClick={handleSignIn}
+              type="submit"
               disabled={loading}
               className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
             >
-              Sign in
+              {mode === 'signin' ? 'Sign in' : 'Sign up'}
             </Button>
-            <Button
-              onClick={handleSignUp}
-              disabled={loading}
-              variant="outline"
-              className="w-full"
-            >
-              Sign up
-            </Button>
+            
+            <div className="text-sm text-center">
+              {mode === 'signin' ? (
+                <p>
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setMode('signup')}
+                    className="text-[#1EAEDB] hover:underline"
+                  >
+                    Sign up
+                  </button>
+                </p>
+              ) : (
+                <p>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setMode('signin')}
+                    className="text-[#1EAEDB] hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              )}
+            </div>
           </div>
         </form>
       </div>

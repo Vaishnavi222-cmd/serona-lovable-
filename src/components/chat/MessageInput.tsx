@@ -1,6 +1,10 @@
 
 import { useState } from 'react';
 import { Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 interface MessageInputProps {
   onSend: (message: string) => void;
@@ -8,8 +12,39 @@ interface MessageInputProps {
 
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSend = () => {
+  // Check authentication status
+  useState(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+
+      // Subscribe to auth changes
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setIsAuthenticated(!!session);
+      });
+    };
+    checkAuth();
+  });
+
+  const handleSend = async () => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+
+    if (!message.trim()) {
+      toast({
+        title: "Cannot send empty message",
+        description: "Please enter a message to send",
+        variant: "destructive",
+      });
+      return;
+    }
+
     onSend(message);
     setMessage('');
   };
@@ -26,19 +61,23 @@ export function MessageInput({ onSend }: MessageInputProps) {
               handleSend();
             }
           }}
-          placeholder="Message Serona AI..."
+          placeholder={isAuthenticated ? "Message Serona AI..." : "Sign in to send messages..."}
           className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                    bg-white border border-gray-200 shadow-sm resize-none text-gray-800
                    placeholder-gray-400 min-h-[44px] max-h-[200px]"
           rows={1}
         />
-        <button 
+        <Button
           onClick={handleSend}
           className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Send message"
+          variant="ghost"
         >
-          <Send className="w-5 h-5 text-[#1EAEDB]" />
-        </button>
+          {isAuthenticated ? (
+            <Send className="w-5 h-5 text-[#1EAEDB]" />
+          ) : (
+            <span className="text-[#1EAEDB]">Sign in to send</span>
+          )}
+        </Button>
       </div>
     </div>
   );
