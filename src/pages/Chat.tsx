@@ -14,12 +14,16 @@ interface Message {
   content: string;
   sender: 'user' | 'ai';
   created_at: string;
+  chat_id: string;
+  user_id: string;
 }
 
 interface Chat {
   id: string;
   title: string;
   created_at: string;
+  user_id: string;
+  updated_at: string;
 }
 
 const Chat = () => {
@@ -29,11 +33,12 @@ const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  // Check authentication status
+  // Check authentication status and get user ID
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -41,12 +46,15 @@ const Chat = () => {
         navigate('/auth');
         return;
       }
+      setUserId(session.user.id);
     };
     checkAuth();
   }, [navigate]);
 
   // Load chats
   useEffect(() => {
+    if (!userId) return;
+
     const loadChats = async () => {
       const { data: chats, error } = await supabase
         .from('chats')
@@ -71,11 +79,11 @@ const Chat = () => {
     };
 
     loadChats();
-  }, [currentChatId, toast]);
+  }, [currentChatId, toast, userId]);
 
   // Load messages for current chat
   useEffect(() => {
-    if (!currentChatId) return;
+    if (!currentChatId || !userId) return;
 
     const loadMessages = async () => {
       const { data: messages, error } = await supabase
@@ -94,7 +102,12 @@ const Chat = () => {
       }
 
       if (messages) {
-        setMessages(messages);
+        // Ensure the messages match our Message interface
+        const typedMessages = messages.map(msg => ({
+          ...msg,
+          sender: msg.sender as 'user' | 'ai'
+        }));
+        setMessages(typedMessages);
       }
     };
 
@@ -109,20 +122,24 @@ const Chat = () => {
         table: 'messages',
         filter: `chat_id=eq.${currentChatId}`,
       }, (payload) => {
-        setMessages(current => [...current, payload.new as Message]);
+        const newMessage = payload.new as Message;
+        setMessages(current => [...current, {
+          ...newMessage,
+          sender: newMessage.sender as 'user' | 'ai'
+        }]);
       })
       .subscribe();
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [currentChatId, toast]);
+  }, [currentChatId, toast, userId]);
 
   const handleSend = async () => {
-    if (!message.trim() || !currentChatId) {
+    if (!message.trim() || !currentChatId || !userId) {
       toast({
-        title: "Empty message",
-        description: "Please enter a message to send",
+        title: "Cannot send message",
+        description: !userId ? "Please sign in to send messages" : "Please enter a message to send",
       });
       return;
     }
@@ -131,6 +148,7 @@ const Chat = () => {
       chat_id: currentChatId,
       content: message.trim(),
       sender: 'user' as const,
+      user_id: userId,
     };
 
     const { error } = await supabase
@@ -150,9 +168,20 @@ const Chat = () => {
   };
 
   const handleNewChat = async () => {
+    if (!userId) {
+      toast({
+        title: "Cannot create chat",
+        description: "Please sign in to create a new chat",
+      });
+      return;
+    }
+
     const { data: chat, error } = await supabase
       .from('chats')
-      .insert({ title: 'New Chat' })
+      .insert({ 
+        title: 'New Chat',
+        user_id: userId
+      })
       .select()
       .single();
 
