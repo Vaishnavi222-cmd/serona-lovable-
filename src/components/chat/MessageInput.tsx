@@ -16,30 +16,17 @@ export function MessageInput({ onSend }: MessageInputProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    };
-    checkAuth();
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleInputFocus = () => {
-    if (!isAuthenticated) {
+  // Handle user interaction with input
+  const handleInputInteraction = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       navigate('/auth');
     }
   };
 
   const handleSend = async () => {
-    if (!isAuthenticated) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       navigate('/auth');
       return;
     }
@@ -63,7 +50,8 @@ export function MessageInput({ onSend }: MessageInputProps) {
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onFocus={handleInputFocus}
+          onFocus={handleInputInteraction}
+          onClick={handleInputInteraction}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
