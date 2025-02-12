@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -13,12 +12,10 @@ interface MessageInputProps {
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
       if (session) {
         setShowAuthDialog(false); // Close dialog if user logs in
       }
