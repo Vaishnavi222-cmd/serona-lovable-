@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuthState } from '@/hooks/use-auth-state';
 import { supabase } from "@/integrations/supabase/client";
@@ -16,20 +16,7 @@ export function AuthDialog({ isOpen, onClose }: AuthDialogProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const { errorMessage, successMessage, handleAuthError } = useAuthState();
 
-  // Check if user is already authenticated
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        onClose();
-      }
-    };
-    
-    if (isOpen) {
-      checkAuth();
-    }
-  }, [isOpen, onClose]);
-
+  // If dialog is not open, don't render anything
   if (!isOpen) return null;
 
   return (
