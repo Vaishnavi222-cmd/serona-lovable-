@@ -1,16 +1,25 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
-  id: number;
-  text: string;
+  id: string;
+  content: string;
   sender: 'user' | 'ai';
+  created_at: string;
+}
+
+interface Chat {
+  id: string;
+  title: string;
+  created_at: string;
 }
 
 const Chat = () => {
@@ -18,40 +27,158 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [chats] = useState([
-    { id: 1, title: "Deep Personality Analysis", active: true },
-    { id: 2, title: "Career Guidance Session", active: false },
-    { id: 3, title: "Mental Health Support", active: false },
-    { id: 4, title: "Life Goals Planning", active: false },
-  ]);
+  const navigate = useNavigate();
 
-  const handleSend = () => {
-    if (!message.trim()) {
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth');
+        return;
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
+  // Load chats
+  useEffect(() => {
+    const loadChats = async () => {
+      const { data: chats, error } = await supabase
+        .from('chats')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading chats:', error);
+        toast({
+          title: "Error loading chats",
+          description: error.message,
+        });
+        return;
+      }
+
+      if (chats) {
+        setChats(chats);
+        if (chats.length > 0 && !currentChatId) {
+          setCurrentChatId(chats[0].id);
+        }
+      }
+    };
+
+    loadChats();
+  }, [currentChatId, toast]);
+
+  // Load messages for current chat
+  useEffect(() => {
+    if (!currentChatId) return;
+
+    const loadMessages = async () => {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', currentChatId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error loading messages:', error);
+        toast({
+          title: "Error loading messages",
+          description: error.message,
+        });
+        return;
+      }
+
+      if (messages) {
+        setMessages(messages);
+      }
+    };
+
+    loadMessages();
+
+    // Subscribe to new messages
+    const subscription = supabase
+      .channel('messages')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `chat_id=eq.${currentChatId}`,
+      }, (payload) => {
+        setMessages(current => [...current, payload.new as Message]);
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentChatId, toast]);
+
+  const handleSend = async () => {
+    if (!message.trim() || !currentChatId) {
       toast({
         title: "Empty message",
         description: "Please enter a message to send",
       });
       return;
     }
-    
-    const newMessage: Message = {
-      id: Date.now(),
-      text: message.trim(),
-      sender: 'user'
+
+    const newMessage = {
+      chat_id: currentChatId,
+      content: message.trim(),
+      sender: 'user' as const,
     };
-    
-    setMessages(prev => [...prev, newMessage]);
+
+    const { error } = await supabase
+      .from('messages')
+      .insert(newMessage);
+
+    if (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error sending message",
+        description: error.message,
+      });
+      return;
+    }
+
     setMessage('');
-    
-    // Log to verify message sending
-    console.log("Message sent:", newMessage);
+  };
+
+  const handleNewChat = async () => {
+    const { data: chat, error } = await supabase
+      .from('chats')
+      .insert({ title: 'New Chat' })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating chat:', error);
+      toast({
+        title: "Error creating chat",
+        description: error.message,
+      });
+      return;
+    }
+
+    if (chat) {
+      setChats(prev => [chat, ...prev]);
+      setCurrentChatId(chat.id);
+      setMessages([]);
+      toast({
+        title: "New chat created",
+        description: "Started a new conversation",
+      });
+      setIsSidebarOpen(true);
+    }
   };
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
-    console.log("Sidebar toggled:", !isSidebarOpen); // Debug log
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
   return (
@@ -94,7 +221,7 @@ const Chat = () => {
               </div>
             </div>
 
-            {/* Serona AI Brand */}
+            {/* Brand */}
             <div className="p-4 flex items-center gap-3 border-b border-gray-700">
               <img
                 src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
@@ -108,19 +235,20 @@ const Chat = () => {
             <div className="p-4">
               <Button 
                 className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
-                onClick={() => {}}
+                onClick={handleNewChat}
               >
                 <Plus className="mr-2 h-4 w-4" /> New Chat
               </Button>
             </div>
 
             {/* Chat List */}
-            <div className="flex-1 px-2 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 px-2 py-2 space-y-2">
               {chats.map((chat) => (
                 <div
                   key={chat.id}
                   className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
-                             ${chat.active ? 'bg-gray-800' : ''}`}
+                             ${chat.id === currentChatId ? 'bg-gray-800' : ''}`}
+                  onClick={() => setCurrentChatId(chat.id)}
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span className="text-sm truncate">{chat.title}</span>
@@ -157,7 +285,7 @@ const Chat = () => {
                     : 'bg-gray-100 mr-auto max-w-[80%]'
                 }`}
               >
-                {msg.text}
+                {msg.content}
               </div>
             ))}
           </div>
