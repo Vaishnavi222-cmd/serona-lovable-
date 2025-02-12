@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,20 +12,8 @@ interface MessageInputProps {
 
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-      if (session) {
-        setShowAuthDialog(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleSend = async () => {
     // Check for empty message first
@@ -38,11 +26,10 @@ export function MessageInput({ onSend }: MessageInputProps) {
       return;
     }
 
-    // Then check authentication
+    // Check authentication only when trying to send
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.log("Auth Triggered: No session found, showing dialog");
-      setShowAuthDialog(true);
+      setIsAuthDialogOpen(true);
       return;
     }
 
@@ -80,8 +67,8 @@ export function MessageInput({ onSend }: MessageInputProps) {
         </div>
       </div>
       <AuthDialog 
-        isOpen={showAuthDialog} 
-        onClose={() => setShowAuthDialog(false)} 
+        isOpen={isAuthDialogOpen} 
+        onClose={() => setIsAuthDialogOpen(false)} 
       />
     </>
   );

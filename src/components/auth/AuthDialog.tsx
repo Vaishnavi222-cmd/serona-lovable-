@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuthState } from '@/hooks/use-auth-state';
-import { supabase } from "@/integrations/supabase/client";
 import { AuthForm } from './AuthForm';
 import { GoogleSignIn } from './GoogleSignIn';
 import { AuthMessages } from './AuthMessages';
@@ -16,7 +15,6 @@ export function AuthDialog({ isOpen, onClose }: AuthDialogProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const { errorMessage, successMessage, handleAuthError } = useAuthState();
 
-  // If dialog is not open, don't render anything
   if (!isOpen) return null;
 
   return (
