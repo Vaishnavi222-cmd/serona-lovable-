@@ -1,10 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface MessageInputProps {
   onSend: (message: string) => void;
@@ -17,18 +17,26 @@ export function MessageInput({ onSend }: MessageInputProps) {
   const { toast } = useToast();
 
   // Check authentication status
-  useState(() => {
+  useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
-
-      // Subscribe to auth changes
-      supabase.auth.onAuthStateChange((_event, session) => {
-        setIsAuthenticated(!!session);
-      });
     };
     checkAuth();
-  });
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleInputFocus = () => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+    }
+  };
 
   const handleSend = async () => {
     if (!isAuthenticated) {
@@ -55,13 +63,14 @@ export function MessageInput({ onSend }: MessageInputProps) {
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          onFocus={handleInputFocus}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSend();
             }
           }}
-          placeholder={isAuthenticated ? "Message Serona AI..." : "Sign in to send messages..."}
+          placeholder="Message Serona AI..."
           className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                    bg-white border border-gray-200 shadow-sm resize-none text-gray-800
                    placeholder-gray-400 min-h-[44px] max-h-[200px]"
@@ -72,11 +81,7 @@ export function MessageInput({ onSend }: MessageInputProps) {
           className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           variant="ghost"
         >
-          {isAuthenticated ? (
-            <Send className="w-5 h-5 text-[#1EAEDB]" />
-          ) : (
-            <span className="text-[#1EAEDB]">Sign in to send</span>
-          )}
+          <Send className="w-5 h-5 text-[#1EAEDB]" />
         </Button>
       </div>
     </div>
