@@ -27,22 +27,8 @@ export function MessageInput({ onSend }: MessageInputProps) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleInputInteraction = async () => {
-    console.log("Auth Triggered: Checking session");
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.log("Auth Triggered: No session found, showing dialog");
-      setShowAuthDialog(true);
-    }
-  };
-
   const handleSend = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setShowAuthDialog(true);
-      return;
-    }
-
+    // Check for empty message first
     if (!message.trim()) {
       toast({
         title: "Cannot send empty message",
@@ -52,6 +38,15 @@ export function MessageInput({ onSend }: MessageInputProps) {
       return;
     }
 
+    // Then check authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.log("Auth Triggered: No session found, showing dialog");
+      setShowAuthDialog(true);
+      return;
+    }
+
+    // If we get here, user is authenticated and message is not empty
     onSend(message);
     setMessage('');
   };
@@ -63,8 +58,6 @@ export function MessageInput({ onSend }: MessageInputProps) {
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onFocus={handleInputInteraction}
-            onClick={handleInputInteraction}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
