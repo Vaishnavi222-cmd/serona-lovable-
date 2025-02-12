@@ -12,7 +12,7 @@ interface MessageInputProps {
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false); // Prevent re-triggering auth
+  const [authChecked, setAuthChecked] = useState(false); // Prevent multiple triggers
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,4 +76,3 @@ export function MessageInput({ onSend }: MessageInputProps) {
     </>
   );
 }
-
