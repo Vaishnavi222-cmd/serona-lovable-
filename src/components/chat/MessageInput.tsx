@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -13,12 +12,13 @@ interface MessageInputProps {
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false); // Prevent multiple triggers
   const { toast } = useToast();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setShowAuthDialog(false); // Only close dialog on successful auth
+        setShowAuthDialog(false); // Close dialog if user logs in
       }
     });
 
@@ -27,11 +27,14 @@ export function MessageInput({ onSend }: MessageInputProps) {
 
   const handleSend = async () => {
     if (!message.trim()) return; // Prevent empty messages
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setShowAuthDialog(true); // Show AuthDialog only when trying to send a message
-      return;
+
+    if (!authChecked) { // Only check authentication once per session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setShowAuthDialog(true);
+        setAuthChecked(true); // Prevent re-triggering
+        return;
+      }
     }
 
     onSend(message);
