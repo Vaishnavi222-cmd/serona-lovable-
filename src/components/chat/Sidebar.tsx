@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { MessageSquare, Plus, X, Search } from 'lucide-react';
+import { MessageSquare, Plus, X, Search, Menu } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Chat } from '@/hooks/use-chat-store';
