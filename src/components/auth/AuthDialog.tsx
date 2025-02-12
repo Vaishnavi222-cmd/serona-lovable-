@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useAuthState } from '@/hooks/use-auth-state';
 import { AuthForm } from './AuthForm';
@@ -14,6 +14,20 @@ interface AuthDialogProps {
 export function AuthDialog({ isOpen, onClose }: AuthDialogProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const { errorMessage, successMessage, handleAuthError } = useAuthState();
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        onClose();
+      }
+    };
+    
+    if (isOpen) {
+      checkAuth();
+    }
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
