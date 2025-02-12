@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,28 +12,30 @@ interface MessageInputProps {
 
 export function MessageInput({ onSend }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const { toast } = useToast();
 
-  const handleSend = async () => {
-    // Check for empty message first
-    if (!message.trim()) {
-      toast({
-        title: "Cannot send empty message",
-        description: "Please enter a message to send",
-        variant: "destructive",
-      });
-      return;
-    }
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      if (session) {
+        setShowAuthDialog(false); // Close dialog if user logs in
+      }
+    });
 
-    // Check authentication only when trying to send
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSend = async () => {
+    if (!message.trim()) return; // Prevent empty messages
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      setIsAuthDialogOpen(true);
+      setShowAuthDialog(true); // Open AuthDialog only when sending a message
       return;
     }
 
-    // If we get here, user is authenticated and message is not empty
     onSend(message);
     setMessage('');
   };
@@ -67,8 +69,8 @@ export function MessageInput({ onSend }: MessageInputProps) {
         </div>
       </div>
       <AuthDialog 
-        isOpen={isAuthDialogOpen} 
-        onClose={() => setIsAuthDialogOpen(false)} 
+        isOpen={showAuthDialog} 
+        onClose={() => setShowAuthDialog(false)} 
       />
     </>
   );
