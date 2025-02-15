@@ -136,7 +136,7 @@ const Chat = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex w-full h-screen pt-14"> {/* Added pt-14 to account for fixed header */}
+      <div className="flex w-full h-screen pt-14 chat-scrollbar"> {/* Added chat-scrollbar class here */}
         {/* Sidebar */}
         <div 
           className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
