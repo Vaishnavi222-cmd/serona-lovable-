@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +8,7 @@ import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
+import { AuthDialog } from "@/components/ui/auth-dialog";
 
 interface Message {
   id: number;
@@ -127,13 +129,12 @@ const Chat = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {user && <UserMenu userEmail={user.email} />}
           <Navbar />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex w-full h-screen pt-14"> {/* Added pt-14 to account for fixed header */}
+      <div className="flex w-full h-screen pt-14">
         {/* Sidebar */}
         <div 
           className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
