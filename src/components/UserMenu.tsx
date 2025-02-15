@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -44,15 +44,16 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-10 w-10 rounded-full">
-          <span className="h-8 w-8 rounded-full bg-serona-primary flex items-center justify-center text-white font-medium">
+        <Button variant="ghost" className="relative h-9 w-9 rounded-full bg-[#1EAEDB]">
+          <span className="h-9 w-9 rounded-full flex items-center justify-center text-white font-medium">
             {userEmail?.charAt(0).toUpperCase() ?? 'U'}
           </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <div className="px-2 py-1.5 text-sm text-gray-700 overflow-hidden text-ellipsis">
-          {userEmail}
+        <div className="flex items-center gap-2 p-2">
+          <User className="h-4 w-4" />
+          <p className="text-sm font-medium truncate">{userEmail}</p>
         </div>
         <DropdownMenuItem
           onClick={handleSignOut}

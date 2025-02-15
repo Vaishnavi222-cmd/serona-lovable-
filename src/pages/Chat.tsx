@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -34,26 +33,39 @@ const Chat = () => {
   ]);
 
   useEffect(() => {
+    // Check for existing session on component mount
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Error checking session:', error);
         return;
       }
-      setUser(session?.user ?? null);
-      setShowAuthDialog(false); // Don't show auth dialog on initial load if user is logged in
+      
+      if (session?.user) {
+        console.log('Existing session found:', session.user.email);
+        setUser(session.user);
+        setShowAuthDialog(false);
+      }
     };
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
         setShowAuthDialog(false);
         toast({
           title: "Successfully authenticated",
           description: "You can now send messages",
+        });
+      } else {
+        // Handle sign out
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
         });
       }
     });
@@ -101,25 +113,38 @@ const Chat = () => {
         onOpenChange={setShowAuthDialog}
       />
 
-      {/* Header with UserMenu */}
-      <div className="fixed top-0 right-0 z-[60] flex items-center gap-4 p-4">
-        {user && <UserMenu userEmail={user.email} />}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-md hover:bg-gray-200/50 transition-colors"
-        >
-          {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
-        </button>
+      {/* Header */}
+      <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-md hover:bg-gray-800 transition-colors"
+          >
+            {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+          <img
+            src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+            alt="Logo"
+            className="h-8 w-8"
+          />
+          <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {user && <UserMenu userEmail={user.email} />}
+          <Navbar />
+        </div>
       </div>
 
-      {/* Sidebar */}
-      <div 
-        className={`fixed md:relative w-64 h-screen bg-black text-white overflow-hidden z-50
-                   transition-transform duration-300 ease-in-out
-                   ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
-      >
-        <ScrollArea className="h-full custom-scrollbar">
-          <div className="flex flex-col h-full">
+      {/* Main Content */}
+      <div className="flex w-full h-screen pt-14"> {/* Added pt-14 to account for fixed header */}
+        {/* Sidebar */}
+        <div 
+          className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
+                     transition-transform duration-300 ease-in-out
+                     ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
+        >
+          <ScrollArea className="h-full custom-scrollbar">
             {/* Search Bar */}
             <div className="p-4 border-b border-gray-700">
               <div className="relative">
@@ -175,67 +200,55 @@ const Chat = () => {
                 </div>
               ))}
             </div>
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen relative">
-        {/* Header */}
-        <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <img
-              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-              alt="Logo"
-              className="h-8 w-8 ml-16 md:ml-20"
-            />
-          </div>
-          <Navbar />
+          </ScrollArea>
         </div>
 
-        {/* Messages Area */}
-        <ScrollArea className="flex-1 p-4 custom-scrollbar">
-          <div className="max-w-3xl mx-auto space-y-4">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`p-4 rounded-lg ${
-                  msg.sender === 'user' 
-                    ? 'bg-[#1EAEDB]/10 ml-auto max-w-[80%]' 
-                    : 'bg-gray-100 mr-auto max-w-[80%]'
-                }`}
-              >
-                {msg.text}
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)]">
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 p-4 custom-scrollbar">
+            <div className="max-w-3xl mx-auto space-y-4">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`p-4 rounded-lg ${
+                    msg.sender === 'user' 
+                      ? 'bg-[#1EAEDB]/10 ml-auto max-w-[80%]' 
+                      : 'bg-gray-100 mr-auto max-w-[80%]'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
 
-        {/* Message Input */}
-        <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4 z-20">
-          <div className="max-w-4xl mx-auto flex items-center gap-2">
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Message Serona AI..."
-              className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
-                       bg-white border border-gray-200 shadow-sm resize-none text-gray-800
-                       placeholder-gray-400 min-h-[44px] max-h-[200px]"
-              rows={1}
-            />
-            <button 
-              onClick={handleSend}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Send message"
-            >
-              <Send className="w-5 h-5 text-[#1EAEDB]" />
-            </button>
+          {/* Message Input */}
+          <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4">
+            <div className="max-w-4xl mx-auto flex items-center gap-2">
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Message Serona AI..."
+                className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
+                         bg-white border border-gray-200 shadow-sm resize-none text-gray-800
+                         placeholder-gray-400 min-h-[44px] max-h-[200px]"
+                rows={1}
+              />
+              <button 
+                onClick={handleSend}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Send message"
+              >
+                <Send className="w-5 h-5 text-[#1EAEDB]" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
