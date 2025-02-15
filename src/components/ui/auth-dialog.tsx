@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, LucideGoogle } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AuthDialogProps {
@@ -103,7 +103,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                 disabled={loading}
                 className="w-full h-12 text-base border-2"
               >
-                <LucideGoogle className="mr-2 h-5 w-5" />
+                <Mail className="mr-2 h-5 w-5" />
                 Sign in with Google
               </Button>
             </div>
