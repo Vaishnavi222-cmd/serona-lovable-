@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +7,7 @@ import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
+import { AuthDialog } from "@/components/ui/auth-dialog";
 
 interface Message {
   id: number;
@@ -20,6 +20,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -68,10 +69,7 @@ const Chat = () => {
     }
 
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to send messages",
-      });
+      setShowAuthDialog(true);
       return;
     }
     
@@ -93,6 +91,12 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
+      {/* Auth Dialog */}
+      <AuthDialog 
+        open={showAuthDialog} 
+        onOpenChange={setShowAuthDialog}
+      />
+
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
