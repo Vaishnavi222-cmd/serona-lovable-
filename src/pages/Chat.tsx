@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -113,25 +114,25 @@ const Chat = () => {
 
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
-        <div className="flex flex-col items-start gap-2">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="relative">
             <img
               src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
               alt="Logo"
               className="h-8 w-8"
             />
-            <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+            <span className="text-lg font-semibold hidden md:inline ml-4">Serona AI</span>
+            {/* Three-line menu icon positioned below Serona AI text */}
+            {!isSidebarOpen && (
+              <button
+                onClick={toggleSidebar}
+                className="absolute -bottom-8 left-0 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+                aria-label="Open sidebar"
+              >
+                <Menu className="w-6 h-6 text-[#40E0D0]" />
+              </button>
+            )}
           </div>
-          {/* Three-line menu icon positioned below Serona AI text */}
-          {!isSidebarOpen && (
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-md hover:bg-gray-800/50 transition-colors ml-2"
-              aria-label="Open sidebar"
-            >
-              <Menu className="w-6 h-6 text-[#40E0D0]" />
-            </button>
-          )}
         </div>
         
         <div className="flex items-center gap-4">
