@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
+import { UserMenu } from "@/components/UserMenu";
 
 interface Message {
   id: number;
@@ -31,16 +31,19 @@ const Chat = () => {
     { id: 3, title: "Mental Health Support", active: false },
     { id: 4, title: "Life Goals Planning", active: false },
   ]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setCurrentUser(session?.user ?? null);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setCurrentUser(session?.user ?? null);
       if (session?.user) {
         setShowAuthDialog(false);
       }
@@ -60,7 +63,7 @@ const Chat = () => {
       return;
     }
 
-    if (!user) {
+    if (!currentUser) {
       setShowAuthDialog(true);
       return;
     }
@@ -91,12 +94,15 @@ const Chat = () => {
       />
 
       {/* Sidebar Toggle Button */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed top-5 left-4 z-[60] p-2 rounded-md hover:bg-gray-200/50 transition-colors md:left-6"
-      >
-        {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
-      </button>
+      <div className="fixed top-4 right-4 z-[60] flex items-center gap-4">
+        {currentUser && <UserMenu userEmail={currentUser.email} />}
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+        >
+          {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+        </button>
+      </div>
 
       {/* Sidebar */}
       <div 
