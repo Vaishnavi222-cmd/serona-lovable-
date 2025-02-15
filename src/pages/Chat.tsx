@@ -5,10 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
-import { AuthDialog } from "@/components/ui/auth-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
-import { UserMenu } from "@/components/UserMenu";
 
 interface Message {
   id: number;
@@ -40,12 +38,15 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
-      setShowAuthDialog(!session?.user);
+      // Only show auth dialog if user is not authenticated
+      if (!session?.user) {
+        setShowAuthDialog(true);
+      }
     };
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -59,6 +60,8 @@ const Chat = () => {
           title: "Signed out",
           description: "You have been signed out successfully",
         });
+        // Show auth dialog when user signs out
+        setShowAuthDialog(true);
       }
     });
 
@@ -76,6 +79,7 @@ const Chat = () => {
       return;
     }
 
+    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
