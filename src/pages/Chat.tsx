@@ -34,25 +34,34 @@ const Chat = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check initial auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error checking session:', error);
+        return;
+      }
       setUser(session?.user ?? null);
-      setCurrentUser(session?.user ?? null);
-    });
+      setShowAuthDialog(!session?.user);
+    };
 
-    // Listen for auth changes
+    checkSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
-      setCurrentUser(session?.user ?? null);
       if (session?.user) {
         setShowAuthDialog(false);
+        toast({
+          title: "Successfully authenticated",
+          description: "You can now send messages",
+        });
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toast]);
 
   const handleSend = async () => {
     if (!message.trim()) {
