@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +20,6 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -38,10 +38,6 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
-      // Only show auth dialog if user is not authenticated
-      if (!session?.user) {
-        setShowAuthDialog(true);
-      }
     };
 
     checkSession();
@@ -50,18 +46,10 @@ const Chat = () => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
-        setShowAuthDialog(false);
         toast({
           title: "Successfully authenticated",
           description: "You can now send messages",
         });
-      } else {
-        toast({
-          title: "Signed out",
-          description: "You have been signed out successfully",
-        });
-        // Show auth dialog when user signs out
-        setShowAuthDialog(true);
       }
     });
 
@@ -79,9 +67,11 @@ const Chat = () => {
       return;
     }
 
-    // Only show auth dialog if user is not authenticated
     if (!user) {
-      setShowAuthDialog(true);
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to send messages",
+      });
       return;
     }
     
@@ -103,12 +93,6 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
-      {/* Auth Dialog */}
-      <AuthDialog 
-        open={showAuthDialog} 
-        onOpenChange={setShowAuthDialog}
-      />
-
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
@@ -127,7 +111,6 @@ const Chat = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {user && <UserMenu userEmail={user.email} />}
           <Navbar />
         </div>
       </div>
