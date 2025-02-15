@@ -28,14 +28,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       toast({
         title: "Signed out successfully",
         description: "You have been signed out of your account",
-        className: "z-[100]",
       });
     } catch (error: any) {
+      console.error('Sign out error:', error);
       toast({
         title: "Error signing out",
         description: error.message,
         variant: "destructive",
-        className: "z-[100]",
       });
     } finally {
       setIsLoading(false);
