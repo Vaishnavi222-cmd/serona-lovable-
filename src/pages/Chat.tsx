@@ -115,12 +115,6 @@ const Chat = () => {
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          <button
-            onClick={toggleSidebar}
-            className="p-2 rounded-md hover:bg-gray-800 transition-colors"
-          >
-            {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
           <img
             src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
             alt="Logo"
@@ -136,42 +130,51 @@ const Chat = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex w-full h-screen pt-14 chat-scrollbar">
+      <div className="flex w-full h-screen pt-14">
+        {/* Three-line menu icon for opening sidebar */}
+        <button
+          onClick={toggleSidebar}
+          className="fixed left-4 top-20 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
+          aria-label="Open sidebar"
+        >
+          <Menu className="w-6 h-6 text-[#1EAEDB]" />
+        </button>
+
         {/* Sidebar */}
         <div 
           className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
                      transition-transform duration-300 ease-in-out
                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         >
-          {/* Close button in sidebar */}
-          <button
-            onClick={toggleSidebar}
-            className="absolute top-4 right-4 p-2 rounded-md hover:bg-gray-800 transition-colors z-50"
-            aria-label="Toggle sidebar"
-          >
-            <X className="w-5 h-5 text-gray-400 hover:text-white" />
-          </button>
-
           <ScrollArea className="h-full custom-scrollbar">
-            {/* Search Bar */}
+            {/* Search Bar with Close Button */}
             <div className="p-4 border-b border-gray-700">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search chats..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10 pr-10"
-                />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-2.5"
-                  >
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
-                )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-md hover:bg-gray-800 transition-colors"
+                  aria-label="Close sidebar"
+                >
+                  <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                </button>
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search chats..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10"
+                  />
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-2.5"
+                    >
+                      <X className="w-4 h-4 text-gray-400" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
