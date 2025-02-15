@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -114,13 +113,25 @@ const Chat = () => {
 
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
-        <div className="flex items-center gap-4">
-          <img
-            src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-            alt="Logo"
-            className="h-8 w-8"
-          />
-          <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+        <div className="flex flex-col items-start gap-2">
+          <div className="flex items-center gap-4">
+            <img
+              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+              alt="Logo"
+              className="h-8 w-8"
+            />
+            <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+          </div>
+          {/* Three-line menu icon positioned below Serona AI text */}
+          {!isSidebarOpen && (
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-md hover:bg-gray-800/50 transition-colors ml-2"
+              aria-label="Open sidebar"
+            >
+              <Menu className="w-6 h-6 text-[#40E0D0]" />
+            </button>
+          )}
         </div>
         
         <div className="flex items-center gap-4">
@@ -131,15 +142,6 @@ const Chat = () => {
 
       {/* Main Content */}
       <div className="flex w-full h-screen pt-14">
-        {/* Three-line menu icon for opening sidebar */}
-        <button
-          onClick={toggleSidebar}
-          className="fixed left-4 top-20 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
-          aria-label="Open sidebar"
-        >
-          <Menu className="w-6 h-6 text-[#1EAEDB]" />
-        </button>
-
         {/* Sidebar */}
         <div 
           className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
