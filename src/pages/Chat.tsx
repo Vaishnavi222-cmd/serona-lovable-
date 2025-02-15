@@ -1,11 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
+import { AuthDialog } from "@/components/ui/auth-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from '@supabase/supabase-js';
 
 interface Message {
   id: number;
@@ -18,6 +21,8 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [chats] = useState([
@@ -27,12 +32,36 @@ const Chat = () => {
     { id: 4, title: "Life Goals Planning", active: false },
   ]);
 
-  const handleSend = () => {
+  useEffect(() => {
+    // Check initial auth state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setShowAuthDialog(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSend = async () => {
     if (!message.trim()) {
       toast({
         title: "Empty message",
         description: "Please enter a message to send",
       });
+      return;
+    }
+
+    if (!user) {
+      setShowAuthDialog(true);
       return;
     }
     
@@ -45,17 +74,22 @@ const Chat = () => {
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
     
-    // Log to verify message sending
     console.log("Message sent:", newMessage);
   };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
-    console.log("Sidebar toggled:", !isSidebarOpen); // Debug log
+    console.log("Sidebar toggled:", !isSidebarOpen);
   };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
+      {/* Auth Dialog */}
+      <AuthDialog 
+        open={showAuthDialog} 
+        onOpenChange={setShowAuthDialog}
+      />
+
       {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
