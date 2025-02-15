@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "../components/Navbar";
