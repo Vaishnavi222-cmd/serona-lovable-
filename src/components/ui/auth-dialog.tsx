@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail } from "lucide-react";
+import { Mail, LucideGoogle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AuthDialogProps {
@@ -71,19 +71,50 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Sign in to chat</DialogTitle>
+      <DialogContent className="sm:max-w-[425px] p-0 gap-0 bg-white">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-2xl font-semibold text-center">Welcome to Serona AI</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="email" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="social">Social</TabsTrigger>
+        
+        <Tabs defaultValue="social" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 p-1 bg-gray-100">
+            <TabsTrigger 
+              value="social"
+              className="data-[state=active]:bg-white data-[state=active]:text-black"
+            >
+              Social Login
+            </TabsTrigger>
+            <TabsTrigger 
+              value="email"
+              className="data-[state=active]:bg-white data-[state=active]:text-black"
+            >
+              Email Login
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="email">
-            <form onSubmit={handleEmailSignIn} className="space-y-4 pt-4">
+
+          <TabsContent value="social" className="p-6 pt-4">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 text-center">
+                Continue with your social account
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full h-12 text-base border-2"
+              >
+                <LucideGoogle className="mr-2 h-5 w-5" />
+                Sign in with Google
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="email" className="p-6 pt-4">
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email address
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -91,25 +122,28 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="h-12"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-base bg-[#1EAEDB] hover:bg-[#1EAEDB]/90" 
+                disabled={loading}
+              >
                 {loading ? "Sending..." : "Send Magic Link"}
               </Button>
+              <p className="text-sm text-gray-600 text-center">
+                We'll send you a magic link for a password-free sign in
+              </p>
             </form>
           </TabsContent>
-          <TabsContent value="social" className="pt-4">
-            <Button
-              variant="outline"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full"
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Continue with Google
-            </Button>
-          </TabsContent>
         </Tabs>
+
+        <div className="p-6 pt-2">
+          <p className="text-xs text-gray-500 text-center">
+            By continuing, you agree to our Terms of Service and Privacy Policy
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );
