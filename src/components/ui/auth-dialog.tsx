@@ -1,13 +1,8 @@
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { AtSign } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AuthDialogProps {
@@ -21,32 +16,21 @@ interface FormData {
 }
 
 export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<FormData>>({});
   const { toast } = useToast();
-
-  const validateForm = (data: FormData, isSignUp: boolean) => {
-    const newErrors: Partial<FormData> = {};
-    if (!data.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(data.email)) {
-      newErrors.email = "Please enter a valid email";
-    }
-    
-    if (!data.password) {
-      newErrors.password = "Password is required";
-    } else if (isSignUp && data.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm(formData, false)) return;
+    if (!formData.email || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
@@ -57,11 +41,11 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
       if (error) throw error;
 
+      onOpenChange(false);
       toast({
         title: "Success",
         description: "You have been signed in successfully",
       });
-      onOpenChange(false);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -75,13 +59,23 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm(formData, true)) return;
+    if (!formData.email || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
       });
 
       if (error) throw error;
@@ -115,34 +109,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "An error occurred while signing in with Google",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!formData.email) {
-      setErrors({ ...errors, email: "Please enter your email" });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email);
-      
-      if (error) throw error;
-
-      toast({
-        title: "Password Reset Email Sent",
-        description: "Please check your email for password reset instructions",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred",
+        description: error.message || "An error occurred while signing in with Google",
         variant: "destructive",
       });
     } finally {
@@ -152,139 +119,91 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-0 gap-0 bg-white overflow-hidden">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-2xl font-semibold text-center">
-            Welcome to Serona AI
-          </DialogTitle>
-        </DialogHeader>
-        
-        <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 p-1">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
+      <DialogContent className="sm:max-w-[425px] p-8 gap-0">
+        <div className="space-y-6">
+          <div className="space-y-2 text-center">
+            <h2 className="text-3xl font-semibold tracking-tight">
+              {isSignUp ? "Create an account" : "Welcome back"}
+            </h2>
+            <p className="text-lg text-gray-600">
+              {isSignUp ? "Sign up to get started" : "Sign in to your account"}
+            </p>
+          </div>
 
-          {/* Common Google Sign In for both tabs */}
-          <div className="p-6 pb-2 space-y-4">
-            <Button
-              variant="outline"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full h-12 font-medium border-2 hover:bg-gray-50"
-            >
-              <AtSign className="mr-2 h-5 w-5" />
-              Continue with Google
-            </Button>
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 p-3 text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <img
+              src="/lovable-uploads/820e8202-8cbe-4ec9-be23-c2c00359f835.png"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            Continue with Google
+          </button>
 
-            <div className="relative">
-              <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
-                or
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Or continue with
               </span>
             </div>
           </div>
 
-          <TabsContent value="signin" className="p-6 pt-2 space-y-4">
-            <form onSubmit={handleEmailSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
-                <Input
-                  id="signin-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email}</p>
-                )}
-              </div>
+          <form onSubmit={isSignUp ? handleEmailSignUp : handleEmailSignIn} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full p-3 rounded-lg border-2 border-gray-200"
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="signin-password">Password</Label>
-                <Input
-                  id="signin-password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={errors.password ? "border-red-500" : ""}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <Input
+                type="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full p-3 rounded-lg border-2 border-gray-200"
+              />
+            </div>
 
-              <Button
-                type="button"
-                variant="link"
-                onClick={handleForgotPassword}
-                className="p-0 h-auto font-normal text-sm text-[#1EAEDB]"
-              >
-                Forgot password?
-              </Button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full p-3 bg-[#1EAEDB] text-white rounded-lg hover:bg-[#1EAEDB]/90 transition-colors"
+            >
+              {loading ? (
+                "Loading..."
+              ) : isSignUp ? (
+                "Sign up"
+              ) : (
+                "Sign in"
+              )}
+            </button>
+          </form>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-[#1EAEDB] hover:bg-[#1EAEDB]/90" 
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </Button>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="signup" className="p-6 pt-2 space-y-4">
-            <form onSubmit={handleEmailSignUp} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  placeholder="Create a password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={errors.password ? "border-red-500" : ""}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password}</p>
-                )}
-                <p className="text-xs text-gray-500">
-                  Password must be at least 6 characters long
-                </p>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-[#1EAEDB] hover:bg-[#1EAEDB]/90" 
-                disabled={loading}
-              >
-                {loading ? "Creating account..." : "Create Account"}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
-
-        <div className="p-6 pt-2">
-          <p className="text-xs text-gray-500 text-center">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+          <p className="text-sm text-center text-gray-600">
+            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-[#1EAEDB] hover:underline font-medium"
+            >
+              {isSignUp ? "Sign in" : "Sign up"}
+            </button>
           </p>
         </div>
       </DialogContent>
