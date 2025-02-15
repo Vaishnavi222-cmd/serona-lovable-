@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -33,42 +34,55 @@ const Chat = () => {
   ]);
 
   useEffect(() => {
-    // Check for existing session on mount
-    const initializeAuth = async () => {
+    const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Error checking session:', error);
         return;
       }
       setUser(session?.user ?? null);
+      // Only show auth dialog if user is not authenticated
+      if (!session?.user) {
+        setShowAuthDialog(true);
+      }
     };
 
-    initializeAuth();
+    checkSession();
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
         setShowAuthDialog(false);
+        toast({
+          title: "Successfully authenticated",
+          description: "You can now send messages",
+        });
+      } else {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+        // Show auth dialog when user signs out
+        setShowAuthDialog(true);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toast]);
 
   const handleSend = async () => {
     if (!message.trim()) {
       toast({
         title: "Empty message",
         description: "Please enter a message to send",
-        className: "fixed top-4 right-4 z-[2000] max-w-[350px]"
       });
       return;
     }
 
+    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -82,6 +96,8 @@ const Chat = () => {
     
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
+    
+    console.log("Message sent:", newMessage);
   };
 
   const toggleSidebar = () => {
@@ -90,6 +106,7 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
+      {/* Auth Dialog */}
       <AuthDialog 
         open={showAuthDialog} 
         onOpenChange={setShowAuthDialog}
