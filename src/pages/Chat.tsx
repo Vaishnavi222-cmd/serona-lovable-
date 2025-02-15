@@ -33,28 +33,21 @@ const Chat = () => {
   ]);
 
   useEffect(() => {
-    // Check for existing session on component mount
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Error checking session:', error);
         return;
       }
-      
-      if (session?.user) {
-        console.log('Existing session found:', session.user.email);
-        setUser(session.user);
-        setShowAuthDialog(false);
-      }
+      setUser(session?.user ?? null);
+      setShowAuthDialog(!session?.user);
     };
 
     checkSession();
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
-      
       if (session?.user) {
         setShowAuthDialog(false);
         toast({
@@ -62,7 +55,6 @@ const Chat = () => {
           description: "You can now send messages",
         });
       } else {
-        // Handle sign out
         toast({
           title: "Signed out",
           description: "You have been signed out successfully",
