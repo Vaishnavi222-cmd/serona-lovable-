@@ -7,7 +7,6 @@ import Navbar from "../components/Navbar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
-import { AuthDialog } from "@/components/ui/auth-dialog";
 
 interface Message {
   id: number;
@@ -39,6 +38,10 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
+      // Only show auth dialog if user is not authenticated
+      if (!session?.user) {
+        setShowAuthDialog(true);
+      }
     };
 
     checkSession();
@@ -47,10 +50,18 @@ const Chat = () => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
+        setShowAuthDialog(false);
         toast({
           title: "Successfully authenticated",
           description: "You can now send messages",
         });
+      } else {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+        // Show auth dialog when user signs out
+        setShowAuthDialog(true);
       }
     });
 
@@ -68,6 +79,7 @@ const Chat = () => {
       return;
     }
 
+    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -115,6 +127,7 @@ const Chat = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          {user && <UserMenu userEmail={user.email} />}
           <Navbar />
         </div>
       </div>
