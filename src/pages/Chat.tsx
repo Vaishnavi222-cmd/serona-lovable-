@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -41,10 +40,6 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
-      // Only show auth dialog if user is not authenticated
-      if (!session?.user) {
-        setShowAuthDialog(true);
-      }
     };
 
     checkSession();
@@ -52,37 +47,27 @@ const Chat = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
         setShowAuthDialog(false);
-        toast({
-          title: "Successfully authenticated",
-          description: "You can now send messages",
-        });
-      } else {
-        toast({
-          title: "Signed out",
-          description: "You have been signed out successfully",
-        });
-        // Show auth dialog when user signs out
-        setShowAuthDialog(true);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, []);
 
   const handleSend = async () => {
     if (!message.trim()) {
       toast({
         title: "Empty message",
         description: "Please enter a message to send",
+        className: "z-[100]",
       });
       return;
     }
 
-    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -96,8 +81,6 @@ const Chat = () => {
     
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
-    
-    console.log("Message sent:", newMessage);
   };
 
   const toggleSidebar = () => {
@@ -136,7 +119,7 @@ const Chat = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex w-full h-screen pt-14"> {/* Added pt-14 to account for fixed header */}
+      <div className="flex w-full h-screen pt-14">
         {/* Sidebar */}
         <div 
           className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
@@ -169,7 +152,7 @@ const Chat = () => {
             {/* Serona AI Brand */}
             <div className="p-4 flex items-center gap-3 border-b border-gray-700">
               <img
-                src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+                src="/lovable-uploads/dc45c119-80a0-499e-939f-4f434d6193c98.png"
                 alt="Serona AI"
                 className="w-8 h-8"
               />
