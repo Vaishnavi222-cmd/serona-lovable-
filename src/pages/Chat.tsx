@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +32,6 @@ const Chat = () => {
     { id: 3, title: "Mental Health Support", active: false },
     { id: 4, title: "Life Goals Planning", active: false },
   ]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -41,7 +41,7 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
-      setShowAuthDialog(!session?.user);
+      setShowAuthDialog(false); // Don't show auth dialog on initial load if user is logged in
     };
 
     checkSession();
@@ -72,7 +72,7 @@ const Chat = () => {
       return;
     }
 
-    if (!currentUser) {
+    if (!user) {
       setShowAuthDialog(true);
       return;
     }
@@ -91,7 +91,6 @@ const Chat = () => {
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
-    console.log("Sidebar toggled:", !isSidebarOpen);
   };
 
   return (
@@ -102,9 +101,9 @@ const Chat = () => {
         onOpenChange={setShowAuthDialog}
       />
 
-      {/* Sidebar Toggle Button */}
-      <div className="fixed top-4 right-4 z-[60] flex items-center gap-4">
-        {currentUser && <UserMenu userEmail={currentUser.email} />}
+      {/* Header with UserMenu */}
+      <div className="fixed top-0 right-0 z-[60] flex items-center gap-4 p-4">
+        {user && <UserMenu userEmail={user.email} />}
         <button
           onClick={toggleSidebar}
           className="p-2 rounded-md hover:bg-gray-200/50 transition-colors"
@@ -164,7 +163,7 @@ const Chat = () => {
             </div>
 
             {/* Chat List */}
-            <div className="flex-1 px-2 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 px-2 py-2 space-y-2">
               {chats.map((chat) => (
                 <div
                   key={chat.id}
