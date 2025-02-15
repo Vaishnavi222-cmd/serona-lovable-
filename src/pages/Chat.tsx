@@ -136,13 +136,22 @@ const Chat = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex w-full h-screen pt-14 chat-scrollbar"> {/* Added chat-scrollbar class here */}
+      <div className="flex w-full h-screen pt-14 chat-scrollbar">
         {/* Sidebar */}
         <div 
           className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
                      transition-transform duration-300 ease-in-out
                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         >
+          {/* Close button in sidebar */}
+          <button
+            onClick={toggleSidebar}
+            className="absolute top-4 right-4 p-2 rounded-md hover:bg-gray-800 transition-colors z-50"
+            aria-label="Toggle sidebar"
+          >
+            <X className="w-5 h-5 text-gray-400 hover:text-white" />
+          </button>
+
           <ScrollArea className="h-full custom-scrollbar">
             {/* Search Bar */}
             <div className="p-4 border-b border-gray-700">
