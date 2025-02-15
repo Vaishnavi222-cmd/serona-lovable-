@@ -36,6 +36,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           title: "Account created",
           description: "You can now sign in with your credentials",
           duration: 5000,
+          className: "z-[100]",
         });
         // Auto sign in after signup
         await handleSignIn(e, true);
@@ -45,6 +46,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         title: "Error",
         description: error.message,
         variant: "destructive",
+        className: "z-[100]",
       });
     } finally {
       setIsLoading(false);
@@ -70,7 +72,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         toast({
           title: "Success",
           description: "You are now signed in",
-          className: "z-[100]", // Ensure toast is above other elements
+          className: "z-[100]",
         });
       }
     } catch (error: any) {
@@ -78,7 +80,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         title: "Error",
         description: error.message || "Invalid credentials",
         variant: "destructive",
-        className: "z-[100]", // Ensure error toast is above other elements
+        className: "z-[100]",
       });
     } finally {
       if (!isAutoSignIn) {
