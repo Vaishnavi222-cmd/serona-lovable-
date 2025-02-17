@@ -124,21 +124,26 @@ const Chat = () => {
               />
               <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
             </div>
-            {/* Three-line menu icon positioned below Serona AI text but within header */}
+            {/* Fixed Menu icon size and stroke width for better visibility */}
             {!isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
                 className="mt-2 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
                 aria-label="Open sidebar"
               >
-                <Menu className="w-6 h-6 text-[#40E0D0]" />
+                <Menu className="w-6 h-6 text-[#40E0D0] stroke-2" />
               </button>
             )}
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          {user && <UserMenu userEmail={user.email} />}
+          {/* Fixed UserMenu container size and visibility */}
+          {user && (
+            <div className="flex items-center justify-center w-9 h-9">
+              <UserMenu userEmail={user.email} />
+            </div>
+          )}
           <Navbar />
         </div>
       </div>
