@@ -151,79 +151,82 @@ const Chat = () => {
 
       {/* Sidebar */}
       <div 
-        className={`fixed md:relative w-64 h-screen bg-black text-white overflow-hidden z-40
+        className={`fixed md:relative w-64 h-screen bg-black text-white z-40
                    transition-transform duration-300 ease-in-out mt-[56px]
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
         <ScrollArea className="h-full chat-scrollbar">
-          {/* Search Bar with Close Button */}
-          <div className="p-4 border-b border-gray-700">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleSidebar}
-                className="p-2 rounded-md hover:bg-gray-800 transition-colors"
-                aria-label="Close sidebar"
-              >
-                <X className="w-5 h-5 text-gray-400 hover:text-white" />
-              </button>
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Search chats..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10"
-                />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-2.5"
-                  >
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
-                )}
+          <div className="flex flex-col h-full">
+            {/* Search Bar with Close Button */}
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-md hover:bg-gray-800 transition-colors"
+                  aria-label="Close sidebar"
+                >
+                  <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                </button>
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search chats..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10"
+                  />
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-2.5"
+                    >
+                      <X className="w-4 h-4 text-gray-400" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Serona AI Brand */}
-          <div className="p-4 flex items-center gap-3 border-b border-gray-700">
-            <img
-              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-              alt="Serona AI"
-              className="w-8 h-8"
-            />
-            <span className="text-lg font-semibold">Serona AI</span>
-          </div>
+            {/* Serona AI Brand */}
+            <div className="p-4 flex items-center gap-3 border-b border-gray-700">
+              <img
+                src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+                alt="Serona AI"
+                className="w-8 h-8"
+              />
+              <span className="text-lg font-semibold">Serona AI</span>
+            </div>
 
-          {/* New Chat Button */}
-          <div className="p-4">
-            <Button 
-              className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
-              onClick={() => {}}
-            >
-              <Plus className="mr-2 h-4 w-4" /> New Chat
-            </Button>
-          </div>
-
-          {/* Chat List */}
-          <div className="flex-1 px-2 py-2 space-y-2">
-            {chats.map((chat) => (
-              <div
-                key={chat.id}
-                className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
-                           ${chat.active ? 'bg-gray-800' : ''}`}
+            {/* New Chat Button */}
+            <div className="p-4">
+              <Button 
+                className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
+                onClick={() => {}}
               >
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-sm truncate">{chat.title}</span>
-              </div>
-            ))}
+                <Plus className="mr-2 h-4 w-4" /> New Chat
+              </Button>
+            </div>
+
+            {/* Chat List */}
+            <div className="flex-1 px-2 py-2 space-y-2">
+              {chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
+                             ${chat.active ? 'bg-gray-800' : ''}`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="text-sm truncate">{chat.title}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </ScrollArea>
       </div>
 
+      {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="bg-black text-white fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50 h-[56px]">
