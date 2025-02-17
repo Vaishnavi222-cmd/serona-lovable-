@@ -29,21 +29,33 @@ const queryClient = new QueryClient({
 const App = () => {
   // Force stop any scrolling
   useEffect(() => {
-    const stopScroll = (e: Event) => {
+    // Prevent scrolling
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    const preventDefault = (e: Event) => {
       e.preventDefault();
-      window.scrollTo(0, 0);
+      e.stopPropagation();
+      return false;
     };
 
     // Handle scroll events with correct TypeScript types
-    document.addEventListener('scroll', stopScroll, { capture: true });
-    document.addEventListener('touchmove', stopScroll, { capture: true });
-    document.addEventListener('wheel', stopScroll, { capture: true });
+    document.addEventListener('scroll', preventDefault, { capture: true, passive: false });
+    document.addEventListener('touchmove', preventDefault, { capture: true, passive: false });
+    document.addEventListener('wheel', preventDefault, { capture: true, passive: false });
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'Space'].includes(e.key)) {
+        e.preventDefault();
+      }
+    }, { capture: true });
 
     // Cleanup function
     return () => {
-      document.removeEventListener('scroll', stopScroll);
-      document.removeEventListener('touchmove', stopScroll);
-      document.removeEventListener('wheel', stopScroll);
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.removeEventListener('scroll', preventDefault);
+      document.removeEventListener('touchmove', preventDefault);
+      document.removeEventListener('wheel', preventDefault);
     };
   }, []);
 
