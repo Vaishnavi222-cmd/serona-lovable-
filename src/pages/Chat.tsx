@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -103,18 +104,28 @@ const Chat = () => {
 
   // Header menu links component
   const HeaderMenu = () => (
-    <div className="hidden md:flex items-center space-x-6">
-      <NavLink to="/">Home</NavLink>
-      <NavLink to="/chat">Chat</NavLink>
-      <NavLink to="/contact">Contact</NavLink>
-      <NavLink to="/recommendations">Recommendations</NavLink>
+    <div className="flex items-center">
+      <div className="flex items-center space-x-4 md:space-x-6">
+        <NavLink to="/">
+          <span className="md:inline text-sm md:text-base">Home</span>
+        </NavLink>
+        <NavLink to="/chat">
+          <span className="md:inline text-sm md:text-base">Chat</span>
+        </NavLink>
+        <NavLink to="/contact">
+          <span className="md:inline text-sm md:text-base">Contact</span>
+        </NavLink>
+        <NavLink to="/recommendations">
+          <span className="md:inline text-sm md:text-base whitespace-nowrap">Recs</span>
+        </NavLink>
+      </div>
     </div>
   );
 
   const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
     <Link
       to={to}
-      className="text-white hover:text-[#40E0D0] transition-colors duration-300 font-medium"
+      className="text-white hover:text-[#40E0D0] transition-colors duration-300 font-medium px-2"
     >
       {children}
     </Link>
@@ -205,9 +216,9 @@ const Chat = () => {
 
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-black text-white fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50 h-[56px]">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-4">
+        <div className="bg-black text-white fixed top-0 left-0 right-0 px-2 md:px-4 py-2 flex items-center justify-between z-50 h-[56px]">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <img
                 src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
                 alt="Logo"
@@ -225,16 +236,16 @@ const Chat = () => {
             <HeaderMenu />
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {user ? (
-              <div className="flex items-center justify-center w-10 h-10">
+              <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10">
                 <UserMenu userEmail={user.email} />
               </div>
             ) : (
               <Button
                 onClick={() => setShowAuthDialog(true)}
                 variant="ghost"
-                className="flex items-center gap-2 text-white hover:bg-gray-800/50"
+                className="flex items-center gap-2 text-white hover:bg-gray-800/50 px-2 md:px-4"
               >
                 <LogIn className="w-5 h-5" />
                 <span className="hidden md:inline">Sign In</span>
