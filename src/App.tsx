@@ -3,50 +3,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Contact from "./pages/Contact";
+import Chat from "./pages/Chat";
+import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
 import Disclaimer from "./pages/Disclaimer";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Refund from "./pages/Refund";
 
-// Force disable all background operations
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      enabled: false, // Completely disable all queries
-      retry: false,
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const App = () => {
-  // Force stop any scrolling
-  useEffect(() => {
-    const stopScroll = (e: Event) => {
-      e.preventDefault();
-      window.scrollTo(0, 0);
-    };
-
-    // Handle scroll events with correct TypeScript types
-    document.addEventListener('scroll', stopScroll, { capture: true });
-    document.addEventListener('touchmove', stopScroll, { capture: true });
-    document.addEventListener('wheel', stopScroll, { capture: true });
-
-    // Cleanup function
-    return () => {
-      document.removeEventListener('scroll', stopScroll);
-      document.removeEventListener('touchmove', stopScroll);
-      document.removeEventListener('wheel', stopScroll);
-    };
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -54,9 +24,9 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/contact" element={<Contact />} />
-            {/* Force redirect /chat to home */}
-            <Route path="/chat" element={<Navigate to="/" replace />} />
-            <Route path="/recommendations" element={<NotFound />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/recommendations/details" element={<Recommendations />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
