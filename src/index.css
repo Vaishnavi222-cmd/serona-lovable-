@@ -91,13 +91,27 @@
 
 /* Chat page scrollbar */
 .chat-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 8px !important;
+  display: block !important;
 }
 
 .chat-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  background: #f1f1f1 !important;
+  border-radius: 10px !important;
 }
 
 .chat-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  background: #888 !important;
+  border-radius: 10px !important;
 }
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #666 !important;
+}
+
+/* Override ScrollArea default styles */
+.chat-scrollbar [data-radix-scroll-area-viewport] {
+  scrollbar-width: thin !important;
+  -ms-overflow-style: auto !important;
+}
+
