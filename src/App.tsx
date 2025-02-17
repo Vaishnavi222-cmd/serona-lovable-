@@ -13,6 +13,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Refund from "./pages/Refund";
 
+// Prevent any background operations for edit 161 specifically
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -21,7 +22,9 @@ const queryClient = new QueryClient({
       refetchOnMount: false,
       refetchOnReconnect: false,
       staleTime: Infinity,
-      gcTime: 0
+      gcTime: 0,
+      queryKey: ['edit-161'], // Target edit 161 specifically
+      enabled: (context) => context?.queryKey?.[0] !== 'edit-161' // Disable only edit 161 queries
     },
   },
 });
