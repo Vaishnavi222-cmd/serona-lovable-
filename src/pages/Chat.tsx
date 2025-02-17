@@ -123,6 +123,7 @@ const Chat = () => {
         <div className={`${isMobile ? 'flex flex-col' : 'flex items-center space-x-6'}`}>
           <NavLink to="/">Home</NavLink>
           <NavLink to="/contact">Contact Us</NavLink>
+          <NavLink to="/recommendations">Recommendations</NavLink>
         </div>
       </nav>
     </>
@@ -284,7 +285,7 @@ const Chat = () => {
           </ScrollArea>
 
           {/* Message Input */}
-          <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4">
+          <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
                 value={message}
