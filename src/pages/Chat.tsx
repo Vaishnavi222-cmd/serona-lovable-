@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -41,10 +40,6 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
-      // Only show auth dialog if user is not authenticated
-      if (!session?.user) {
-        setShowAuthDialog(true);
-      }
     };
 
     checkSession();
@@ -63,8 +58,6 @@ const Chat = () => {
           title: "Signed out",
           description: "You have been signed out successfully",
         });
-        // Show auth dialog when user signs out
-        setShowAuthDialog(true);
       }
     });
 
@@ -82,7 +75,6 @@ const Chat = () => {
       return;
     }
 
-    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -115,20 +107,18 @@ const Chat = () => {
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          <div className="flex flex-col md:flex-row md:items-center">
-            <div className="flex items-center gap-4">
-              <img
-                src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-                alt="Logo"
-                className="h-8 w-8"
-              />
-              <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
-            </div>
-            {/* Repositioned menu icon */}
+          <div className="flex items-center gap-4">
+            <img
+              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+              alt="Logo"
+              className="h-8 w-8"
+            />
+            <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+            {/* Desktop-optimized menu icon */}
             {!isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
-                className="mt-2 md:mt-0 md:ml-4 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+                className="inline-flex p-2 rounded-md hover:bg-gray-800/50 transition-colors ml-4"
                 aria-label="Open sidebar"
               >
                 <Menu className="w-6 h-6 text-[#40E0D0] stroke-2" />
@@ -138,9 +128,9 @@ const Chat = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Adjusted profile icon container */}
+          {/* Improved profile icon placement */}
           {user && (
-            <div className="flex items-center justify-center mr-2">
+            <div className="flex items-center justify-center mr-4">
               <UserMenu userEmail={user.email} />
             </div>
           )}
