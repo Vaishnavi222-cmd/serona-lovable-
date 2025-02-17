@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -114,7 +115,7 @@ const Chat = () => {
               className="h-8 w-8"
             />
             <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
-            {/* Desktop-optimized menu icon */}
+            {/* Three-line menu icon */}
             {!isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
@@ -128,9 +129,9 @@ const Chat = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Improved profile icon placement */}
+          {/* Profile icon with adjusted spacing */}
           {user && (
-            <div className="flex items-center justify-center mr-4">
+            <div className="flex items-center justify-center mr-6">
               <UserMenu userEmail={user.email} />
             </div>
           )}
