@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Contact from "./pages/Contact";
 import Chat from "./pages/Chat";
-import Auth from "./pages/Auth";
 import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
 import Disclaimer from "./pages/Disclaimer";
@@ -26,7 +25,6 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/chat" element={<Chat />} />
-            <Route path="/auth" element={<Auth />} />
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/recommendations/details" element={<Recommendations />} />
             <Route path="/disclaimer" element={<Disclaimer />} />

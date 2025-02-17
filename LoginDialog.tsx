@@ -199,25 +199,3 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     </Dialog>
   );
 }
-
-// CSS Customization
-.custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-100;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
-}
-
-/* Chat page scrollbar */
-.chat-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-100;
-}
-
-.chat-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
-}
