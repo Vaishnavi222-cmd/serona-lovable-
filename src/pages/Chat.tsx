@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -102,30 +101,42 @@ const Chat = () => {
     setIsSidebarOpen(prev => !prev);
   };
 
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const isMobile = useIsMobile();
+
   // Header menu links component
   const HeaderMenu = () => (
-    <div className="flex items-center">
-      <div className="flex items-center space-x-4 md:space-x-6">
-        <NavLink to="/">
-          <span className="md:inline text-sm md:text-base">Home</span>
-        </NavLink>
-        <NavLink to="/chat">
-          <span className="md:inline text-sm md:text-base">Chat</span>
-        </NavLink>
-        <NavLink to="/contact">
-          <span className="md:inline text-sm md:text-base">Contact</span>
-        </NavLink>
-        <NavLink to="/recommendations">
-          <span className="md:inline text-sm md:text-base whitespace-nowrap">Recs</span>
-        </NavLink>
-      </div>
-    </div>
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+        className="md:hidden p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+        aria-label="Toggle header menu"
+      >
+        <Menu className="w-5 h-5 text-[#40E0D0]" />
+      </button>
+
+      {/* Menu Items */}
+      <nav className={`${
+        isMobile 
+          ? `absolute top-[56px] right-0 bg-black w-48 py-2 ${showHeaderMenu ? 'block' : 'hidden'}`
+          : 'flex items-center space-x-6'
+      }`}>
+        <div className={`${isMobile ? 'flex flex-col' : 'flex items-center space-x-6'}`}>
+          <NavLink to="/">Home</NavLink>
+          <NavLink to="/contact">Contact Us</NavLink>
+        </div>
+      </nav>
+    </>
   );
 
   const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
     <Link
       to={to}
-      className="text-white hover:text-[#40E0D0] transition-colors duration-300 font-medium px-2"
+      className={`text-white hover:text-[#40E0D0] transition-colors duration-300 font-medium ${
+        isMobile ? 'block px-4 py-2 hover:bg-gray-800/50' : ''
+      }`}
+      onClick={() => setShowHeaderMenu(false)}
     >
       {children}
     </Link>
@@ -216,9 +227,9 @@ const Chat = () => {
 
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-black text-white fixed top-0 left-0 right-0 px-2 md:px-4 py-2 flex items-center justify-between z-50 h-[56px]">
-          <div className="flex items-center gap-2 md:gap-4">
-            <div className="flex items-center gap-2 md:gap-4">
+        <div className="bg-black text-white fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50 h-[56px]">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
               <img
                 src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
                 alt="Logo"
@@ -233,19 +244,19 @@ const Chat = () => {
                 <Menu className="w-6 h-6 text-[#40E0D0] stroke-[2.5px]" />
               </button>
             </div>
-            <HeaderMenu />
           </div>
           
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-4">
+            <HeaderMenu />
             {user ? (
-              <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10">
+              <div className="flex items-center justify-center w-10 h-10">
                 <UserMenu userEmail={user.email} />
               </div>
             ) : (
               <Button
                 onClick={() => setShowAuthDialog(true)}
                 variant="ghost"
-                className="flex items-center gap-2 text-white hover:bg-gray-800/50 px-2 md:px-4"
+                className="flex items-center gap-2 text-white hover:bg-gray-800/50"
               >
                 <LogIn className="w-5 h-5" />
                 <span className="hidden md:inline">Sign In</span>
