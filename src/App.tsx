@@ -23,8 +23,7 @@ const queryClient = new QueryClient({
       refetchOnReconnect: false,
       staleTime: Infinity,
       gcTime: 0,
-      queryKey: ['edit-161'], // Target edit 161 specifically
-      enabled: (context) => context?.queryKey?.[0] !== 'edit-161' // Disable only edit 161 queries
+      enabled: false // Disable all queries by default
     },
   },
 });
