@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -111,41 +112,42 @@ const Chat = () => {
         onOpenChange={setShowAuthDialog}
       />
 
-      {/* Main Header */}
-      <header className="bg-black text-white w-full fixed top-0 left-0 right-0 min-h-16 px-6 py-3 flex items-center justify-between z-50">
-        {/* Left side */}
+      {/* Header */}
+      <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          {!isSidebarOpen && (
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-md hover:bg-gray-800/50 transition-colors"
-              aria-label="Open sidebar"
-            >
-              <Menu className="w-6 h-6 text-[#40E0D0]" />
-            </button>
-          )}
-          <div className="flex items-center gap-4">
-            <img
-              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-              alt="Logo"
-              className="h-8 w-8"
-            />
-            <h1 className="text-xl font-semibold hidden md:inline">Serona AI</h1>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-4">
+              <img
+                src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+                alt="Logo"
+                className="h-8 w-8"
+              />
+              <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+            </div>
+            {/* Three-line menu icon positioned below Serona AI text but within header */}
+            {!isSidebarOpen && (
+              <button
+                onClick={toggleSidebar}
+                className="mt-2 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+                aria-label="Open sidebar"
+              >
+                <Menu className="w-6 h-6 text-[#40E0D0]" />
+              </button>
+            )}
           </div>
         </div>
         
-        {/* Right side */}
         <div className="flex items-center gap-4">
           {user && <UserMenu userEmail={user.email} />}
           <Navbar />
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <div className="flex w-full h-screen pt-16">
+      <div className="flex w-full h-screen pt-14">
         {/* Sidebar */}
         <div 
-          className={`fixed md:relative w-64 h-[calc(100vh-4rem)] bg-black text-white overflow-hidden z-40
+          className={`fixed md:relative w-64 h-[calc(100vh-3.5rem)] bg-black text-white overflow-hidden z-40
                      transition-transform duration-300 ease-in-out
                      ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         >
@@ -218,7 +220,7 @@ const Chat = () => {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col h-[calc(100vh-4rem)]">
+        <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)]">
           {/* Messages Area */}
           <ScrollArea className="flex-1 p-4 custom-scrollbar">
             <div className="max-w-3xl mx-auto space-y-4">
