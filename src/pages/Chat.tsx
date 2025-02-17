@@ -115,7 +115,7 @@ const Chat = () => {
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          <div className="flex flex-col">
+          <div className="flex flex-col md:flex-row md:items-center">
             <div className="flex items-center gap-4">
               <img
                 src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
@@ -124,21 +124,26 @@ const Chat = () => {
               />
               <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
             </div>
-            {/* Three-line menu icon positioned below Serona AI text but within header */}
+            {/* Repositioned menu icon */}
             {!isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
-                className="mt-2 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+                className="mt-2 md:mt-0 md:ml-4 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
                 aria-label="Open sidebar"
               >
-                <Menu className="w-6 h-6 text-[#40E0D0]" />
+                <Menu className="w-6 h-6 text-[#40E0D0] stroke-2" />
               </button>
             )}
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          {user && <UserMenu userEmail={user.email} />}
+          {/* Adjusted profile icon container */}
+          {user && (
+            <div className="flex items-center justify-center mr-2">
+              <UserMenu userEmail={user.email} />
+            </div>
+          )}
           <Navbar />
         </div>
       </div>
