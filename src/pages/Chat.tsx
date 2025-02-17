@@ -26,6 +26,7 @@ const Chat = () => {
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [chats] = useState([
     { id: 1, title: "Deep Personality Analysis", active: true },
     { id: 2, title: "Career Guidance Session", active: false },
@@ -100,9 +101,6 @@ const Chat = () => {
     console.log('Toggling sidebar', { currentState: isSidebarOpen });
     setIsSidebarOpen(prev => !prev);
   };
-
-  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
-  const isMobile = useIsMobile();
 
   // Header menu links component
   const HeaderMenu = () => (
