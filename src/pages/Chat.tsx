@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +18,6 @@ interface Message {
 }
 
 const Chat = () => {
-  console.log('Chat component rendering');
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,22 +34,26 @@ const Chat = () => {
     { id: 4, title: "Life Goals Planning", active: false },
   ]);
 
+  // Clear any potential background processes on component mount/unmount
   useEffect(() => {
-    console.log('Running auth effect');
+    const controller = new AbortController();
+    
     const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error checking session:', error);
-        return;
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error checking session:', error);
+          return;
+        }
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Session check failed:', error);
       }
-      console.log('Session check result:', session?.user);
-      setUser(session?.user ?? null);
     };
 
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
         setShowAuthDialog(false);
@@ -65,13 +69,14 @@ const Chat = () => {
       }
     });
 
+    // Cleanup function to abort any pending operations
     return () => {
       subscription.unsubscribe();
+      controller.abort();
     };
   }, [toast]);
 
   const handleSend = async () => {
-    console.log('Handle send clicked', { message, user });
     if (!message.trim()) {
       toast({
         title: "Empty message",
@@ -93,19 +98,15 @@ const Chat = () => {
     
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
-    
-    console.log("Message sent:", newMessage);
   };
 
   const toggleSidebar = () => {
-    console.log('Toggling sidebar', { currentState: isSidebarOpen });
     setIsSidebarOpen(prev => !prev);
   };
 
   // Header menu links component
   const HeaderMenu = () => (
     <>
-      {/* Mobile Menu Button */}
       <button
         onClick={() => setShowHeaderMenu(!showHeaderMenu)}
         className="md:hidden p-2 rounded-md hover:bg-gray-800/50 transition-colors"
@@ -114,7 +115,6 @@ const Chat = () => {
         <Menu className="w-5 h-5 text-[#40E0D0]" />
       </button>
 
-      {/* Menu Items */}
       <nav className={`${
         isMobile 
           ? `absolute top-[56px] right-0 bg-black w-48 py-2 ${showHeaderMenu ? 'block' : 'hidden'}`
@@ -143,7 +143,6 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
-      {/* Auth Dialog */}
       <AuthDialog 
         open={showAuthDialog} 
         onOpenChange={setShowAuthDialog}
@@ -157,7 +156,6 @@ const Chat = () => {
         style={{ height: 'calc(100vh - 56px)' }}
       >
         <ScrollArea className="h-full custom-scrollbar">
-          {/* Search Bar with Close Button */}
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <button
@@ -188,7 +186,6 @@ const Chat = () => {
             </div>
           </div>
 
-          {/* Serona AI Brand */}
           <div className="p-4 flex items-center gap-3 border-b border-gray-700">
             <img
               src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
@@ -198,7 +195,6 @@ const Chat = () => {
             <span className="text-lg font-semibold">Serona AI</span>
           </div>
 
-          {/* New Chat Button */}
           <div className="p-4">
             <Button 
               className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
@@ -208,7 +204,6 @@ const Chat = () => {
             </Button>
           </div>
 
-          {/* Chat List */}
           <div className="flex-1 px-2 py-2 space-y-2">
             {chats.map((chat) => (
               <div
@@ -225,7 +220,6 @@ const Chat = () => {
       </div>
 
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <div className="bg-black text-white fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50 h-[56px]">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-4">
@@ -264,9 +258,7 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Chat Area */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          {/* Messages Area */}
           <ScrollArea className="flex-1 p-4 custom-scrollbar">
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.map((msg) => (
@@ -284,7 +276,6 @@ const Chat = () => {
             </div>
           </ScrollArea>
 
-          {/* Message Input */}
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
