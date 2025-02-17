@@ -12,7 +12,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Refund from "./pages/Refund";
 
-// Force disable all background operations
+// Force disable all background operations and prevent any query caching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -21,6 +21,8 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,
+      staleTime: Infinity, // Prevent background updates
+      cacheTime: 0, // Disable caching completely
     },
   },
 });
@@ -33,13 +35,15 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/contact" element={<Contact />} />
-            {/* Force redirect /chat to home */}
-            <Route path="/chat" element={<Navigate to="/" replace />} />
+            {/* Force immediate redirect from /chat to home */}
+            <Route path="/chat/*" element={<Navigate to="/" replace />} />
             <Route path="/recommendations" element={<NotFound />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/refund" element={<Refund />} />
+            {/* Catch any chat-related routes and redirect */}
+            <Route path="/chat*" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
