@@ -19,13 +19,19 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Add base configuration to handle routing
   base: "/",
   build: {
     rollupOptions: {
+      external: ['critical'], // Explicitly mark critical as external
       output: {
         manualChunks: undefined,
       },
     },
+    commonjsOptions: {
+      include: [/critical/, /node_modules/], // Include critical in commonjs processing
+    },
+  },
+  optimizeDeps: {
+    include: ['critical'], // Include critical in dependency optimization
   },
 }));
