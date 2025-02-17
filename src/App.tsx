@@ -33,18 +33,17 @@ const App = () => {
       e.preventDefault();
       window.scrollTo(0, 0);
     };
-    
-    // Clean up any existing scroll listeners
-    const events = ['scroll', 'touchmove', 'wheel'];
-    events.forEach(event => {
-      window.removeEventListener(event, stopScroll, { passive: false });
-      window.addEventListener(event, stopScroll, { passive: false });
-    });
 
+    // Handle scroll events with correct TypeScript types
+    document.addEventListener('scroll', stopScroll, { capture: true });
+    document.addEventListener('touchmove', stopScroll, { capture: true });
+    document.addEventListener('wheel', stopScroll, { capture: true });
+
+    // Cleanup function
     return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, stopScroll);
-      });
+      document.removeEventListener('scroll', stopScroll);
+      document.removeEventListener('touchmove', stopScroll);
+      document.removeEventListener('wheel', stopScroll);
     };
   }, []);
 
