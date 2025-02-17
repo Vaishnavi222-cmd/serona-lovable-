@@ -23,7 +23,6 @@ export default defineConfig(({ mode }) => ({
   base: "/",
   build: {
     rollupOptions: {
-      external: ['critical'], // Add critical as external dependency
       output: {
         manualChunks: undefined,
       },

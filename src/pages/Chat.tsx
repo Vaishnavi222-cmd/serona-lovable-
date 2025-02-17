@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
+import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -20,7 +21,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default false
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
@@ -40,6 +41,10 @@ const Chat = () => {
         return;
       }
       setUser(session?.user ?? null);
+      // Only show auth dialog if user is not authenticated
+      if (!session?.user) {
+        setShowAuthDialog(true);
+      }
     };
 
     checkSession();
@@ -58,6 +63,8 @@ const Chat = () => {
           title: "Signed out",
           description: "You have been signed out successfully",
         });
+        // Show auth dialog when user signs out
+        setShowAuthDialog(true);
       }
     });
 
@@ -75,6 +82,7 @@ const Chat = () => {
       return;
     }
 
+    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -96,11 +104,6 @@ const Chat = () => {
     setIsSidebarOpen(prev => !prev);
   };
 
-  // Fix "Message Serona AI" box visibility issue on load
-  useEffect(() => {
-    window.scrollTo(0, document.body.scrollHeight);
-  }, []);
-
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       {/* Auth Dialog */}
@@ -119,25 +122,33 @@ const Chat = () => {
               className="h-8 w-8"
             />
             <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+            {/* Three-line menu icon with improved visibility */}
+            {!isSidebarOpen && (
+              <button
+                onClick={toggleSidebar}
+                className="p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+                aria-label="Open sidebar"
+              >
+                <Menu className="w-6 h-6 text-[#40E0D0] stroke-[2.5px]" />
+              </button>
+            )}
           </div>
-          {/* Three-line menu icon - Always visible when sidebar is closed */}
-          {!isSidebarOpen && (
-            <button
-              onClick={toggleSidebar}
-              className="inline-flex p-2 rounded-md hover:bg-gray-800/50 transition-colors"
-              aria-label="Open sidebar"
-            >
-              <Menu className="w-6 h-6 text-[#40E0D0] stroke-2" />
-            </button>
-          )}
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Profile icon with adjusted spacing */}
-          {user && (
-            <div className="flex items-center justify-center mr-6">
+          {user ? (
+            <div className="flex items-center justify-center w-10 h-10">
               <UserMenu userEmail={user.email} />
             </div>
+          ) : (
+            <Button
+              onClick={() => setShowAuthDialog(true)}
+              variant="ghost"
+              className="flex items-center gap-2 text-white hover:bg-gray-800/50"
+            >
+              <LogIn className="w-5 h-5" />
+              <span className="hidden md:inline">Sign In</span>
+            </Button>
           )}
           <Navbar />
         </div>
@@ -233,27 +244,36 @@ const Chat = () => {
                       : 'bg-gray-100 mr-auto max-w-[80%]'
                   }`}
                 >
-                  <p className="text-sm">{msg.text}</p>
+                  {msg.text}
                 </div>
               ))}
             </div>
           </ScrollArea>
 
-          {/* Input Area */}
-          <div className="p-4 bg-gray-800 text-white">
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
+          {/* Message Input */}
+          <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4">
+            <div className="max-w-4xl mx-auto flex items-center gap-2">
+              <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full p-3 rounded-lg bg-gray-700 text-white"
-                placeholder="Type your message..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Message Serona AI..."
+                className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
+                         bg-white border border-gray-200 shadow-sm resize-none text-gray-800
+                         placeholder-gray-400 min-h-[44px] max-h-[200px]"
+                rows={1}
               />
-              <button
+              <button 
                 onClick={handleSend}
-                className="p-3 rounded-lg bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Send message"
               >
-                <Send className="w-5 h-5 text-white" />
+                <Send className="w-5 h-5 text-[#1EAEDB]" />
               </button>
             </div>
           </div>
