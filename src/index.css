@@ -1,86 +1,206 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
- 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
- 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
- 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
- 
-    --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
- 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+interface AuthDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-/* Custom scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+interface FormData {
+  email: string;
+  password: string;
+  fullName?: string;
 }
 
+export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
+  const [formData, setFormData] = useState<FormData>({ email: "", password: "", fullName: "" });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const { toast } = useToast();
+
+  const validateForm = () => {
+    const errors: string[] = [];
+    if (!formData.email) errors.push("Email is required");
+    if (!formData.email.includes("@")) errors.push("Invalid email format");
+    if (!formData.password) errors.push("Password is required");
+    if (formData.password.length < 6) errors.push("Password must be at least 6 characters");
+    if (isSignUp && !formData.fullName) errors.push("Full name is required");
+
+    return errors;
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const errors = validateForm();
+    if (errors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: errors.join("\n"),
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: formData.fullName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Please check your email to confirm your account",
+      });
+      setIsSignUp(false);
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred during sign-up",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const errors = validateForm();
+    if (errors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: errors.join("\n"),
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "You have been signed in successfully",
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Sign in error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred during sign-in",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Attempting Google sign-in");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred while signing in with Google",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogOverlay className="bg-black/80" />
+      <DialogContent className="bg-white opacity-100 max-w-[425px] w-full max-h-[90vh] rounded-lg p-6 shadow-lg border border-gray-200">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-semibold text-center text-gray-900">
+            Welcome to Serona AI
+          </DialogTitle>
+          <p className="text-center text-gray-600 mt-2">
+            {isSignUp ? "Create your account" : "Sign in to your account"}
+          </p>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          {isSignUp && (
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              className="w-full p-2 border rounded-md"
+              disabled={isLoading}
+            />
+          )}
+          <input
+            type="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full p-2 border rounded-md"
+            disabled={isLoading}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            className="w-full p-2 border rounded-md"
+            disabled={isLoading}
+          />
+          <div className="flex gap-2">
+            <Button onClick={isSignUp ? handleSignUp : handleSignIn} className="flex-1" disabled={isLoading}>
+              {isSignUp ? "Sign Up" : "Sign In"}
+            </Button>
+            <Button onClick={handleGoogleSignIn} variant="outline" className="flex-1" disabled={isLoading}>
+              Sign in with Google
+            </Button>
+          </div>
+          <p className="text-center text-sm text-gray-600">
+            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+            <button onClick={() => setIsSignUp(!isSignUp)} className="text-blue-500 hover:underline">
+              {isSignUp ? "Sign in" : "Sign up"}
+            </button>
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// CSS Customization
 .custom-scrollbar::-webkit-scrollbar-track {
   @apply bg-gray-100;
 }

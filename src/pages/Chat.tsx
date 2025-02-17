@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +20,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Changed to false by default
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default false
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
@@ -96,6 +95,11 @@ const Chat = () => {
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
+
+  // Fix "Message Serona AI" box visibility issue on load
+  useEffect(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  }, []);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
@@ -229,36 +233,27 @@ const Chat = () => {
                       : 'bg-gray-100 mr-auto max-w-[80%]'
                   }`}
                 >
-                  {msg.text}
+                  <p className="text-sm">{msg.text}</p>
                 </div>
               ))}
             </div>
           </ScrollArea>
 
-          {/* Message Input */}
-          <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 p-4">
-            <div className="max-w-4xl mx-auto flex items-center gap-2">
-              <textarea
+          {/* Input Area */}
+          <div className="p-4 bg-gray-800 text-white">
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Message Serona AI..."
-                className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
-                         bg-white border border-gray-200 shadow-sm resize-none text-gray-800
-                         placeholder-gray-400 min-h-[44px] max-h-[200px]"
-                rows={1}
+                className="w-full p-3 rounded-lg bg-gray-700 text-white"
+                placeholder="Type your message..."
               />
-              <button 
+              <button
                 onClick={handleSend}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Send message"
+                className="p-3 rounded-lg bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
               >
-                <Send className="w-5 h-5 text-[#1EAEDB]" />
+                <Send className="w-5 h-5 text-white" />
               </button>
             </div>
           </div>
