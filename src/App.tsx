@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
       refetchOnMount: false,
       refetchOnReconnect: false,
       staleTime: Infinity, // Prevent background updates
-      cacheTime: 0, // Disable caching completely
+      gcTime: 0 // Immediately garbage collect any query data
     },
   },
 });
