@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
+import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -115,41 +115,30 @@ const Chat = () => {
       {/* Header */}
       <div className="bg-black text-white w-full fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-4">
-            <img
-              src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
-              alt="Logo"
-              className="h-8 w-8"
-            />
-            <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
-            {/* Three-line menu icon with improved visibility */}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-4">
+              <img
+                src="/lovable-uploads/dc45c119-80a0-499e-939f-f434d6193c98.png"
+                alt="Logo"
+                className="h-8 w-8"
+              />
+              <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
+            </div>
+            {/* Three-line menu icon positioned below Serona AI text but within header */}
             {!isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+                className="mt-2 p-2 rounded-md hover:bg-gray-800/50 transition-colors"
                 aria-label="Open sidebar"
               >
-                <Menu className="w-6 h-6 text-[#40E0D0] stroke-[2.5px]" />
+                <Menu className="w-6 h-6 text-[#40E0D0]" />
               </button>
             )}
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center justify-center w-10 h-10">
-              <UserMenu userEmail={user.email} />
-            </div>
-          ) : (
-            <Button
-              onClick={() => setShowAuthDialog(true)}
-              variant="ghost"
-              className="flex items-center gap-2 text-white hover:bg-gray-800/50"
-            >
-              <LogIn className="w-5 h-5" />
-              <span className="hidden md:inline">Sign In</span>
-            </Button>
-          )}
+          {user && <UserMenu userEmail={user.email} />}
           <Navbar />
         </div>
       </div>
