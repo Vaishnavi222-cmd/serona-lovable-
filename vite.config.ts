@@ -22,16 +22,10 @@ export default defineConfig(({ mode }) => ({
   base: "/",
   build: {
     rollupOptions: {
-      external: ['critical'], // Explicitly mark critical as external
+      external: [], // Remove critical from external
       output: {
         manualChunks: undefined,
       },
     },
-    commonjsOptions: {
-      include: [/critical/, /node_modules/], // Include critical in commonjs processing
-    },
-  },
-  optimizeDeps: {
-    include: ['critical'], // Include critical in dependency optimization
   },
 }));

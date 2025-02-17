@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +17,7 @@ interface Message {
 }
 
 const Chat = () => {
+  console.log('Chat component rendering'); // Debug log
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,14 +34,15 @@ const Chat = () => {
   ]);
 
   useEffect(() => {
+    console.log('Running auth effect'); // Debug log
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Error checking session:', error);
         return;
       }
+      console.log('Session check result:', session?.user); // Debug log
       setUser(session?.user ?? null);
-      // Only show auth dialog if user is not authenticated
       if (!session?.user) {
         setShowAuthDialog(true);
       }
@@ -63,7 +64,6 @@ const Chat = () => {
           title: "Signed out",
           description: "You have been signed out successfully",
         });
-        // Show auth dialog when user signs out
         setShowAuthDialog(true);
       }
     });
@@ -74,6 +74,7 @@ const Chat = () => {
   }, [toast]);
 
   const handleSend = async () => {
+    console.log('Handle send clicked', { message, user }); // Debug log
     if (!message.trim()) {
       toast({
         title: "Empty message",
@@ -82,7 +83,6 @@ const Chat = () => {
       return;
     }
 
-    // Only show auth dialog if user is not authenticated
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -101,6 +101,7 @@ const Chat = () => {
   };
 
   const toggleSidebar = () => {
+    console.log('Toggling sidebar', { currentState: isSidebarOpen }); // Debug log
     setIsSidebarOpen(prev => !prev);
   };
 
