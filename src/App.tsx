@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,27 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  // Force stop any scrolling
+  useEffect(() => {
+    const stopScroll = (e: Event) => {
+      e.preventDefault();
+      window.scrollTo(0, 0);
+    };
+    
+    // Clean up any existing scroll listeners
+    const events = ['scroll', 'touchmove', 'wheel'];
+    events.forEach(event => {
+      window.removeEventListener(event, stopScroll, { passive: false });
+      window.addEventListener(event, stopScroll, { passive: false });
+    });
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, stopScroll);
+      });
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
