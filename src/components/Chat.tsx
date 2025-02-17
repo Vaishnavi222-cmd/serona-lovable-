@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -96,7 +95,7 @@ const Chat = () => {
             <span className="text-lg font-semibold">Serona AI</span>
           </div>
 
-          {/* New Chat Button - Matched color with Get Started */}
+          {/* New Chat Button */}
           <div className="p-4">
             <Button 
               className="w-full bg-[#1EAEDB] hover:bg-[#1795BD] text-white font-semibold"
@@ -177,3 +176,4 @@ const Chat = () => {
 };
 
 export default Chat;
+
