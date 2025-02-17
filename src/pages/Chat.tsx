@@ -122,7 +122,7 @@ const Chat = () => {
               className="h-8 w-8"
             />
             <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
-            {/* Improved Menu icon visibility with proper positioning */}
+            {/* Three-line menu icon with improved visibility */}
             {!isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
