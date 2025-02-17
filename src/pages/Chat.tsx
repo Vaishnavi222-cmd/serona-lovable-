@@ -21,7 +21,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Changed to false by default
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
@@ -115,17 +115,17 @@ const Chat = () => {
               className="h-8 w-8"
             />
             <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
-            {/* Three-line menu icon */}
-            {!isSidebarOpen && (
-              <button
-                onClick={toggleSidebar}
-                className="inline-flex p-2 rounded-md hover:bg-gray-800/50 transition-colors ml-4"
-                aria-label="Open sidebar"
-              >
-                <Menu className="w-6 h-6 text-[#40E0D0] stroke-2" />
-              </button>
-            )}
           </div>
+          {/* Three-line menu icon - Always visible when sidebar is closed */}
+          {!isSidebarOpen && (
+            <button
+              onClick={toggleSidebar}
+              className="inline-flex p-2 rounded-md hover:bg-gray-800/50 transition-colors"
+              aria-label="Open sidebar"
+            >
+              <Menu className="w-6 h-6 text-[#40E0D0] stroke-2" />
+            </button>
+          )}
         </div>
         
         <div className="flex items-center gap-4">
