@@ -156,7 +156,7 @@ const Chat = () => {
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
-        <ScrollArea className="h-full custom-scrollbar">
+        <ScrollArea className="h-full chat-scrollbar">
           {/* Search Bar with Close Button */}
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ const Chat = () => {
         {/* Chat Area */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
           {/* Messages Area */}
-          <ScrollArea className="flex-1 p-4 custom-scrollbar">
+          <ScrollArea className="flex-1 p-4 chat-scrollbar">
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.map((msg) => (
                 <div
