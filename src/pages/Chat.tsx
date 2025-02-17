@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
+import { Link } from 'react-router-dom';
 
 interface Message {
   id: number;
@@ -100,6 +100,25 @@ const Chat = () => {
     console.log('Toggling sidebar', { currentState: isSidebarOpen });
     setIsSidebarOpen(prev => !prev);
   };
+
+  // Header menu links component
+  const HeaderMenu = () => (
+    <div className="hidden md:flex items-center space-x-6">
+      <NavLink to="/">Home</NavLink>
+      <NavLink to="/chat">Chat</NavLink>
+      <NavLink to="/contact">Contact</NavLink>
+      <NavLink to="/recommendations">Recommendations</NavLink>
+    </div>
+  );
+
+  const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
+    <Link
+      to={to}
+      className="text-white hover:text-[#40E0D0] transition-colors duration-300 font-medium"
+    >
+      {children}
+    </Link>
+  );
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
@@ -203,6 +222,7 @@ const Chat = () => {
                 <Menu className="w-6 h-6 text-[#40E0D0] stroke-[2.5px]" />
               </button>
             </div>
+            <HeaderMenu />
           </div>
           
           <div className="flex items-center gap-4">
