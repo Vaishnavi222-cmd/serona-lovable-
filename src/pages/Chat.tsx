@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -288,8 +289,8 @@ const Chat = () => {
         </div>
 
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-4">
-            <div className="max-w-3xl mx-auto space-y-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="max-w-3xl mx-auto p-4 space-y-6">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
@@ -331,18 +332,27 @@ const Chat = () => {
                   </div>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`p-4 rounded-lg ${
-                      msg.sender === 'user' 
-                        ? 'bg-[#1EAEDB]/10 ml-auto max-w-[80%]' 
-                        : 'bg-gray-100 mr-auto max-w-[80%]'
-                    }`}
-                  >
-                    {msg.text}
-                  </div>
-                ))
+                <div className="space-y-6 px-2 sm:px-4">
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${
+                        msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`relative p-4 rounded-lg max-w-[85%] sm:max-w-[75%] break-words
+                          ${
+                            msg.sender === 'user' 
+                              ? 'bg-[#1EAEDB]/10 ml-4' 
+                              : 'bg-gray-100 mr-4'
+                          }`}
+                      >
+                        <p className="text-gray-800 whitespace-pre-wrap">{msg.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
