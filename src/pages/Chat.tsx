@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -171,6 +170,15 @@ const Chat = () => {
     setMessage(e.target.value);
   };
 
+  useEffect(() => {
+    // Update meta title for home page
+    document.title = "Serona AI – AI That Understands You & Guides You Forward";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
+    }
+  }, []);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       <AuthDialog 
@@ -290,7 +298,7 @@ const Chat = () => {
 
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="max-w-3xl mx-auto p-4 space-y-6">
+            <div className="max-w-3xl mx-auto py-4 px-6 space-y-6">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
@@ -332,7 +340,7 @@ const Chat = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6 px-2 sm:px-4">
+                <div className="space-y-6">
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
@@ -341,14 +349,14 @@ const Chat = () => {
                       }`}
                     >
                       <div
-                        className={`relative p-4 rounded-lg max-w-[85%] sm:max-w-[75%] break-words
+                        className={`relative p-4 rounded-lg max-w-[80%] break-words
                           ${
                             msg.sender === 'user' 
                               ? 'bg-[#1EAEDB]/10 ml-4' 
                               : 'bg-gray-100 mr-4'
                           }`}
                       >
-                        <p className="text-gray-800 whitespace-pre-wrap">{msg.text}</p>
+                        <p className="text-gray-800 whitespace-pre-wrap text-[15px] leading-relaxed">{msg.text}</p>
                       </div>
                     </div>
                   ))}
