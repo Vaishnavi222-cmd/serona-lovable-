@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -276,41 +277,41 @@ const Chat = () => {
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
-                  <h1 className="text-2xl font-playfair font-semibold text-gray-800 text-center mb-12 leading-relaxed">
+                  <h1 className="text-2xl md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
                     Hello, I am your personal growth partner. Let me know how I can help you.
                   </h1>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+                  <div className="grid grid-cols-2 gap-2 md:gap-6 w-full max-w-2xl px-2 md:px-4">
                     <Button
                       onClick={() => handleQuickStart("Deep Personality Analysis")}
-                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      className="p-3 md:p-6 h-auto flex flex-col items-center gap-2 md:gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
                       variant="outline"
                     >
-                      <Brain className="w-6 h-6 text-[#1EAEDB]" />
-                      <span>Deep Personality Analysis</span>
+                      <Brain className="w-5 h-5 md:w-6 md:h-6 text-[#1EAEDB]" />
+                      <span className="text-sm md:text-base text-center">Deep Personality Analysis</span>
                     </Button>
                     <Button
                       onClick={() => handleQuickStart("Career Guidance")}
-                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      className="p-3 md:p-6 h-auto flex flex-col items-center gap-2 md:gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
                       variant="outline"
                     >
-                      <Briefcase className="w-6 h-6 text-[#1EAEDB]" />
-                      <span>Career Guidance</span>
+                      <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-[#1EAEDB]" />
+                      <span className="text-sm md:text-base text-center">Career Guidance</span>
                     </Button>
                     <Button
                       onClick={() => handleQuickStart("Decision Making")}
-                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      className="p-3 md:p-6 h-auto flex flex-col items-center gap-2 md:gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
                       variant="outline"
                     >
-                      <Scale className="w-6 h-6 text-[#1EAEDB]" />
-                      <span>Decision Making</span>
+                      <Scale className="w-5 h-5 md:w-6 md:h-6 text-[#1EAEDB]" />
+                      <span className="text-sm md:text-base text-center">Decision Making</span>
                     </Button>
                     <Button
                       onClick={() => handleQuickStart("Relationship Advice")}
-                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      className="p-3 md:p-6 h-auto flex flex-col items-center gap-2 md:gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
                       variant="outline"
                     >
-                      <Heart className="w-6 h-6 text-[#1EAEDB]" />
-                      <span>Relationship Advice</span>
+                      <Heart className="w-5 h-5 md:w-6 md:h-6 text-[#1EAEDB]" />
+                      <span className="text-sm md:text-base text-center">Relationship Advice</span>
                     </Button>
                   </div>
                 </div>
