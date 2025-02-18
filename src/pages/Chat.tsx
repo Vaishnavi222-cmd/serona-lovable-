@@ -278,7 +278,7 @@ const Chat = () => {
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
                   <h1 className="text-2xl md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
-                    Hello, I am your personal growth partner. Let me know how I can help you.
+                    Hello! I'm your personal growth partner—here to support and guide you! 💡 Let me know how I can help😊
                   </h1>
                   <div className="grid grid-cols-2 gap-2 md:gap-6 w-full max-w-2xl px-2 md:px-4">
                     <Button
@@ -287,7 +287,7 @@ const Chat = () => {
                       variant="outline"
                     >
                       <Brain className="w-5 h-5 md:w-6 md:h-6 text-[#1EAEDB]" />
-                      <span className="text-sm md:text-base text-center">Deep Personality Analysis</span>
+                      <span className="text-sm md:text-base text-center whitespace-pre-line">Deep{'\n'}Personality Analysis</span>
                     </Button>
                     <Button
                       onClick={() => handleQuickStart("Career Guidance")}
