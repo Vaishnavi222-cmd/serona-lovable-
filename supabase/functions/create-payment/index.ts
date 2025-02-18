@@ -42,7 +42,11 @@ serve(async (req) => {
         throw new Error('Invalid plan type');
     }
 
-    console.log(`Creating Razorpay order: ${planType} plan for amount ${amount}`);
+    // Generate a shorter receipt ID (max 40 chars)
+    const timestamp = Date.now().toString().slice(-8);
+    const receiptId = `rcpt_${planType}_${timestamp}`;
+    
+    console.log(`Creating Razorpay order with receipt: ${receiptId}`);
 
     // Create Razorpay order
     const response = await fetch('https://api.razorpay.com/v1/orders', {
@@ -54,7 +58,7 @@ serve(async (req) => {
       body: JSON.stringify({
         amount: amount,
         currency: 'INR',
-        receipt: `receipt_${Date.now()}`,
+        receipt: receiptId,
         notes: {
           plan_type: planType,
         },
