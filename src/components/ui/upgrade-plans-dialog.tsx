@@ -73,6 +73,15 @@ export function UpgradePlansDialog({
     },
   ];
 
+  const handleSelectPlan = (planType: 'hourly' | 'daily' | 'monthly') => {
+    // Close the dialog immediately before opening Razorpay
+    onOpenChange(false);
+    // Small delay to ensure dialog is closed
+    setTimeout(() => {
+      onSelectPlan(planType);
+    }, 100);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] w-[95%] p-0 h-[90vh] sm:h-auto overflow-auto">
@@ -117,7 +126,7 @@ export function UpgradePlansDialog({
                   ))}
                 </ul>
                 <Button
-                  onClick={() => onSelectPlan(plan.type)}
+                  onClick={() => handleSelectPlan(plan.type)}
                   className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
                 >
                   Get Started
