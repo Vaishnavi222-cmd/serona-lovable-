@@ -89,6 +89,78 @@ export type Database = {
         }
         Relationships: []
       }
+      user_daily_usage: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          input_tokens_used: number
+          last_usage_time: string
+          output_tokens_used: number
+          responses_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          input_tokens_used?: number
+          last_usage_time?: string
+          output_tokens_used?: number
+          responses_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          input_tokens_used?: number
+          last_usage_time?: string
+          output_tokens_used?: number
+          responses_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_plans: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          end_time: string
+          id: string
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          remaining_input_tokens: number
+          remaining_output_tokens: number
+          start_time: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          end_time: string
+          id?: string
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          remaining_input_tokens: number
+          remaining_output_tokens: number
+          start_time?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          end_time?: string
+          id?: string
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          remaining_input_tokens?: number
+          remaining_output_tokens?: number
+          start_time?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -97,7 +169,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      plan_type: "hourly" | "daily" | "monthly"
     }
     CompositeTypes: {
       [_ in never]: never
