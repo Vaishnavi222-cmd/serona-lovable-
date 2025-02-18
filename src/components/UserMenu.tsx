@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
+import { UserProfileDialog } from "@/components/ui/user-profile-dialog";
 
 interface UserMenuProps {
   userEmail: string | undefined;
@@ -20,6 +21,7 @@ interface UserMenuProps {
 export function UserMenu({ userEmail }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const { toast } = useToast();
 
   // Check if Razorpay is loaded
@@ -202,10 +204,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <div className="flex items-center gap-2 p-2">
-            <User className="h-4 w-4" />
-            <p className="text-sm font-medium truncate">{userEmail}</p>
-          </div>
+          <DropdownMenuItem
+            onClick={() => setShowProfileDialog(true)}
+            className="cursor-pointer"
+          >
+            <User className="mr-2 h-4 w-4" />
+            Profile Settings
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setShowUpgradeDialog(true)}
@@ -230,6 +235,14 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         onOpenChange={setShowUpgradeDialog}
         onSelectPlan={handleSelectPlan}
       />
+
+      {userEmail && (
+        <UserProfileDialog
+          open={showProfileDialog}
+          onOpenChange={setShowProfileDialog}
+          userEmail={userEmail}
+        />
+      )}
     </>
   );
 }
