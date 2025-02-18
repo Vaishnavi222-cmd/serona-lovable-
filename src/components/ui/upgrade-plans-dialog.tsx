@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import {
   Dialog,
@@ -6,9 +5,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Clock, Calendar, CalendarDays, CheckCircle2, X } from "lucide-react";
 
 interface Plan {
   type: 'hourly' | 'daily' | 'monthly';
@@ -75,6 +75,10 @@ export function UpgradePlansDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] w-[95%] p-0 h-[90vh] sm:h-auto overflow-auto">
+        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
         <DialogHeader className="p-6 pb-2 sticky top-0 bg-white z-10 border-b">
           <DialogTitle className="text-2xl font-semibold text-center">
             Upgrade Your Experience
