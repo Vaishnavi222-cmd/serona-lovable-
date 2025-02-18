@@ -277,7 +277,7 @@ const Chat = () => {
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
-                  <h1 className="text-2xl md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
+                  <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
                     Hello! I'm your personal growth partner—here to support and guide you! 💡 Let me know how I can help😊
                   </h1>
                   <div className="grid grid-cols-2 gap-2 md:gap-6 w-full max-w-2xl px-2 md:px-4">
