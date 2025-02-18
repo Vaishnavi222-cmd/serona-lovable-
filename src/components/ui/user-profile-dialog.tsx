@@ -21,46 +21,34 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const isMobile = useIsMobile();
 
-  // Fetch user's active plan and purchase history when dialog opens
-  useEffect(() => {
-    if (open) {
-      fetchUserData();
-    }
-  }, [open]);
-
   const fetchUserData = async () => {
     try {
       setIsLoading(true);
       
+      // Get current time in UTC
+      const now = new Date().toISOString();
+
       // Fetch active plan
-      const now = new Date();
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
         .eq('status', 'active')
-        .lte('start_time', now.toISOString())
-        .gte('end_time', now.toISOString())
+        .lte('start_time', now)
+        .gte('end_time', now)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (planError && planError.code !== 'PGRST116') {
+      if (planError) {
         console.error('Error fetching active plan:', planError);
+        toast({
+          title: "Error fetching plan",
+          description: "Could not fetch your active plan. Please try again.",
+          variant: "destructive",
+        });
       } else {
+        console.log('Active plan data:', planData);
         setActivePlan(planData);
-        
-        // If plan exists but has expired, move it to history
-        if (planData && new Date(planData.end_time) < now) {
-          const { error: updateError } = await supabase
-            .from('user_plans')
-            .update({ status: 'expired' })
-            .eq('id', planData.id);
-
-          if (updateError) {
-            console.error('Error updating expired plan:', updateError);
-          }
-          setActivePlan(null);
-        }
       }
 
       // Fetch purchase history
@@ -71,20 +59,38 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
       if (historyError) {
         console.error('Error fetching purchase history:', historyError);
+        toast({
+          title: "Error fetching history",
+          description: "Could not fetch your purchase history. Please try again.",
+          variant: "destructive",
+        });
       } else {
+        console.log('Purchase history:', historyData);
         setPurchaseHistory(historyData || []);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      toast({
+        title: "Error",
+        description: "Could not fetch your data. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Fetch user's active plan and purchase history when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchUserData();
+    }
+  }, [open]);
+
   const formatTimeRange = (start: string, end: string) => {
     const startTime = new Date(start);
     const endTime = new Date(end);
-    return `${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()} (${startTime.toLocaleDateString()})`;
+    return `${startTime.toLocaleString()} - ${endTime.toLocaleString()}`;
   };
 
   const handleResetPassword = async () => {
@@ -132,7 +138,9 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                 <Crown className="h-5 w-5 text-[#1EAEDB]" />
                 <h3 className="text-lg font-semibold">Active Plan</h3>
               </div>
-              {activePlan ? (
+              {isLoading ? (
+                <p className="text-sm text-gray-500">Loading plan details...</p>
+              ) : activePlan ? (
                 <div className="space-y-2">
                   <p className="text-sm">
                     <span className="font-medium">Type:</span>{' '}
@@ -145,6 +153,10 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                   <p className="text-sm">
                     <span className="font-medium">Remaining Tokens:</span>{' '}
                     {activePlan.remaining_output_tokens.toLocaleString()} output / {activePlan.remaining_input_tokens.toLocaleString()} input
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Status:</span>{' '}
+                    <span className="capitalize">{activePlan.status}</span>
                   </p>
                 </div>
               ) : (
@@ -159,7 +171,9 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                 <History className="h-5 w-5 text-[#1EAEDB]" />
                 <h3 className="text-lg font-semibold">Purchase History</h3>
               </div>
-              {purchaseHistory.length > 0 ? (
+              {isLoading ? (
+                <p className="text-sm text-gray-500">Loading purchase history...</p>
+              ) : purchaseHistory.length > 0 ? (
                 <div className="space-y-3">
                   {purchaseHistory.map((purchase) => (
                     <div key={purchase.id} className="p-3 border rounded-lg">
@@ -167,10 +181,10 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                         {purchase.plan_type.charAt(0).toUpperCase() + purchase.plan_type.slice(1)} Plan
                       </p>
                       <p className="text-sm text-gray-500">
-                        Active Period: {formatTimeRange(purchase.start_time, purchase.end_time)}
+                        Period: {formatTimeRange(purchase.start_time, purchase.end_time)}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Status: {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
+                        Status: <span className="capitalize">{purchase.status}</span>
                       </p>
                       <p className="text-sm text-gray-500">
                         Amount: ₹{(purchase.amount_paid / 100).toFixed(2)}

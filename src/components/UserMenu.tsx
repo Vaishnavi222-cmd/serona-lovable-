@@ -24,27 +24,34 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const { toast } = useToast();
 
-  // Check if Razorpay is loaded
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => {
+        resolve(true);
+      };
+      script.onerror = () => {
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
+  };
+
   useEffect(() => {
-    const checkRazorpayLoaded = () => {
-      if (!(window as any).Razorpay) {
-        console.error('Razorpay not loaded');
-        toast({
-          title: "Payment system not ready",
-          description: "Please refresh the page and try again.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      return true;
-    };
-
-    // Check immediately on mount
-    checkRazorpayLoaded();
-
-    // Also check when dialog is opened
     if (showUpgradeDialog) {
-      checkRazorpayLoaded();
+      loadRazorpay().then((loaded) => {
+        if (!loaded) {
+          console.error('Razorpay failed to load');
+          toast({
+            title: "Payment system not ready",
+            description: "Please refresh the page and try again.",
+            variant: "destructive",
+          });
+          setShowUpgradeDialog(false);
+        }
+      });
     }
   }, [showUpgradeDialog, toast]);
 
@@ -72,16 +79,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     try {
-      if (!(window as any).Razorpay) {
-        console.error('Razorpay not loaded');
-        toast({
-          title: "Payment system not ready",
-          description: "Please refresh the page and try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       setIsLoading(true);
       
       // Get the current session
@@ -130,13 +127,24 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               },
             });
 
-            if (verifyError) throw verifyError;
+            if (verifyError) {
+              console.error('Payment verification error:', verifyError);
+              throw verifyError;
+            }
 
             toast({
               title: "Payment successful",
               description: `Your ${planType} plan is now active`,
             });
+            
+            // Close the upgrade dialog
             setShowUpgradeDialog(false);
+            
+            // Refresh the profile dialog to show the new plan
+            if (showProfileDialog) {
+              setShowProfileDialog(false);
+              setTimeout(() => setShowProfileDialog(true), 1000);
+            }
           } catch (error: any) {
             console.error('Payment verification error:', error);
             toast({
@@ -150,10 +158,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           ondismiss: function() {
             console.log('Payment modal dismissed');
             setIsLoading(false);
-            toast({
-              title: "Payment cancelled",
-              description: "You have cancelled the payment process",
-            });
           }
         },
         prefill: {
@@ -164,13 +168,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
       };
 
-      console.log('Initializing Razorpay with options:', { ...options, key: '[HIDDEN]' });
-
       // Create and open Razorpay
       const razorpay = new (window as any).Razorpay(options);
       razorpay.on('payment.failed', function (response: any) {
         console.error('Payment failed:', response.error);
-        setIsLoading(false);
         toast({
           title: "Payment failed",
           description: response.error.description || "Payment could not be processed",
@@ -178,7 +179,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         });
       });
 
-      // Open the payment modal
       razorpay.open();
       console.log('Razorpay modal opened');
     } catch (error: any) {
