@@ -17,23 +17,55 @@ serve(async (req) => {
   try {
     // Get request body
     const { planType } = await req.json();
-    const client = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    
+    // Log request details
+    console.log('Received request for plan type:', planType);
+
+    // Verify Razorpay credentials exist
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      console.error('Missing Razorpay credentials');
+      throw new Error('Razorpay credentials not configured');
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase credentials');
+      throw new Error('Supabase credentials not configured');
+    }
+
+    const client = createClient(supabaseUrl, supabaseKey);
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!authHeader) {
+      console.error('No authorization header found');
+      throw new Error('Authorization required');
+    }
+
     const { data: { user }, error: userError } = await client.auth.getUser(authHeader);
     
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    if (userError) {
+      console.error('User authentication error:', userError);
+      throw userError;
     }
+    
+    if (!user) {
+      console.error('No user found');
+      throw new Error('User not found');
+    }
+
+    console.log('User authenticated:', user.id);
 
     // Initialize Razorpay
     const razorpay = new Razorpay({
-      key_id: Deno.env.get('RAZORPAY_KEY_ID'),
-      key_secret: Deno.env.get('RAZORPAY_KEY_SECRET'),
+      key_id: razorpayKeyId,
+      key_secret: razorpayKeySecret,
     });
 
     // Set amount based on plan type
@@ -49,6 +81,7 @@ serve(async (req) => {
         amount = 299900; // ₹2,999.00
         break;
       default:
+        console.error('Invalid plan type:', planType);
         throw new Error('Invalid plan type');
     }
 
@@ -61,14 +94,14 @@ serve(async (req) => {
       receipt: `plan_${planType}_${user.id}_${Date.now()}`,
     });
 
-    console.log('Order created:', order);
+    console.log('Order created successfully:', order.id);
 
     return new Response(
       JSON.stringify({
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        keyId: Deno.env.get('RAZORPAY_KEY_ID'),
+        keyId: razorpayKeyId,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -76,12 +109,16 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error creating payment:', error);
+    console.error('Error in create-payment function:', error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }
