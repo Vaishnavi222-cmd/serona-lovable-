@@ -85,11 +85,13 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     try {
       setLoading(true);
       console.log('Attempting sign up with:', formData.email);
+      
+      // Add site URL to ensure confirmation emails work
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: formData.fullName,
           }
@@ -100,8 +102,11 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
       toast({
         title: "Success",
-        description: "Please check your email to confirm your account",
+        description: "Please check your email (including spam folder) to confirm your account. The confirmation email should arrive within a few minutes.",
       });
+      
+      // Close the dialog after successful signup
+      onOpenChange(false);
     } catch (error: any) {
       console.error('Sign up error:', error);
       toast({
