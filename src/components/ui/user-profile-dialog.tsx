@@ -114,13 +114,13 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${isMobile ? 'w-[95vw] h-[90vh] overflow-y-auto' : 'sm:max-w-[600px]'}`}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Profile Settings</DialogTitle>
         </DialogHeader>
         
         <Tabs defaultValue="plan" className="w-full">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-3'}`}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="plan">Current Plan</TabsTrigger>
             <TabsTrigger value="history">Purchase History</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
@@ -153,8 +153,8 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className={`space-y-4 ${isMobile ? 'max-h-[50vh] overflow-y-auto' : ''}`}>
-            <div className="space-y-4">
+          <TabsContent value="history" className="space-y-4">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
               <div className="flex items-center gap-2 mb-4">
                 <History className="h-5 w-5 text-[#1EAEDB]" />
                 <h3 className="text-lg font-semibold">Purchase History</h3>
@@ -185,7 +185,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
           </TabsContent>
 
           <TabsContent value="account" className="space-y-4">
-            <div className={`space-y-4 ${isMobile ? 'pb-4' : ''}`}>
+            <div className="space-y-4">
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Mail className="h-4 w-4" />
