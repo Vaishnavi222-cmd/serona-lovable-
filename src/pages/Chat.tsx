@@ -298,7 +298,7 @@ const Chat = () => {
 
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="max-w-3xl mx-auto py-4 px-6 space-y-6">
+            <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
@@ -340,23 +340,23 @@ const Chat = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
                       className={`flex ${
                         msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                      }`}
+                      } w-full`}
                     >
                       <div
-                        className={`relative p-4 rounded-lg max-w-[80%] break-words
-                          ${
-                            msg.sender === 'user' 
-                              ? 'bg-[#1EAEDB]/10 ml-4' 
-                              : 'bg-gray-100 mr-4'
-                          }`}
+                        className={`relative rounded-lg break-words
+                          ${msg.sender === 'user' 
+                            ? 'bg-[#1EAEDB]/10 ml-auto mr-0' 
+                            : 'bg-gray-100 mr-auto ml-0'
+                          }
+                          max-w-[92%] md:max-w-[85%] px-6 py-4`}
                       >
-                        <p className="text-gray-800 whitespace-pre-wrap text-[15px] leading-relaxed">{msg.text}</p>
+                        <p className="text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap">{msg.text}</p>
                       </div>
                     </div>
                   ))}
