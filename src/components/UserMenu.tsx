@@ -46,12 +46,32 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     try {
+      setIsLoading(true);
+      
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
+      console.log('Creating payment for plan:', planType);
       // Create payment order
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Payment creation error:', error);
+        throw error;
+      }
+
+      if (!data || !data.orderId) {
+        console.error('Invalid response data:', data);
+        throw new Error('Invalid response from payment service');
+      }
+
+      console.log('Payment order created:', data);
 
       // Initialize Razorpay
       const options = {
@@ -103,9 +123,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       console.error('Payment error:', error);
       toast({
         title: "Error creating payment",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
