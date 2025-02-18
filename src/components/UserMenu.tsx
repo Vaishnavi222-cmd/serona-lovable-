@@ -45,8 +45,68 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   };
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
-    // Will implement Razorpay integration here
-    console.log('Selected plan:', planType);
+    try {
+      // Create payment order
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { planType },
+      });
+
+      if (error) throw error;
+
+      // Initialize Razorpay
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "Lovable AI",
+        description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan`,
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            const { error: verifyError } = await supabase.functions.invoke('verify-payment', {
+              body: {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                planType,
+              },
+            });
+
+            if (verifyError) throw verifyError;
+
+            toast({
+              title: "Payment successful",
+              description: `Your ${planType} plan is now active`,
+            });
+            setShowUpgradeDialog(false);
+          } catch (error: any) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "Payment verification failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
+        },
+        prefill: {
+          email: userEmail,
+        },
+        theme: {
+          color: "#1EAEDB",
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Error creating payment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
