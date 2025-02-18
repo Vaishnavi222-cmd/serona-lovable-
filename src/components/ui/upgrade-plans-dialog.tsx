@@ -40,7 +40,7 @@ export function UpgradePlansDialog({
         'Full access for 1 hour',
         'Detailed responses',
         'Instant activation',
-        'One-time payment'
+        'One-time payment/no recurring charges'
       ],
       icon: <Clock className="w-5 h-5" />,
     },
@@ -53,7 +53,7 @@ export function UpgradePlansDialog({
         'Extended 12-hour access',
         'Comprehensive responses',
         'Higher usage limits',
-        'Best for intensive use'
+        'One-time payment/no recurring charges'
       ],
       icon: <Calendar className="w-5 h-5" />,
     },
@@ -66,7 +66,7 @@ export function UpgradePlansDialog({
         'Full month access',
         'Unlimited detailed responses',
         'Priority processing',
-        'Best value for money'
+        'One-time payment/no recurring charges'
       ],
       icon: <CalendarDays className="w-5 h-5" />,
     },
@@ -74,8 +74,8 @@ export function UpgradePlansDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] p-0">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="sm:max-w-[700px] w-[95%] p-0 h-[90vh] sm:h-auto overflow-auto">
+        <DialogHeader className="p-6 pb-2 sticky top-0 bg-white z-10 border-b">
           <DialogTitle className="text-2xl font-semibold text-center">
             Upgrade Your Experience
           </DialogTitle>
@@ -83,11 +83,11 @@ export function UpgradePlansDialog({
             Choose the plan that best fits your needs
           </DialogDescription>
         </DialogHeader>
-        <div className="grid md:grid-cols-3 gap-4 p-6 bg-gray-50/50">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 sm:p-6 bg-gray-50/50">
           {plans.map((plan) => (
             <div
               key={plan.type}
-              className="relative p-6 rounded-xl bg-white border border-gray-200 hover:border-[#1EAEDB] hover:shadow-md transition-all"
+              className="relative p-4 sm:p-6 rounded-xl bg-white border border-gray-200 hover:border-[#1EAEDB] hover:shadow-md transition-all"
             >
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -106,7 +106,7 @@ export function UpgradePlansDialog({
                 <ul className="space-y-3">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
