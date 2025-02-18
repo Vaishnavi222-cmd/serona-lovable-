@@ -51,6 +51,11 @@ serve(async (req) => {
       throw new Error('Invalid payment signature');
     }
 
+    console.log('Payment signature verified successfully');
+
+    // Get current time for plan start
+    const now = new Date();
+    
     // Add user plan to database
     const { error: planError } = await client
       .from('user_plans')
@@ -60,12 +65,16 @@ serve(async (req) => {
         payment_id: paymentId,
         order_id: orderId,
         status: 'active',
-        start_time: new Date().toISOString(),
+        start_time: now.toISOString(),
+        // End time and tokens will be set by the database trigger
       });
 
     if (planError) {
+      console.error('Error inserting plan:', planError);
       throw planError;
     }
+
+    console.log('Plan created successfully');
 
     return new Response(
       JSON.stringify({ success: true }),
