@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import Razorpay from "npm:razorpay@2.9.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,15 +17,13 @@ serve(async (req) => {
     // Get request body
     const { planType } = await req.json();
     
-    // Log request details
     console.log('Received request for plan type:', planType);
 
-    // Verify Razorpay credentials exist
+    // Get credentials
     const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
     if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error('Missing Razorpay credentials');
       throw new Error('Razorpay credentials not configured');
     }
 
@@ -35,7 +32,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials');
       throw new Error('Supabase credentials not configured');
     }
 
@@ -44,29 +40,14 @@ serve(async (req) => {
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     if (!authHeader) {
-      console.error('No authorization header found');
       throw new Error('Authorization required');
     }
 
     const { data: { user }, error: userError } = await client.auth.getUser(authHeader);
     
-    if (userError) {
-      console.error('User authentication error:', userError);
-      throw userError;
-    }
-    
-    if (!user) {
-      console.error('No user found');
+    if (userError || !user) {
       throw new Error('User not found');
     }
-
-    console.log('User authenticated:', user.id);
-
-    // Initialize Razorpay
-    const razorpay = new Razorpay({
-      key_id: razorpayKeyId,
-      key_secret: razorpayKeySecret,
-    });
 
     // Set amount based on plan type
     let amount = 0;
@@ -81,19 +62,32 @@ serve(async (req) => {
         amount = 299900; // ₹2,999.00
         break;
       default:
-        console.error('Invalid plan type:', planType);
         throw new Error('Invalid plan type');
     }
 
     console.log('Creating order for plan:', planType, 'amount:', amount);
 
-    // Create Razorpay order
-    const order = await razorpay.orders.create({
-      amount,
-      currency: 'INR',
-      receipt: `plan_${planType}_${user.id}_${Date.now()}`,
+    // Create Razorpay order using fetch
+    const response = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${btoa(`${razorpayKeyId}:${razorpayKeySecret}`)}`,
+      },
+      body: JSON.stringify({
+        amount,
+        currency: 'INR',
+        receipt: `plan_${planType}_${user.id}_${Date.now()}`,
+      }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Razorpay API error:', errorData);
+      throw new Error('Failed to create Razorpay order');
+    }
+
+    const order = await response.json();
     console.log('Order created successfully:', order.id);
 
     return new Response(
@@ -112,10 +106,7 @@ serve(async (req) => {
     console.error('Error in create-payment function:', error);
     
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }),
+      JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
