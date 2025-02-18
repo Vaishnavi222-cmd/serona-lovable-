@@ -104,7 +104,13 @@ const Chat = () => {
       setShowAuthDialog(true);
       return;
     }
-    setMessage(`Help me with ${topic}`);
+    const newMessage: Message = {
+      id: Date.now(),
+      text: `Help me with ${topic}`,
+      sender: 'user'
+    };
+    setMessages(prev => [...prev, newMessage]);
+    setMessage('');
   };
 
   const toggleSidebar = () => {
@@ -268,12 +274,12 @@ const Chat = () => {
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
           <ScrollArea className="flex-1 p-4 custom-scrollbar">
             <div className="max-w-3xl mx-auto space-y-4">
-              {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-                  <h1 className="text-2xl font-semibold text-gray-800 text-center mb-8">
+              {messages.length === 0 && !message ? (
+                <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
+                  <h1 className="text-2xl font-playfair font-semibold text-gray-800 text-center mb-12 leading-relaxed">
                     Hello, I am your personal growth partner. Let me know how I can help you.
                   </h1>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
                     <Button
                       onClick={() => handleQuickStart("Deep Personality Analysis")}
                       className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"

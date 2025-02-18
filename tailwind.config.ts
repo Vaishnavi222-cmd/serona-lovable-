@@ -18,6 +18,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        playfair: ['Playfair Display', 'serif'],
+      },
       colors: {
         serona: {
           primary: "#40E0D0", // Teal/aqua from logo
