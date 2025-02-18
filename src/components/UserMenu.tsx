@@ -1,15 +1,17 @@
 
 import { useState } from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 
 interface UserMenuProps {
   userEmail: string | undefined;
@@ -17,6 +19,7 @@ interface UserMenuProps {
 
 export function UserMenu({ userEmail }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const { toast } = useToast();
 
   const handleSignOut = async () => {
@@ -41,29 +44,50 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     }
   };
 
+  const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
+    // Will implement Razorpay integration here
+    console.log('Selected plan:', planType);
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full bg-[#1EAEDB]">
-          <span className="h-9 w-9 rounded-full flex items-center justify-center text-white font-medium">
-            {userEmail?.charAt(0).toUpperCase() ?? 'U'}
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <div className="flex items-center gap-2 p-2">
-          <User className="h-4 w-4" />
-          <p className="text-sm font-medium truncate">{userEmail}</p>
-        </div>
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          disabled={isLoading}
-          className="text-red-600 cursor-pointer"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          {isLoading ? "Signing out..." : "Sign out"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full bg-[#1EAEDB]">
+            <span className="h-9 w-9 rounded-full flex items-center justify-center text-white font-medium">
+              {userEmail?.charAt(0).toUpperCase() ?? 'U'}
+            </span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <div className="flex items-center gap-2 p-2">
+            <User className="h-4 w-4" />
+            <p className="text-sm font-medium truncate">{userEmail}</p>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setShowUpgradeDialog(true)}
+            className="text-[#1EAEDB] cursor-pointer"
+          >
+            <Crown className="mr-2 h-4 w-4" />
+            Upgrade Plan
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            disabled={isLoading}
+            className="text-red-600 cursor-pointer"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {isLoading ? "Signing out..." : "Sign out"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <UpgradePlansDialog 
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        onSelectPlan={handleSelectPlan}
+      />
+    </>
   );
 }

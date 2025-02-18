@@ -8,15 +8,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, CalendarDays, Zap } from "lucide-react";
+import { Clock, Calendar, CalendarDays, CheckCircle2 } from "lucide-react";
 
 interface Plan {
   type: 'hourly' | 'daily' | 'monthly';
   title: string;
   price: number;
   duration: string;
-  outputTokens: string;
-  inputTokens: string;
+  features: string[];
   icon: React.ReactNode;
 }
 
@@ -34,77 +33,90 @@ export function UpgradePlansDialog({
   const plans: Plan[] = [
     {
       type: 'hourly',
-      title: 'Hourly Plan',
+      title: 'Hourly Access',
       price: 25,
       duration: '1 hour',
-      outputTokens: '9,000',
-      inputTokens: '5,000',
+      features: [
+        'Full access for 1 hour',
+        'Detailed responses',
+        'Instant activation',
+        'One-time payment'
+      ],
       icon: <Clock className="w-5 h-5" />,
     },
     {
       type: 'daily',
-      title: 'Daily Plan',
+      title: 'Daily Access',
       price: 150,
       duration: '12 hours',
-      outputTokens: '108,000',
-      inputTokens: '60,000',
+      features: [
+        'Extended 12-hour access',
+        'Comprehensive responses',
+        'Higher usage limits',
+        'Best for intensive use'
+      ],
       icon: <Calendar className="w-5 h-5" />,
     },
     {
       type: 'monthly',
-      title: 'Monthly Plan',
+      title: 'Monthly Access',
       price: 2999,
       duration: '30 days',
-      outputTokens: '3,240,000',
-      inputTokens: '1,800,000',
+      features: [
+        'Full month access',
+        'Unlimited detailed responses',
+        'Priority processing',
+        'Best value for money'
+      ],
       icon: <CalendarDays className="w-5 h-5" />,
     },
   ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Upgrade Your Plan
+      <DialogContent className="sm:max-w-[700px] p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-2xl font-semibold text-center">
+            Upgrade Your Experience
           </DialogTitle>
-          <DialogDescription>
-            Choose a plan that best suits your needs
+          <DialogDescription className="text-center">
+            Choose the plan that best fits your needs
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid md:grid-cols-3 gap-4 p-6 bg-gray-50/50">
           {plans.map((plan) => (
             <div
               key={plan.type}
-              className="relative p-6 rounded-lg border border-gray-200 hover:border-[#1EAEDB] transition-colors"
+              className="relative p-6 rounded-xl bg-white border border-gray-200 hover:border-[#1EAEDB] hover:shadow-md transition-all"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-[#1EAEDB]">
                     {plan.icon}
                     <h3 className="text-lg font-semibold">{plan.title}</h3>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600">Duration: {plan.duration}</p>
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm flex items-center gap-1">
-                      <Zap className="w-4 h-4 text-[#1EAEDB]" />
-                      {plan.outputTokens} output tokens
-                    </p>
-                    <p className="text-sm flex items-center gap-1">
-                      <Zap className="w-4 h-4 text-[#1EAEDB]" />
-                      {plan.inputTokens} input tokens
-                    </p>
+                  <p className="text-sm text-gray-600">{plan.duration}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold">₹{plan.price}</span>
+                    <span className="text-gray-500 text-sm">
+                      {plan.type === 'monthly' ? '/mo' : ''}
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-[#1EAEDB]">₹{plan.price}</p>
-                  <Button
-                    onClick={() => onSelectPlan(plan.type)}
-                    className="mt-2 bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
-                  >
-                    Choose Plan
-                  </Button>
-                </div>
+                <ul className="space-y-3">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => onSelectPlan(plan.type)}
+                  className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
+                >
+                  Get Started
+                </Button>
               </div>
             </div>
           ))}
