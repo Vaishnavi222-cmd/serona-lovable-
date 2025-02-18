@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -155,6 +154,22 @@ const Chat = () => {
     </Link>
   );
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (e.key === 'Enter' && !e.shiftKey && !isMobileDevice) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const adjustTextareaHeight = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    setMessage(e.target.value);
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       <AuthDialog 
@@ -164,12 +179,12 @@ const Chat = () => {
 
       {/* Sidebar */}
       <div 
-        className={`fixed md:relative w-64 h-screen bg-black text-white overflow-hidden z-40
+        className={`fixed md:relative w-64 h-screen bg-black text-white overflow-auto z-40
                    transition-transform duration-300 ease-in-out mt-[56px]
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
-        <ScrollArea className="h-full custom-scrollbar">
+        <div className="h-full overflow-y-auto custom-scrollbar">
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <button
@@ -230,7 +245,7 @@ const Chat = () => {
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col">
@@ -273,7 +288,7 @@ const Chat = () => {
         </div>
 
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <ScrollArea className="flex-1 p-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-4">
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
@@ -330,23 +345,19 @@ const Chat = () => {
                 ))
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
+                onChange={adjustTextareaHeight}
+                onKeyDown={handleKeyDown}
                 placeholder="Message Serona AI..."
                 className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                          bg-white border border-gray-200 shadow-sm resize-none text-gray-800
-                         placeholder-gray-400 min-h-[44px] max-h-[200px]"
+                         placeholder-gray-400 min-h-[44px] max-h-[200px] overflow-y-auto"
+                style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                 rows={1}
               />
               <button 
