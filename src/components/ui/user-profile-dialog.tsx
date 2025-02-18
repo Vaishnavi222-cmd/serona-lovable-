@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Mail, Key, History, Crown } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserProfileDialogProps {
   open: boolean;
@@ -18,17 +19,27 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
   const { toast } = useToast();
   const [activePlan, setActivePlan] = useState<any>(null);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
+  const isMobile = useIsMobile();
 
   // Fetch user's active plan and purchase history when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchUserData();
+    }
+  }, [open]);
+
   const fetchUserData = async () => {
     try {
       setIsLoading(true);
       
       // Fetch active plan
+      const now = new Date();
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
         .eq('status', 'active')
+        .lte('start_time', now.toISOString())
+        .gte('end_time', now.toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -37,6 +48,19 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         console.error('Error fetching active plan:', planError);
       } else {
         setActivePlan(planData);
+        
+        // If plan exists but has expired, move it to history
+        if (planData && new Date(planData.end_time) < now) {
+          const { error: updateError } = await supabase
+            .from('user_plans')
+            .update({ status: 'expired' })
+            .eq('id', planData.id);
+
+          if (updateError) {
+            console.error('Error updating expired plan:', updateError);
+          }
+          setActivePlan(null);
+        }
       }
 
       // Fetch purchase history
@@ -55,6 +79,12 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatTimeRange = (start: string, end: string) => {
+    const startTime = new Date(start);
+    const endTime = new Date(end);
+    return `${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()} (${startTime.toLocaleDateString()})`;
   };
 
   const handleResetPassword = async () => {
@@ -84,13 +114,13 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className={`${isMobile ? 'w-[95vw] h-[90vh] overflow-y-auto' : 'sm:max-w-[600px]'}`}>
         <DialogHeader>
           <DialogTitle>Profile Settings</DialogTitle>
         </DialogHeader>
         
         <Tabs defaultValue="plan" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-3'}`}>
             <TabsTrigger value="plan">Current Plan</TabsTrigger>
             <TabsTrigger value="history">Purchase History</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
@@ -109,12 +139,12 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                     {activePlan.plan_type.charAt(0).toUpperCase() + activePlan.plan_type.slice(1)}
                   </p>
                   <p className="text-sm">
-                    <span className="font-medium">Remaining Tokens:</span>{' '}
-                    {activePlan.remaining_output_tokens.toLocaleString()} output / {activePlan.remaining_input_tokens.toLocaleString()} input
+                    <span className="font-medium">Active Period:</span>{' '}
+                    {formatTimeRange(activePlan.start_time, activePlan.end_time)}
                   </p>
                   <p className="text-sm">
-                    <span className="font-medium">Expires:</span>{' '}
-                    {new Date(activePlan.end_time).toLocaleString()}
+                    <span className="font-medium">Remaining Tokens:</span>{' '}
+                    {activePlan.remaining_output_tokens.toLocaleString()} output / {activePlan.remaining_input_tokens.toLocaleString()} input
                   </p>
                 </div>
               ) : (
@@ -123,7 +153,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
             </div>
           </TabsContent>
 
-          <TabsContent value="history">
+          <TabsContent value="history" className={`space-y-4 ${isMobile ? 'max-h-[50vh] overflow-y-auto' : ''}`}>
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <History className="h-5 w-5 text-[#1EAEDB]" />
@@ -137,7 +167,10 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                         {purchase.plan_type.charAt(0).toUpperCase() + purchase.plan_type.slice(1)} Plan
                       </p>
                       <p className="text-sm text-gray-500">
-                        Purchased on {new Date(purchase.created_at).toLocaleDateString()}
+                        Active Period: {formatTimeRange(purchase.start_time, purchase.end_time)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Status: {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
                       </p>
                       <p className="text-sm text-gray-500">
                         Amount: ₹{(purchase.amount_paid / 100).toFixed(2)}
@@ -152,13 +185,13 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
           </TabsContent>
 
           <TabsContent value="account" className="space-y-4">
-            <div className="space-y-4">
+            <div className={`space-y-4 ${isMobile ? 'pb-4' : ''}`}>
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Mail className="h-4 w-4" />
                   <p className="text-sm font-medium">Email Address</p>
                 </div>
-                <p className="text-sm text-gray-500">{userEmail}</p>
+                <p className="text-sm text-gray-500 break-all">{userEmail}</p>
               </div>
 
               <div className="p-4 border rounded-lg">
