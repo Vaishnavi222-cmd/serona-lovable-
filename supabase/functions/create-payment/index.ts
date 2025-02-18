@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { Razorpay } from "npm:razorpay@2.9.2";
+import Razorpay from "npm:razorpay@2.9.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,12 +52,16 @@ serve(async (req) => {
         throw new Error('Invalid plan type');
     }
 
+    console.log('Creating order for plan:', planType, 'amount:', amount);
+
     // Create Razorpay order
     const order = await razorpay.orders.create({
       amount,
       currency: 'INR',
       receipt: `plan_${planType}_${user.id}_${Date.now()}`,
     });
+
+    console.log('Order created:', order);
 
     return new Response(
       JSON.stringify({
