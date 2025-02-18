@@ -25,9 +25,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   // Check if Razorpay is loaded
   useEffect(() => {
     if (!(window as any).Razorpay) {
-      console.error('Razorpay SDK not loaded');
+      toast({
+        title: "Warning",
+        description: "Payment system is not loaded. Please refresh the page.",
+        variant: "destructive",
+      });
     }
-  }, []);
+  }, [toast]);
 
   const handleSignOut = async () => {
     try {
@@ -53,9 +57,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     try {
-      // Check if Razorpay is loaded
       if (!(window as any).Razorpay) {
-        throw new Error('Razorpay SDK not loaded. Please refresh the page.');
+        toast({
+          title: "Error",
+          description: "Payment system is not loaded. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
       }
 
       setIsLoading(true);
@@ -64,10 +72,9 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       if (!session) {
-        throw new Error('No active session found');
+        throw new Error('No active session found. Please sign in again.');
       }
 
-      console.log('Creating payment for plan:', planType);
       // Create payment order
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
@@ -79,13 +86,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       }
 
       if (!data || !data.orderId) {
-        console.error('Invalid response data:', data);
-        throw new Error('Invalid response from payment service');
+        throw new Error('Could not create payment order. Please try again.');
       }
 
-      console.log('Payment order created:', data);
-
-      // Initialize Razorpay
+      // Initialize Razorpay options
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -95,7 +99,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         order_id: data.orderId,
         handler: async function (response: any) {
           try {
-            // Verify payment
             const { error: verifyError } = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId: response.razorpay_order_id,
@@ -123,6 +126,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         modal: {
           ondismiss: function() {
+            setIsLoading(false);
             toast({
               title: "Payment cancelled",
               description: "You have cancelled the payment process",
@@ -137,8 +141,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
       };
 
+      // Create and open Razorpay
       const razorpay = new (window as any).Razorpay(options);
       razorpay.on('payment.failed', function (response: any) {
+        setIsLoading(false);
         toast({
           title: "Payment failed",
           description: response.error.description || "Payment could not be processed",
