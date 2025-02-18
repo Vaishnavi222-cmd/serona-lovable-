@@ -22,7 +22,8 @@ serve(async (req) => {
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
     if (!razorpayKeyId || !razorpayKeySecret) {
-      throw new Error('Razorpay credentials are not configured');
+      console.error('Missing Razorpay credentials');
+      throw new Error('Payment service configuration error');
     }
 
     // Set amount based on plan type
@@ -41,10 +42,10 @@ serve(async (req) => {
         throw new Error('Invalid plan type');
     }
 
-    console.log('Creating order for plan:', planType, 'amount:', amount);
+    console.log(`Creating Razorpay order: ${planType} plan for amount ${amount}`);
 
     // Create Razorpay order
-    const orderResponse = await fetch('https://api.razorpay.com/v1/orders', {
+    const response = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,17 +55,21 @@ serve(async (req) => {
         amount: amount,
         currency: 'INR',
         receipt: `receipt_${Date.now()}`,
+        notes: {
+          plan_type: planType,
+        },
       }),
     });
 
-    if (!orderResponse.ok) {
-      const errorText = await orderResponse.text();
-      console.error('Razorpay API error:', errorText);
-      throw new Error(`Failed to create Razorpay order: ${errorText}`);
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Razorpay API error:', errorData);
+      throw new Error('Failed to create payment order');
     }
 
-    const order = await orderResponse.json();
-    
+    const order = await response.json();
+    console.log('Razorpay order created successfully:', order.id);
+
     return new Response(
       JSON.stringify({
         orderId: order.id,
@@ -82,7 +87,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: error.message || 'An unexpected error occurred',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
