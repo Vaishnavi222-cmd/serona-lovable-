@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const { toast } = useToast();
+
+  // Check if Razorpay is loaded
+  useEffect(() => {
+    if (!(window as any).Razorpay) {
+      console.error('Razorpay SDK not loaded');
+    }
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -46,6 +53,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     try {
+      // Check if Razorpay is loaded
+      if (!(window as any).Razorpay) {
+        throw new Error('Razorpay SDK not loaded. Please refresh the page.');
+      }
+
       setIsLoading(true);
       
       // Get the current session
@@ -109,6 +121,14 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             });
           }
         },
+        modal: {
+          ondismiss: function() {
+            toast({
+              title: "Payment cancelled",
+              description: "You have cancelled the payment process",
+            });
+          }
+        },
         prefill: {
           email: userEmail,
         },
@@ -118,6 +138,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       };
 
       const razorpay = new (window as any).Razorpay(options);
+      razorpay.on('payment.failed', function (response: any) {
+        toast({
+          title: "Payment failed",
+          description: response.error.description || "Payment could not be processed",
+          variant: "destructive",
+        });
+      });
       razorpay.open();
     } catch (error: any) {
       console.error('Payment error:', error);
