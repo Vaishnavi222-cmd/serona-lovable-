@@ -89,7 +89,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
-        name: "Lovable AI",
+        name: "Serona AI",
         description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan`,
         order_id: data.orderId,
         handler: async function (response: any) {
