@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Send, Menu, MessageSquare, Plus, X, Search, LogIn } from 'lucide-react';
+import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -98,6 +97,14 @@ const Chat = () => {
     
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
+  };
+
+  const handleQuickStart = (topic: string) => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+    setMessage(`Help me with ${topic}`);
   };
 
   const toggleSidebar = () => {
@@ -261,18 +268,60 @@ const Chat = () => {
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
           <ScrollArea className="flex-1 p-4 custom-scrollbar">
             <div className="max-w-3xl mx-auto space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`p-4 rounded-lg ${
-                    msg.sender === 'user' 
-                      ? 'bg-[#1EAEDB]/10 ml-auto max-w-[80%]' 
-                      : 'bg-gray-100 mr-auto max-w-[80%]'
-                  }`}
-                >
-                  {msg.text}
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+                  <h1 className="text-2xl font-semibold text-gray-800 text-center mb-8">
+                    Hello, I am your personal growth partner. Let me know how I can help you.
+                  </h1>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+                    <Button
+                      onClick={() => handleQuickStart("Deep Personality Analysis")}
+                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      variant="outline"
+                    >
+                      <Brain className="w-6 h-6 text-[#1EAEDB]" />
+                      <span>Deep Personality Analysis</span>
+                    </Button>
+                    <Button
+                      onClick={() => handleQuickStart("Career Guidance")}
+                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      variant="outline"
+                    >
+                      <Briefcase className="w-6 h-6 text-[#1EAEDB]" />
+                      <span>Career Guidance</span>
+                    </Button>
+                    <Button
+                      onClick={() => handleQuickStart("Decision Making")}
+                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      variant="outline"
+                    >
+                      <Scale className="w-6 h-6 text-[#1EAEDB]" />
+                      <span>Decision Making</span>
+                    </Button>
+                    <Button
+                      onClick={() => handleQuickStart("Relationship Advice")}
+                      className="p-6 h-auto flex flex-col items-center gap-3 bg-white border-2 border-gray-200 hover:border-[#1EAEDB] hover:bg-gray-50 text-gray-800"
+                      variant="outline"
+                    >
+                      <Heart className="w-6 h-6 text-[#1EAEDB]" />
+                      <span>Relationship Advice</span>
+                    </Button>
+                  </div>
                 </div>
-              ))}
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`p-4 rounded-lg ${
+                      msg.sender === 'user' 
+                        ? 'bg-[#1EAEDB]/10 ml-auto max-w-[80%]' 
+                        : 'bg-gray-100 mr-auto max-w-[80%]'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                ))
+              )}
             </div>
           </ScrollArea>
 
