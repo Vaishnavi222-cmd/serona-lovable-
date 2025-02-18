@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { createHmac } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,9 +30,22 @@ serve(async (req) => {
 
     // Verify signature
     const secret = Deno.env.get('RAZORPAY_KEY_SECRET') ?? '';
-    const hmac = createHmac('sha256', secret);
     const data = orderId + '|' + paymentId;
-    const generated_signature = hmac.update(data).digest('hex');
+    
+    // Create HMAC using SHA256
+    const key = new TextEncoder().encode(secret);
+    const message = new TextEncoder().encode(data);
+    const hmac = await crypto.subtle.importKey(
+      "raw",
+      key,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signature_bytes = await crypto.subtle.sign("HMAC", hmac, message);
+    const generated_signature = Array.from(new Uint8Array(signature_bytes))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
     if (generated_signature !== signature) {
       throw new Error('Invalid payment signature');
