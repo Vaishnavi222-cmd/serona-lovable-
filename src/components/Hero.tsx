@@ -33,9 +33,9 @@ const Hero = () => {
             <Brain className="w-14 h-14 md:w-20 md:h-20 mx-auto text-serona-primary animate-pulse" />
           </div>
           
-          <h1 className="text-3xl md:text-7xl font-bold text-serona-secondary mb-4 md:mb-8 opacity-0 animate-fade-up flex flex-col" style={{ animationDelay: '0.3s' }}>
-            <span>Welcome to</span>
-            <span>Serona AI</span>
+          <h1 className="text-3xl md:text-7xl font-bold text-serona-secondary mb-4 md:mb-8 opacity-0 animate-fade-up flex flex-col space-y-1 md:space-y-2" style={{ animationDelay: '0.3s' }}>
+            <span className="text-2xl md:text-6xl text-serona-secondary/90">Welcome to</span>
+            <span className="text-3xl md:text-7xl">Serona AI</span>
           </h1>
           
           <p className="text-base md:text-2xl text-serona-secondary/80 max-w-3xl mx-auto mb-6 md:mb-12 opacity-0 animate-fade-up" style={{ animationDelay: '0.6s' }}>
