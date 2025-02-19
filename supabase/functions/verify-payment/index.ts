@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { createHmac } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,55 +9,77 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Starting payment verification...');
     const { orderId, paymentId, signature, planType } = await req.json();
-    const client = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+
+    // Validate input
+    if (!orderId || !paymentId || !signature || !planType) {
+      console.error('Missing required fields:', { orderId, paymentId, signature, planType });
+      throw new Error('Missing required payment verification fields');
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase configuration');
+      throw new Error('Server configuration error');
+    }
+
+    const client = createClient(supabaseUrl, supabaseKey);
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!authHeader) {
+      console.error('No authorization header found');
+      throw new Error('Unauthorized');
+    }
+
     const { data: { user }, error: userError } = await client.auth.getUser(authHeader);
-    
     if (userError || !user) {
+      console.error('User verification failed:', userError);
       throw new Error('Unauthorized');
     }
 
     // Verify signature
-    const secret = Deno.env.get('RAZORPAY_KEY_SECRET') ?? '';
-    const data = orderId + '|' + paymentId;
-    
-    // Create HMAC using SHA256
-    const key = new TextEncoder().encode(secret);
-    const message = new TextEncoder().encode(data);
-    const hmac = await crypto.subtle.importKey(
-      "raw",
-      key,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    const signature_bytes = await crypto.subtle.sign("HMAC", hmac, message);
-    const generated_signature = Array.from(new Uint8Array(signature_bytes))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    if (generated_signature !== signature) {
-      throw new Error('Invalid payment signature');
+    const secret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    if (!secret) {
+      console.error('Missing Razorpay secret key');
+      throw new Error('Server configuration error');
     }
 
-    console.log('Payment signature verified successfully');
+    const payload = orderId + '|' + paymentId;
+    const encoder = new TextEncoder();
+    const key = encoder.encode(secret);
+    const message = encoder.encode(payload);
+    
+    const hmac = createHmac("sha256", key);
+    hmac.update(message);
+    const generatedSignature = hmac.toString();
+
+    console.log('Signature verification:', {
+      provided: signature,
+      generated: generatedSignature,
+      match: signature === generatedSignature
+    });
+
+    if (generatedSignature !== signature) {
+      console.error('Signature verification failed');
+      throw new Error('Invalid payment signature');
+    }
 
     // Get current time for plan start
     const now = new Date();
     
-    // Add user plan to database
-    const { error: planError } = await client
+    // Insert the plan
+    const { data: planData, error: planError } = await client
       .from('user_plans')
       .insert({
         user_id: user.id,
@@ -66,18 +88,23 @@ serve(async (req) => {
         order_id: orderId,
         status: 'active',
         start_time: now.toISOString(),
-        // End time and tokens will be set by the database trigger
-      });
+      })
+      .select()
+      .single();
 
     if (planError) {
       console.error('Error inserting plan:', planError);
       throw planError;
     }
 
-    console.log('Plan created successfully');
+    console.log('Plan created successfully:', planData);
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ 
+        success: true,
+        message: 'Payment verified and plan activated successfully',
+        plan: planData
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -86,7 +113,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error verifying payment:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'If payment was deducted, it will be automatically refunded'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
