@@ -14,13 +14,15 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting payment verification process...');
-    const { orderId, paymentId, signature, planType } = await req.json();
+    console.log('------- PAYMENT VERIFICATION START -------');
+    const requestBody = await req.json();
+    console.log('1. Full request body:', requestBody);
     
-    // Log the received data
-    console.log('Received payment data:', { orderId, paymentId, planType });
+    const { orderId, paymentId, signature, planType } = requestBody;
+    console.log('2. Extracted values:', { orderId, paymentId, signature, planType });
 
     if (!orderId || !paymentId || !signature || !planType) {
+      console.error('3. Missing fields in request');
       throw new Error('Missing required payment verification fields');
     }
 
@@ -28,7 +30,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const razorpaySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
+    console.log('4. Environment variables check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasRazorpaySecret: !!razorpaySecret
+    });
+
     if (!supabaseUrl || !supabaseKey || !razorpaySecret) {
+      console.error('5. Missing environment variables');
       throw new Error('Missing required configuration');
     }
 
@@ -36,20 +45,36 @@ serve(async (req) => {
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
+    console.log('6. Auth header present:', !!authHeader);
+
     if (!authHeader) {
+      console.error('7. No authorization header found');
       throw new Error('No authorization header found');
     }
 
     const { data: { user }, error: userError } = await client.auth.getUser(authHeader);
+    console.log('8. User verification:', { 
+      success: !!user, 
+      error: userError ? userError.message : null,
+      userId: user?.id 
+    });
+
     if (userError || !user) {
+      console.error('9. User verification failed:', userError);
       throw new Error('User verification failed');
     }
 
-    // Generate HMAC signature for verification
+    // Generate verification signature
     const payload = `${orderId}|${paymentId}`;
+    console.log('10. Generated payload:', payload);
+
+    // Convert secret to bytes
     const key = new TextEncoder().encode(razorpaySecret);
     const message = new TextEncoder().encode(payload);
     
+    console.log('11. Starting HMAC generation');
+    
+    // Create HMAC
     const hmacBuffer = await crypto.subtle.importKey(
       "raw",
       key,
@@ -68,46 +93,48 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    console.log('Signature check:', {
-      provided: signature,
-      generated: generatedSignature,
-      match: signature === generatedSignature
+    console.log('12. Signature comparison:', {
+      receivedSignature: signature,
+      generatedSignature: generatedSignature,
+      match: signature === generatedSignature,
+      receivedLength: signature?.length,
+      generatedLength: generatedSignature.length
     });
 
     if (signature !== generatedSignature) {
+      console.error('13. Signature verification failed');
       throw new Error('Invalid payment signature');
     }
 
-    // Set plan limits based on plan type
-    let outputTokens, inputTokens;
-    switch (planType) {
-      case 'hourly':
-        outputTokens = 9000;
-        inputTokens = 5000;
-        break;
-      case 'daily':
-        outputTokens = 108000;
-        inputTokens = 60000;
-        break;
-      case 'monthly':
-        outputTokens = 3240000;
-        inputTokens = 1800000;
-        break;
-      default:
-        throw new Error('Invalid plan type');
-    }
+    console.log('14. Starting plan creation');
 
-    // Deactivate any existing active plans
+    // Deactivate existing plans
     const { error: deactivateError } = await client
       .from('user_plans')
       .update({ status: 'inactive' })
       .eq('user_id', user.id)
       .eq('status', 'active');
 
+    console.log('15. Deactivation result:', { error: deactivateError });
+
     if (deactivateError) {
-      console.error('Error deactivating existing plans:', deactivateError);
+      console.error('16. Error deactivating plans:', deactivateError);
       throw deactivateError;
     }
+
+    // Calculate plan limits
+    const planLimits = {
+      hourly: { output: 9000, input: 5000 },
+      daily: { output: 108000, input: 60000 },
+      monthly: { output: 3240000, input: 1800000 }
+    }[planType];
+
+    if (!planLimits) {
+      console.error('17. Invalid plan type:', planType);
+      throw new Error('Invalid plan type');
+    }
+
+    console.log('18. Creating new plan with limits:', planLimits);
 
     // Insert new plan
     const { data: planData, error: planError } = await client
@@ -118,19 +145,25 @@ serve(async (req) => {
         payment_id: paymentId,
         order_id: orderId,
         status: 'active',
-        remaining_output_tokens: outputTokens,
-        remaining_input_tokens: inputTokens,
+        remaining_output_tokens: planLimits.output,
+        remaining_input_tokens: planLimits.input,
         start_time: new Date().toISOString(),
       })
       .select()
       .single();
 
+    console.log('19. Plan creation result:', {
+      success: !!planData,
+      error: planError ? planError.message : null,
+      planData
+    });
+
     if (planError) {
-      console.error('Error creating plan:', planError);
+      console.error('20. Error creating plan:', planError);
       throw planError;
     }
 
-    console.log('Plan created successfully:', planData);
+    console.log('------- PAYMENT VERIFICATION SUCCESS -------');
 
     return new Response(
       JSON.stringify({
@@ -144,11 +177,13 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('------- PAYMENT VERIFICATION FAILED -------');
+    console.error('Final error:', error);
+    
     return new Response(
       JSON.stringify({
         error: error.message,
-        details: 'Payment verification failed. Our team will verify and activate your plan manually.'
+        details: 'Payment verification failed. Please contact support with your payment ID and we will activate your plan.'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
