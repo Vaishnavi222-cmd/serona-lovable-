@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,16 +20,28 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
   const fetchUserData = async () => {
     try {
+      console.log('Fetching user data...');
       setIsLoading(true);
       
       // Get current time in UTC
       const now = new Date().toISOString();
+      console.log('Current time:', now);
 
-      // Fetch active plan
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('Error getting user:', userError);
+        throw userError;
+      }
+      console.log('Current user:', user);
+
+      // Fetch active plan with detailed query logging
+      console.log('Fetching active plan...');
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
         .eq('status', 'active')
+        .eq('user_id', user?.id)
         .lte('start_time', now)
         .gte('end_time', now)
         .order('created_at', { ascending: false })
@@ -49,10 +60,12 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         setActivePlan(planData);
       }
 
-      // Fetch purchase history (including expired plans)
+      // Fetch purchase history with detailed logging
+      console.log('Fetching purchase history...');
       const { data: historyData, error: historyError } = await supabase
         .from('user_plans')
         .select('*')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (historyError) {
@@ -67,7 +80,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         setPurchaseHistory(historyData || []);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Error in fetchUserData:', error);
       toast({
         title: "Error",
         description: "Could not fetch your data. Please try again.",
@@ -78,9 +91,10 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     }
   };
 
-  // Fetch user's active plan and purchase history when dialog opens or when open state changes
+  // Fetch user's active plan and purchase history when dialog opens
   useEffect(() => {
     if (open) {
+      console.log('Dialog opened, fetching data...');
       fetchUserData();
     }
   }, [open]);
@@ -89,6 +103,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
   useEffect(() => {
     if (!open) return;
 
+    console.log('Setting up real-time subscription...');
     const channel = supabase
       .channel('user-plans-changes')
       .on(
@@ -106,6 +121,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       .subscribe();
 
     return () => {
+      console.log('Cleaning up subscription...');
       supabase.removeChannel(channel);
     };
   }, [open]);
