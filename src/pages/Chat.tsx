@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,12 +28,16 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Changed to false by default
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarButtonRef = useRef<HTMLButtonElement>(null);
   const [chats, setChats] = useState<Chat[]>([
     { id: '1', title: "Deep Personality Analysis", active: true },
     { id: '2', title: "Career Guidance Session", active: false },
@@ -242,6 +246,7 @@ const Chat = () => {
   const HeaderMenu = () => (
     <>
       <button
+        ref={menuButtonRef}
         onClick={() => setShowHeaderMenu(!showHeaderMenu)}
         className="md:hidden p-2 rounded-md hover:bg-gray-800/50 transition-colors"
         aria-label="Toggle header menu"
@@ -299,6 +304,35 @@ const Chat = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMobile) {
+        // Handle header menu
+        if (showHeaderMenu && 
+            headerMenuRef.current && 
+            !headerMenuRef.current.contains(event.target as Node) &&
+            menuButtonRef.current && 
+            !menuButtonRef.current.contains(event.target as Node)) {
+          setShowHeaderMenu(false);
+        }
+
+        // Handle sidebar
+        if (isSidebarOpen && 
+            sidebarRef.current && 
+            !sidebarRef.current.contains(event.target as Node) &&
+            sidebarButtonRef.current && 
+            !sidebarButtonRef.current.contains(event.target as Node)) {
+          setIsSidebarOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMobile, showHeaderMenu, isSidebarOpen]);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       <AuthDialog 
@@ -307,6 +341,7 @@ const Chat = () => {
       />
 
       <div 
+        ref={sidebarRef}
         className={`fixed md:relative w-64 h-screen bg-black text-white overflow-auto z-40
                    transition-transform duration-300 ease-in-out mt-[56px]
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
@@ -387,6 +422,7 @@ const Chat = () => {
               />
               <span className="text-lg font-semibold hidden md:inline">Serona AI</span>
               <button
+                ref={sidebarButtonRef}
                 onClick={toggleSidebar}
                 className="p-2 rounded-md hover:bg-gray-800/50 transition-colors"
                 aria-label="Toggle sidebar"
@@ -397,7 +433,9 @@ const Chat = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <HeaderMenu />
+            <div ref={headerMenuRef}>
+              <HeaderMenu />
+            </div>
             {user ? (
               <div className="flex items-center justify-center w-10 h-10">
                 <UserMenu userEmail={user.email} />
