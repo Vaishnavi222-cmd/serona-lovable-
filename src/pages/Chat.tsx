@@ -39,7 +39,6 @@ const Chat = () => {
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
 
-  // Clear any potential background processes on component mount/unmount
   useEffect(() => {
     const controller = new AbortController();
     
@@ -74,7 +73,6 @@ const Chat = () => {
       }
     });
 
-    // Cleanup function to abort any pending operations
     return () => {
       subscription.unsubscribe();
       controller.abort();
@@ -103,15 +101,14 @@ const Chat = () => {
     try {
       const { data: limitCheck, error: limitError } = await supabase.functions.invoke('check-plan-limits', {
         body: { 
-          input_tokens: message.length, // Simplified token count
-          output_tokens: 400 // Base estimate
+          input_tokens: message.length,
+          output_tokens: 400
         }
       });
 
       if (limitError || !limitCheck.allowed) {
         const errorMessage = limitError?.message || limitCheck?.error || "Usage limit reached";
         
-        // Extract time remaining if present in error message
         const timeMatch = errorMessage.match(/resets in (\d+) minutes/);
         if (timeMatch) {
           const minutes = parseInt(timeMatch[1]);
@@ -129,8 +126,7 @@ const Chat = () => {
         return;
       }
 
-      // If we got here, the message can be sent
-      const newMessage = {
+      const newMessage: Message = {
         id: Date.now(),
         text: message.trim(),
         sender: 'user'
@@ -139,7 +135,6 @@ const Chat = () => {
       setMessages(prev => [...prev, newMessage]);
       setMessage('');
       
-      // Show warning toast if provided
       if (limitCheck.warning) {
         toast({
           title: "Token Usage Warning",
@@ -156,25 +151,14 @@ const Chat = () => {
     }
   };
 
-  const handleQuickStart = (topic: string) => {
-    if (!user) {
-      setShowAuthDialog(true);
-      return;
-    }
-    const newMessage: Message = {
-      id: Date.now(),
-      text: `Help me with ${topic}`,
-      sender: 'user'
-    };
-    setMessages(prev => [...prev, newMessage]);
-    setMessage('');
+  const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
+    console.log('Selected plan:', planType);
   };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
 
-  // Header menu links component
   const HeaderMenu = () => (
     <>
       <button
@@ -228,7 +212,6 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Update meta title for home page
     document.title = "Serona AI – AI That Understands You & Guides You Forward";
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
@@ -243,7 +226,6 @@ const Chat = () => {
         onOpenChange={setShowAuthDialog}
       />
 
-      {/* Sidebar */}
       <div 
         className={`fixed md:relative w-64 h-screen bg-black text-white overflow-auto z-40
                    transition-transform duration-300 ease-in-out mt-[56px]
@@ -462,6 +444,7 @@ const Chat = () => {
       <UpgradePlansDialog
         open={showUpgradePlansDialog}
         onOpenChange={setShowUpgradePlansDialog}
+        onSelectPlan={handleSelectPlan}
       />
     </div>
   );
