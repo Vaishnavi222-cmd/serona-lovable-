@@ -108,7 +108,7 @@ serve(async (req) => {
 
     console.log('14. Starting plan creation');
 
-    // Deactivate existing plans
+    // First deactivate any existing active plans for this user
     const { error: deactivateError } = await client
       .from('user_plans')
       .update({ status: 'inactive' })
