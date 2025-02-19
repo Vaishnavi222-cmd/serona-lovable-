@@ -33,6 +33,36 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_submissions: {
+        Row: {
+          email: string
+          id: string
+          message: string
+          name: string
+          status: string
+          submitted_at: string
+          user_id: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          message: string
+          name: string
+          status?: string
+          submitted_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          status?: string
+          submitted_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           chat_id: string
