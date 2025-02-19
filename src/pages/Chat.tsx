@@ -155,6 +155,26 @@ const Chat = () => {
     console.log('Selected plan:', planType);
   };
 
+  const handleQuickStart = (topic: string) => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+    
+    if (isLimitReached) {
+      setShowLimitReachedDialog(true);
+      return;
+    }
+
+    const newMessage: Message = {
+      id: Date.now(),
+      text: `Help me with ${topic}`,
+      sender: 'user'
+    };
+    setMessages(prev => [...prev, newMessage]);
+    setMessage('');
+  };
+
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
