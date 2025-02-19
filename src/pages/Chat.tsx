@@ -13,9 +13,15 @@ import { LimitReachedDialog } from "@/components/ui/limit-reached-dialog";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 
 interface Message {
-  id: number;
+  id: string;  // Changed from number to string to match UUID
   text: string;
   sender: 'user' | 'ai';
+}
+
+interface Chat {
+  id: string;  // Changed from number to string to match UUID
+  title: string;
+  active: boolean;
 }
 
 const Chat = () => {
@@ -28,11 +34,11 @@ const Chat = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
-  const [chats, setChats] = useState([
-    { id: 1, title: "Deep Personality Analysis", active: true },
-    { id: 2, title: "Career Guidance Session", active: false },
-    { id: 3, title: "Mental Health Support", active: false },
-    { id: 4, title: "Life Goals Planning", active: false },
+  const [chats, setChats] = useState<Chat[]>([
+    { id: '1', title: "Deep Personality Analysis", active: true },
+    { id: '2', title: "Career Guidance Session", active: false },
+    { id: '3', title: "Mental Health Support", active: false },
+    { id: '4', title: "Life Goals Planning", active: false },
   ]);
   const [showLimitReachedDialog, setShowLimitReachedDialog] = useState(false);
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
@@ -181,7 +187,7 @@ const Chat = () => {
       }
 
       const newMessage: Message = {
-        id: Date.now(),
+        id: Date.now().toString(),
         text: message.trim(),
         sender: 'user'
       };
@@ -221,7 +227,7 @@ const Chat = () => {
     }
 
     const newMessage: Message = {
-      id: Date.now(),
+      id: Date.now().toString(),
       text: `Help me with ${topic}`,
       sender: 'user'
     };

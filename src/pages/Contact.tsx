@@ -17,13 +17,15 @@ const Contact = () => {
     const formData = new FormData(form);
     
     try {
+      const submissionData = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        message: formData.get('message') as string,
+      };
+
       const { error } = await supabase
         .from('contact_submissions')
-        .insert({
-          name: formData.get('name'),
-          email: formData.get('email'),
-          message: formData.get('message'),
-        });
+        .insert([submissionData]); // Insert expects an array of objects
 
       if (error) {
         console.error('Error submitting form:', error);
