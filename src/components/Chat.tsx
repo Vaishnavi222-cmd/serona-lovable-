@@ -1,179 +1,155 @@
-import { useState } from 'react';
-import { Send, Menu, MessageSquare, Plus, X, Search } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useIsMobile } from "@/hooks/use-mobile";
-import Navbar from "../components/Navbar";
+import { useState } from "react";
+import { Bot, Send, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { usePlanStatus } from "@/hooks/use-plan-status";
+import LoginDialog from "@/components/LoginDialog";
+import LimitReachedDialog from "@/components/ui/limit-reached-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Chat = () => {
-  const [message, setMessage] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [limitReachedOpen, setLimitReachedOpen] = useState(false);
   const { toast } = useToast();
-  const isMobile = useIsMobile();
-  const [chats, setChats] = useState([
-    { id: 1, title: "Deep Personality Analysis", active: true },
-    { id: 2, title: "Career Guidance Session", active: false },
-    { id: 3, title: "Mental Health Support", active: false },
-    { id: 4, title: "Life Goals Planning", active: false },
-  ]);
+  const { user } = useAuth();
+  const { checkPlanLimits } = usePlanStatus();
 
-  const handleSend = () => {
-    if (!message.trim()) {
-      toast({
-        title: "Empty message",
-        description: "Please enter a message to send",
-      });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!user) {
+      setLoginOpen(true);
       return;
     }
-    setMessage('');
+
+    const canUse = await checkPlanLimits();
+    if (!canUse) {
+      setLimitReachedOpen(true);
+      return;
+    }
+
+    setIsLoading(true);
+    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    setInput("");
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: input }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const data = await response.json();
+      setMessages((prev) => [...prev, { role: "assistant", content: data.response }]);
+    } catch (error: any) {
+      toast({
+        title: "Something went wrong.",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleNewChat = () => {
-    const newChats = [...chats].map(chat => ({ ...chat, active: false }));
-    const newChat = {
-      id: chats.length + 1,
-      title: "New Chat",
-      active: true
-    };
-    setChats([newChat, ...newChats]);
-    toast({
-      title: "New chat created",
-      description: "Started a new conversation",
-    });
-    setIsSidebarOpen(true); // Open sidebar when creating new chat
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const clearChat = () => {
+    setMessages([]);
+    setInput("");
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
-      {/* Three-dot menu button - Fixed position */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-gray-200/50 transition-colors"
-        style={{ background: 'transparent' }}
-      >
-        {isSidebarOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
-      </button>
-
-      {/* Sidebar */}
-      <div 
-        className={`fixed md:relative w-64 h-full bg-black text-white 
-                   transition-all duration-300 ease-in-out transform 
-                   ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'} 
-                   z-40 flex flex-col`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Search bar */}
-          <div className="p-4 border-b border-gray-700">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search chats..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 pl-10 pr-10"
-              />
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-2.5"
-                >
-                  <X className="w-4 h-4 text-gray-400" />
-                </button>
-              )}
+    <div className="h-[calc(100vh-4rem)] flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center max-w-2xl mx-auto text-center px-4">
+            <Bot className="w-12 h-12 mb-4 text-serona-primary" />
+            <h2 className="text-2xl font-semibold mb-2 text-serona-dark">Welcome to Serona AI Chat!</h2>
+            <p className="text-gray-600 mb-4">
+              I'm here to help you explore your thoughts, feelings, and behaviors.
+              Start by sharing what's on your mind, and together we'll work on your
+              personal growth journey.
+            </p>
+            <div className="text-sm text-gray-500">
+              Your conversations are private and secure.
             </div>
           </div>
-
-          {/* Brand */}
-          <div className="p-4 flex items-center gap-3 border-b border-gray-700">
-            <span className="text-lg font-semibold">Serona AI</span>
-          </div>
-
-          {/* New Chat Button */}
-          <div className="p-4">
-            <Button 
-              className="w-full bg-[#1EAEDB] hover:bg-[#1795BD] text-white font-semibold"
-              onClick={handleNewChat}
+        ) : (
+          messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
             >
-              <Plus className="mr-2 h-4 w-4" /> New Chat
-            </Button>
-          </div>
-
-          {/* Chat list with custom scrollbar */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <ScrollArea className="h-full">
-              <div className="flex flex-col gap-2 p-2">
-                {chats.map((chat) => (
-                  <div
-                    key={chat.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
-                               ${chat.active ? 'bg-gray-800' : ''}`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="text-sm truncate">{chat.title}</span>
-                  </div>
-                ))}
+              <div
+                className={`max-w-[80%] md:max-w-[70%] rounded-lg p-3 ${
+                  message.role === "user"
+                    ? "bg-serona-primary text-serona-dark ml-4"
+                    : "bg-gray-100 text-gray-800 mr-4"
+                }`}
+              >
+                {message.content}
               </div>
-            </ScrollArea>
+            </div>
+          ))
+        )}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] md:max-w-[70%] space-y-2 mr-4">
+              <Skeleton className="h-4 w-[200px]" />
+              <Skeleton className="h-4 w-[160px]" />
+              <Skeleton className="h-4 w-[180px]" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen">
-        {/* Header */}
-        <div className="bg-black text-white px-4 py-2 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold ml-12 md:ml-16">Serona AI</span>
-          </div>
-          <Navbar />
-        </div>
-
-        {/* Messages Area with custom scrollbar */}
-        <ScrollArea className="flex-1 bg-white">
-          <div className="max-w-3xl mx-auto w-full p-4 space-y-8">
-            {/* Chat messages will go here */}
-          </div>
-        </ScrollArea>
-
-        {/* Message input box - Fixed for mobile */}
-        <div className={`bg-white border-t border-gray-200 p-4 ${isMobile ? 'fixed bottom-0 left-0 right-0' : ''}`}>
-          <div className="max-w-4xl mx-auto relative">
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Message Serona AI..."
-              className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
-                       bg-white border border-gray-200 shadow-sm resize-none text-gray-800
-                       placeholder-gray-400 min-h-[44px] max-h-[200px]"
-              rows={1}
-            />
-            <button 
-              onClick={handleSend}
-              className="absolute right-3 bottom-3 p-2 rounded-full hover:bg-gray-100 
-                       transition-colors"
-              aria-label="Send message"
+      <form onSubmit={handleSubmit} className="p-4 border-t bg-white">
+        <div className="flex gap-2 max-w-5xl mx-auto">
+          {messages.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={clearChat}
+              className="shrink-0"
             >
-              <Send className="w-5 h-5 text-[#1EAEDB]" />
-            </button>
-          </div>
+              <XCircle className="h-5 w-5" />
+            </Button>
+          )}
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="min-h-[44px] max-h-32"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+          />
+          <Button type="submit" size="icon" disabled={isLoading || !input.trim()} className="shrink-0">
+            <Send className="h-5 w-5" />
+          </Button>
         </div>
-      </div>
+      </form>
+
+      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
+      <LimitReachedDialog open={limitReachedOpen} onOpenChange={setLimitReachedOpen} />
     </div>
   );
 };
 
 export default Chat;
-
