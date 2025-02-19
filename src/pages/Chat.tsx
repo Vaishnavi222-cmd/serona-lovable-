@@ -9,6 +9,8 @@ import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
 import { Link } from 'react-router-dom';
+import { LimitReachedDialog } from "@/components/ui/limit-reached-dialog";
+import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 
 interface Message {
   id: number;
@@ -32,6 +34,10 @@ const Chat = () => {
     { id: 3, title: "Mental Health Support", active: false },
     { id: 4, title: "Life Goals Planning", active: false },
   ]);
+  const [showLimitReachedDialog, setShowLimitReachedDialog] = useState(false);
+  const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState("");
+  const [isLimitReached, setIsLimitReached] = useState(false);
 
   // Clear any potential background processes on component mount/unmount
   useEffect(() => {
@@ -88,15 +94,66 @@ const Chat = () => {
       setShowAuthDialog(true);
       return;
     }
+
+    if (isLimitReached) {
+      setShowLimitReachedDialog(true);
+      return;
+    }
     
-    const newMessage: Message = {
-      id: Date.now(),
-      text: message.trim(),
-      sender: 'user'
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    setMessage('');
+    try {
+      const { data: limitCheck, error: limitError } = await supabase.functions.invoke('check-plan-limits', {
+        body: { 
+          input_tokens: message.length, // Simplified token count
+          output_tokens: 400 // Base estimate
+        }
+      });
+
+      if (limitError || !limitCheck.allowed) {
+        const errorMessage = limitError?.message || limitCheck?.error || "Usage limit reached";
+        
+        // Extract time remaining if present in error message
+        const timeMatch = errorMessage.match(/resets in (\d+) minutes/);
+        if (timeMatch) {
+          const minutes = parseInt(timeMatch[1]);
+          const hours = Math.floor(minutes / 60);
+          const remainingMinutes = minutes % 60;
+          setTimeRemaining(
+            hours > 0 
+              ? `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes > 0 ? `${remainingMinutes} minutes` : ''}`
+              : `${minutes} minutes`
+          );
+        }
+
+        setIsLimitReached(true);
+        setShowLimitReachedDialog(true);
+        return;
+      }
+
+      // If we got here, the message can be sent
+      const newMessage = {
+        id: Date.now(),
+        text: message.trim(),
+        sender: 'user'
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
+      setMessage('');
+      
+      // Show warning toast if provided
+      if (limitCheck.warning) {
+        toast({
+          title: "Token Usage Warning",
+          description: limitCheck.warning,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking limits:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check usage limits. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleQuickStart = (topic: string) => {
@@ -377,11 +434,13 @@ const Chat = () => {
                          placeholder-gray-400 min-h-[44px] max-h-[200px] overflow-y-auto"
                 style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                 rows={1}
+                disabled={isLimitReached}
               />
               <button 
                 onClick={handleSend}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="Send message"
+                disabled={isLimitReached}
               >
                 <Send className="w-5 h-5 text-[#1EAEDB]" />
               </button>
@@ -389,6 +448,21 @@ const Chat = () => {
           </div>
         </div>
       </div>
+      
+      <LimitReachedDialog
+        open={showLimitReachedDialog}
+        onOpenChange={setShowLimitReachedDialog}
+        timeRemaining={timeRemaining}
+        onUpgrade={() => {
+          setShowLimitReachedDialog(false);
+          setShowUpgradePlansDialog(true);
+        }}
+      />
+
+      <UpgradePlansDialog
+        open={showUpgradePlansDialog}
+        onOpenChange={setShowUpgradePlansDialog}
+      />
     </div>
   );
 };

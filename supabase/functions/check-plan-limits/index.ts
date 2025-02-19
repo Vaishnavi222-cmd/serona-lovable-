@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -44,11 +43,12 @@ serve(async (req) => {
 
     // If no active plan, check free tier limits
     if (!activePlan) {
+      const currentDate = new Date().toISOString().split('T')[0];
       const { data: dailyUsage, error: usageError } = await client
         .from('user_daily_usage')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', new Date().toISOString().split('T')[0])
+        .eq('date', currentDate)
         .single();
 
       if (usageError && usageError.code !== 'PGRST116') {
@@ -57,19 +57,49 @@ serve(async (req) => {
 
       // Free tier limits
       const maxResponses = 7;
-      const maxOutputTokens = 800;
+      const baseMaxOutputTokens = 400;
+      const absoluteMaxOutputTokens = 800;
 
       if (dailyUsage) {
+        // Check response count
         if (dailyUsage.responses_count >= maxResponses) {
-          throw new Error('Daily response limit exceeded for free plan');
+          // Calculate time until reset
+          const now = new Date();
+          const tomorrow = new Date(now);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(0, 0, 0, 0);
+          const msUntilReset = tomorrow.getTime() - now.getTime();
+          const minutesUntilReset = Math.ceil(msUntilReset / (1000 * 60));
+
+          throw new Error(`Daily response limit exceeded. Plan resets in ${minutesUntilReset} minutes`);
         }
-        if (dailyUsage.output_tokens_used + output_tokens > maxOutputTokens) {
-          throw new Error('Output token limit exceeded for free plan');
+
+        // Check if requested output tokens exceed the absolute maximum
+        if (output_tokens > absoluteMaxOutputTokens) {
+          throw new Error(`Requested output exceeds maximum allowed tokens (${absoluteMaxOutputTokens})`);
         }
+
+        // Check if total output tokens would exceed the limit
+        if (dailyUsage.output_tokens_used + output_tokens > absoluteMaxOutputTokens) {
+          throw new Error(`Output token limit exceeded for free plan`);
+        }
+
+        // Warn if exceeding base limit but still under absolute limit
+        const warning = output_tokens > baseMaxOutputTokens ? 
+          "Warning: Response exceeds standard token limit but falls within extended limit" : null;
+
+        return new Response(
+          JSON.stringify({ 
+            allowed: true, 
+            remaining_responses: maxResponses - dailyUsage.responses_count,
+            warning
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       return new Response(
-        JSON.stringify({ allowed: true, remaining_responses: maxResponses - (dailyUsage?.responses_count || 0) }),
+        JSON.stringify({ allowed: true, remaining_responses: maxResponses }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
