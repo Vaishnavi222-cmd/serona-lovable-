@@ -6,7 +6,6 @@ import { Mail, Key, History, Crown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserProfileDialogProps {
   open: boolean;
@@ -19,7 +18,6 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
   const { toast } = useToast();
   const [activePlan, setActivePlan] = useState<any>(null);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
-  const isMobile = useIsMobile();
 
   const fetchUserData = async () => {
     try {
@@ -51,7 +49,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         setActivePlan(planData);
       }
 
-      // Fetch purchase history
+      // Fetch purchase history (including expired plans)
       const { data: historyData, error: historyError } = await supabase
         .from('user_plans')
         .select('*')
@@ -80,11 +78,36 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     }
   };
 
-  // Fetch user's active plan and purchase history when dialog opens
+  // Fetch user's active plan and purchase history when dialog opens or when open state changes
   useEffect(() => {
     if (open) {
       fetchUserData();
     }
+  }, [open]);
+
+  // Set up real-time subscription for plan updates
+  useEffect(() => {
+    if (!open) return;
+
+    const channel = supabase
+      .channel('user-plans-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_plans',
+        },
+        (payload) => {
+          console.log('Plan update received:', payload);
+          fetchUserData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [open]);
 
   const formatTimeRange = (start: string, end: string) => {
