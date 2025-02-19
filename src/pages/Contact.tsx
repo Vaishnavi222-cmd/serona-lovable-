@@ -2,16 +2,56 @@
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from 'react';
 
 const Contact = () => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast({
-      title: "Message sent!",
-      description: "We'll get back to you soon.",
-    });
+    setIsSubmitting(true);
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    try {
+      const { error } = await supabase
+        .from('contact_submissions')
+        .insert({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          message: formData.get('message'),
+        });
+
+      if (error) {
+        console.error('Error submitting form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Reset form
+      form.reset();
+      
+      toast({
+        title: "Message sent!",
+        description: "We'll get back to you soon.",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -30,6 +70,7 @@ const Contact = () => {
               <input
                 type="text"
                 id="name"
+                name="name"
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-serona-primary"
                 required
               />
@@ -39,6 +80,7 @@ const Contact = () => {
               <input
                 type="email"
                 id="email"
+                name="email"
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-serona-primary"
                 required
               />
@@ -47,6 +89,7 @@ const Contact = () => {
               <label htmlFor="message" className="block text-sm font-medium text-serona-dark mb-1">Message</label>
               <textarea
                 id="message"
+                name="message"
                 rows={4}
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-serona-primary"
                 required
@@ -54,9 +97,10 @@ const Contact = () => {
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 bg-serona-primary text-white rounded-lg hover:bg-serona-accent transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-serona-primary text-white rounded-lg hover:bg-serona-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send Message
+              {isSubmitting ? 'Sending...' : 'Send Message'}
             </button>
           </form>
 

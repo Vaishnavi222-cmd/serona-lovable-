@@ -28,7 +28,7 @@ const Chat = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
-  const [chats] = useState([
+  const [chats, setChats] = useState([
     { id: 1, title: "Deep Personality Analysis", active: true },
     { id: 2, title: "Career Guidance Session", active: false },
     { id: 3, title: "Mental Health Support", active: false },
@@ -78,6 +78,60 @@ const Chat = () => {
       controller.abort();
     };
   }, [toast]);
+
+  const handleNewChat = async () => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
+    try {
+      // Create a new chat in the database
+      const { data: newChat, error: chatError } = await supabase
+        .from('chats')
+        .insert({
+          title: 'New Chat',
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (chatError) {
+        console.error('Error creating new chat:', chatError);
+        toast({
+          title: "Error",
+          description: "Failed to create new chat. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Clear current messages
+      setMessages([]);
+      setMessage('');
+      
+      // Update chats list
+      const updatedChats = chats.map(chat => ({ ...chat, active: false }));
+      updatedChats.unshift({ 
+        id: newChat.id, 
+        title: newChat.title, 
+        active: true 
+      });
+      setChats(updatedChats);
+
+      // Close sidebar on mobile
+      if (isMobile) {
+        setIsSidebarOpen(false);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create new chat. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSend = async () => {
     if (!message.trim()) {
@@ -295,7 +349,7 @@ const Chat = () => {
           <div className="p-4">
             <Button 
               className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white"
-              onClick={() => {}}
+              onClick={handleNewChat}
             >
               <Plus className="mr-2 h-4 w-4" /> New Chat
             </Button>
