@@ -35,16 +35,18 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       }
       console.log('Current user:', user);
 
-      // Fetch active plan - simplified query
+      // Fetch active plan with detailed query logging
       console.log('Fetching active plan...');
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
-        .eq('user_id', user?.id)
         .eq('status', 'active')
+        .eq('user_id', user?.id)
+        .lte('start_time', now)
+        .gte('end_time', now)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (planError) {
         console.error('Error fetching active plan:', planError);
