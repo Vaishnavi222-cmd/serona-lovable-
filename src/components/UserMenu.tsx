@@ -98,19 +98,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     setShowUpgradeDialog(false);
 
-    if (!isRazorpayLoaded) {
-      try {
-        await loadRazorpayScript();
-      } catch (error) {
-        toast({
-          title: "Payment system not ready",
-          description: "Please refresh the page and try again",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
     try {
       setIsLoading(true);
       
@@ -119,6 +106,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       if (!session) {
         throw new Error('No active session found. Please sign in again.');
       }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User session expired');
+
+      console.log('Creating payment for user:', user.id);
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
@@ -148,42 +141,39 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         handler: async function (response: any) {
           try {
-            console.log('Payment successful, sending verification...');
+            console.log('Payment successful, verifying...', response);
             
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User session expired');
-
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
                 planType,
-                userId: user.id // Send the user ID directly
+                userId: user.id
               }
             });
 
-            console.log('Verification response:', verifyResponse);
+            if (verifyResponse.error) {
+              console.error('Verification error:', verifyResponse.error);
+              throw new Error(verifyResponse.error);
+            }
+
+            console.log('Verification successful:', verifyResponse);
 
             toast({
               title: "Payment successful",
               description: `Your ${planType} plan is now active`,
             });
-            
-            // Refresh profile dialog if open
-            if (showProfileDialog) {
-              setShowProfileDialog(false);
-              setTimeout(() => setShowProfileDialog(true), 1000);
-            }
 
             // Force reload to ensure everything is up to date
             window.location.reload();
+
           } catch (error: any) {
             console.error('Verification error:', error);
             toast({
-              title: "Payment successful",
-              description: `Your ${planType} plan is now active`,
+              title: "Error activating plan",
+              description: error.message,
+              variant: "destructive",
             });
-            window.location.reload();
           }
         },
       };

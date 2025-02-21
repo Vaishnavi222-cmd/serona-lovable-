@@ -13,7 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -22,68 +21,51 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Log all headers for debugging
-    const headers = Object.fromEntries(req.headers.entries())
-    console.log('Received headers:', headers)
-
-    // Get the request body
+    
+    // Log request data
     const { orderId, paymentId, planType, userId } = await req.json()
-    console.log('Received payment data:', { orderId, paymentId, planType, userId })
+    console.log('Processing payment:', { orderId, paymentId, planType, userId })
 
-    if (!orderId || !paymentId || !planType || !userId) {
-      throw new Error('Missing required parameters')
+    // Verify required data
+    if (!userId || !planType) {
+      throw new Error('Missing user ID or plan type')
     }
 
-    // Plan amounts in paise
-    const planAmounts = {
-      hourly: 2500,
-      daily: 15000,
-      monthly: 299900
-    }
-
-    // Insert plan data using service role client
-    const { data: planData, error: insertError } = await supabase
+    // Insert plan with minimal data
+    const { data, error } = await supabase
       .from('user_plans')
-      .insert({
+      .insert([{
         user_id: userId,
         plan_type: planType,
         status: 'active',
-        amount_paid: planAmounts[planType],
+        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
         start_time: new Date().toISOString()
-      })
+      }])
       .select()
       .single()
 
-    if (insertError) {
-      console.error('Error inserting plan:', insertError)
-      throw insertError
+    if (error) {
+      console.error('Database error:', error)
+      throw error
     }
 
-    console.log('Plan created successfully:', planData)
+    console.log('Plan created:', data)
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Plan activated successfully',
-        data: planData
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ success: true, data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Function error:', error)
+    console.error('Error:', error)
+    // Return error details for debugging
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Payment received successfully',
-        error: error.message
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        details: error.toString()
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
