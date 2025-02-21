@@ -40,13 +40,11 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
-        .eq('status', 'active')
         .eq('user_id', user?.id)
-        .lte('start_time', now)
-        .gte('end_time', now)
+        .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .single();
 
       if (planError) {
         console.error('Error fetching active plan:', planError);
