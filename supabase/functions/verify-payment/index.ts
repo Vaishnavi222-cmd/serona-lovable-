@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHmac } from 'https://deno.land/std@0.177.0/node/crypto.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,25 +8,27 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Get auth token
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      throw new Error('Missing authorization header')
+      throw new Error('No auth token provided')
     }
 
-    // Create Supabase client
-    const supabaseClient = createClient(
+    // Initialize Supabase client
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Get user from auth header
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
 
@@ -35,28 +36,42 @@ serve(async (req) => {
       throw new Error('Invalid user token')
     }
 
-    const { orderId, paymentId, signature, planType, amount } = await req.json()
-    console.log('Received payment data:', { orderId, paymentId, signature, planType, amount })
+    // Get payment details from request
+    const { orderId, paymentId, planType, amount } = await req.json()
+    
+    console.log('Processing payment verification:', {
+      userId: user.id,
+      orderId,
+      paymentId,
+      planType,
+      amount
+    })
 
-    // Insert plan data directly without signature verification (we'll verify with Razorpay API)
-    const { data: planData, error: planError } = await supabaseClient
+    // Deactivate any existing active plans
+    const { error: deactivateError } = await supabaseAdmin
       .from('user_plans')
-      .insert([
-        {
-          user_id: user.id,
-          plan_type: planType,
-          amount_paid: amount / 100, // Convert from paisa to INR
-          status: 'active',
-          payment_id: paymentId,
-          order_id: orderId
-        }
-      ])
-      .select()
-      .single()
+      .update({ status: 'inactive' })
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (deactivateError) {
+      console.error('Error deactivating old plans:', deactivateError)
+      throw new Error('Failed to deactivate old plans')
+    }
+
+    // Create new plan
+    const { data: planData, error: planError } = await supabaseAdmin
+      .rpc('create_user_plan', {
+        p_user_id: user.id,
+        p_plan_type: planType,
+        p_amount_paid: amount / 100,
+        p_payment_id: paymentId,
+        p_order_id: orderId
+      })
 
     if (planError) {
-      console.error('Error inserting plan:', planError)
-      throw new Error(`Failed to save plan: ${planError.message}`)
+      console.error('Error creating plan:', planError)
+      throw new Error('Failed to create plan')
     }
 
     console.log('Plan created successfully:', planData)
@@ -64,20 +79,19 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        data: planData,
+        data: planData
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
     )
-
   } catch (error) {
     console.error('Verification error:', error)
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message
+        error: error.message
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
