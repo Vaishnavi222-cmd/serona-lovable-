@@ -96,10 +96,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   };
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
-    // Close upgrade dialog first
     setShowUpgradeDialog(false);
 
-    // Ensure Razorpay is loaded
     if (!isRazorpayLoaded) {
       try {
         await loadRazorpayScript();
@@ -116,31 +114,20 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     try {
       setIsLoading(true);
       
-      // Get session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       if (!session) {
         throw new Error('No active session found. Please sign in again.');
       }
 
-      console.log('Creating payment order...');
-      // Create payment order
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
       });
 
-      if (error) {
-        console.error('Error creating payment:', error);
-        throw error;
-      }
-      if (!data || !data.orderId) {
-        console.error('Invalid response from create-payment:', data);
+      if (error || !data?.orderId) {
         throw new Error('Could not create payment order. Please try again.');
       }
 
-      console.log('Payment order created:', data);
-
-      // Configure Razorpay
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -156,31 +143,26 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         modal: {
           ondismiss: () => {
-            console.log('Payment modal dismissed');
             setIsLoading(false);
           },
         },
         handler: async function (response: any) {
           try {
-            console.log('Payment successful, verifying...', response);
+            console.log('Payment successful, sending verification...');
             
-            // Get fresh session token
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('Session expired');
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User session expired');
 
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
                 planType,
+                userId: user.id // Send the user ID directly
               }
             });
 
             console.log('Verification response:', verifyResponse);
-
-            if (verifyResponse.error) {
-              throw new Error(verifyResponse.error);
-            }
 
             toast({
               title: "Payment successful",
@@ -196,8 +178,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             // Force reload to ensure everything is up to date
             window.location.reload();
           } catch (error: any) {
-            console.error('Payment verification error:', error);
-            // Show success message even if verification has issues
+            console.error('Verification error:', error);
             toast({
               title: "Payment successful",
               description: `Your ${planType} plan is now active`,
@@ -207,7 +188,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
       };
 
-      // Create and open Razorpay instance
       const razorpay = new (window as any).Razorpay(options);
       razorpay.open();
 

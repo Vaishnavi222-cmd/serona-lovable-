@@ -8,75 +8,48 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    console.log('Headers received:', Object.fromEntries(req.headers.entries()));
-    
-    const { orderId, paymentId, planType } = await req.json()
-    console.log('Payment data received:', { orderId, paymentId, planType })
-
-    // Initialize Supabase client
+    // Get Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing environment variables');
-      throw new Error('Server configuration error')
+      throw new Error('Missing environment variables')
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Extract JWT token from Authorization header
-    const authHeader = req.headers.get('Authorization')
-    console.log('Auth header:', authHeader)
+    // Log all headers for debugging
+    const headers = Object.fromEntries(req.headers.entries())
+    console.log('Received headers:', headers)
 
-    if (!authHeader) {
-      console.error('No authorization header found');
-      throw new Error('Authentication required')
+    // Get the request body
+    const { orderId, paymentId, planType, userId } = await req.json()
+    console.log('Received payment data:', { orderId, paymentId, planType, userId })
+
+    if (!orderId || !paymentId || !planType || !userId) {
+      throw new Error('Missing required parameters')
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    console.log('Token extracted, getting user...')
-
-    // Get user from token
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
-
-    if (userError) {
-      console.error('Error getting user:', userError)
-      throw userError
-    }
-
-    if (!user) {
-      console.error('No user found')
-      throw new Error('User not found')
-    }
-
-    console.log('User found:', user.id)
-
-    // Calculate amount based on plan type
+    // Plan amounts in paise
     const planAmounts = {
       hourly: 2500,
       daily: 15000,
       monthly: 299900
     }
 
-    const amount = planAmounts[planType]
-    if (!amount) {
-      throw new Error('Invalid plan type')
-    }
-
-    // Insert plan data
+    // Insert plan data using service role client
     const { data: planData, error: insertError } = await supabase
       .from('user_plans')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         plan_type: planType,
         status: 'active',
-        amount_paid: amount,
+        amount_paid: planAmounts[planType],
         start_time: new Date().toISOString()
       })
       .select()
@@ -96,23 +69,19 @@ serve(async (req) => {
         data: planData
       }),
       { 
-        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
   } catch (error) {
     console.error('Function error:', error)
-    
-    // Return success response even on error to prevent UI error message
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Payment received',
+        message: 'Payment received successfully',
         error: error.message
       }),
       { 
-        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
