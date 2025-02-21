@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,9 +11,11 @@ export const usePayment = (userEmail: string | undefined) => {
     try {
       setIsLoading(true);
       
+      // Get session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error('Please sign in to continue');
+      if (sessionError) throw sessionError;
+      if (!session) {
+        throw new Error('No active session found. Please sign in again.');
       }
 
       console.log('Creating payment order...');
@@ -22,9 +23,13 @@ export const usePayment = (userEmail: string | undefined) => {
         body: { planType },
       });
 
-      if (error || !data?.orderId) {
-        console.error('Payment creation error:', error || 'No order ID received');
-        throw new Error('Could not create payment order');
+      if (error) {
+        console.error('Error creating payment:', error);
+        throw error;
+      }
+      if (!data || !data.orderId) {
+        console.error('Invalid response from create-payment:', data);
+        throw new Error('Could not create payment order. Please try again.');
       }
 
       console.log('Payment order created:', data);
@@ -49,15 +54,16 @@ export const usePayment = (userEmail: string | undefined) => {
               body: {
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
                 planType,
-                amount: data.amount
+                amount: data.amount // Pass the amount to store
               },
             });
 
             console.log('Verification response:', verifyResponse);
 
-            if (!verifyResponse.data || verifyResponse.error) {
-              throw new Error(verifyResponse.error?.message || 'Payment verification failed');
+            if (verifyResponse.error) {
+              throw new Error(verifyResponse.error.message || 'Payment verification failed');
             }
 
             toast({
@@ -65,14 +71,15 @@ export const usePayment = (userEmail: string | undefined) => {
               description: `Your ${planType} plan is now active`,
             });
 
-            // Force refresh any open profile dialogs
-            window.dispatchEvent(new CustomEvent('plan-updated'));
+            // Force refresh the profile dialog if it's open
+            const event = new CustomEvent('plan-updated');
+            window.dispatchEvent(event);
 
           } catch (error: any) {
-            console.error('Verification error:', error);
+            console.error('Payment verification error:', error);
             toast({
-              title: "Payment verification failed",
-              description: "Your payment was received but verification failed. Please contact support.",
+              title: "Error activating plan",
+              description: error.message || "Please contact support if payment was deducted",
               variant: "destructive",
             });
           } finally {
@@ -87,7 +94,6 @@ export const usePayment = (userEmail: string | undefined) => {
         },
       };
 
-      // Initialize and open Razorpay
       const razorpay = new (window as any).Razorpay(options);
       razorpay.on('payment.failed', function (response: any) {
         console.error('Payment failed:', response.error);
@@ -104,7 +110,7 @@ export const usePayment = (userEmail: string | undefined) => {
       console.error('Payment setup error:', error);
       setIsLoading(false);
       toast({
-        title: "Error",
+        title: "Error setting up payment",
         description: error.message || "Please try again later",
         variant: "destructive",
       });
