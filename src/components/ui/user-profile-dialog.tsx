@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -22,11 +21,14 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
   const fetchUserData = async () => {
     try {
       setIsLoading(true);
+      console.log('Fetching user data...');
       
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
-      // Get active plan
+      console.log('Current user:', user);
+
+      // First try to get plans that are active
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
@@ -37,17 +39,12 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
       if (planError) {
         console.error('Error fetching active plan:', planError);
-        toast({
-          title: "Error fetching plan",
-          description: "Could not fetch your active plan. Please try again.",
-          variant: "destructive",
-        });
       } else {
         console.log('Active plan data:', planData);
         setActivePlan(planData);
       }
 
-      // Get purchase history
+      // Get all plans for history
       const { data: historyData, error: historyError } = await supabase
         .from('user_plans')
         .select('*')
@@ -56,57 +53,30 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
       if (historyError) {
         console.error('Error fetching history:', historyError);
-        toast({
-          title: "Error fetching history",
-          description: "Could not fetch your purchase history. Please try again.",
-          variant: "destructive",
-        });
       } else {
         console.log('Purchase history:', historyData);
         setPurchaseHistory(historyData || []);
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
-      toast({
-        title: "Error",
-        description: "Could not fetch your data. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch data when dialog opens
+  // Fetch data when dialog opens or when component mounts
   useEffect(() => {
     if (open) {
       fetchUserData();
     }
   }, [open]);
 
-  // Set up real-time subscription for plan updates
+  // Fetch data every 5 seconds when dialog is open
   useEffect(() => {
     if (!open) return;
 
-    const channel = supabase
-      .channel('user-plans-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_plans',
-        },
-        (payload) => {
-          console.log('Plan update received:', payload);
-          fetchUserData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const interval = setInterval(fetchUserData, 5000);
+    return () => clearInterval(interval);
   }, [open]);
 
   const formatTimeRange = (start: string, end: string) => {
