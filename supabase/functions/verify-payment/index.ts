@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
-import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,63 +8,31 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    const { orderId, paymentId, planType } = await req.json()
+    
+    if (!orderId || !paymentId || !planType) {
+      throw new Error('Missing required parameters')
+    }
+
+    console.log('Starting payment verification:', { orderId, paymentId, planType })
+
+    // Get Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const razorpayKey = Deno.env.get('RAZORPAY_KEY_SECRET')
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing environment variables.')
+    if (!supabaseUrl || !supabaseServiceKey || !razorpayKey) {
+      throw new Error('Missing environment variables')
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { orderId, paymentId, signature, planType } = await req.json()
-    const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
-
-    if (!orderId || !paymentId || !signature || !planType || !keySecret) {
-      throw new Error('Missing required parameters')
-    }
-
-    console.log('Verifying payment:', { orderId, paymentId, planType })
-
-    // Generate signature for verification
-    const text = orderId + '|' + paymentId
-    const encoder = new TextEncoder()
-    const data = encoder.encode(text)
-    const key = encoder.encode(keySecret)
-    const hmacSignature = new Uint8Array(
-      await crypto.subtle.sign(
-        { name: 'HMAC', hash: 'SHA-256' },
-        await crypto.subtle.importKey(
-          'raw',
-          key,
-          { name: 'HMAC', hash: 'SHA-256' },
-          false,
-          ['sign']
-        ),
-        data
-      )
-    )
-
-    // Convert to base64
-    const generatedSignature = btoa(String.fromCharCode(...hmacSignature))
-
-    console.log('Signature verification:', {
-      provided: signature,
-      generated: generatedSignature,
-      match: signature === generatedSignature
-    })
-
-    if (signature !== generatedSignature) {
-      throw new Error('Invalid signature')
-    }
-
-    // Get user ID from auth token
+    // Get user from auth header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       throw new Error('No authorization header')
@@ -79,31 +46,63 @@ serve(async (req) => {
       throw new Error('Authentication failed')
     }
 
-    // Insert new plan
-    const { error: insertError } = await supabase
+    console.log('Authenticated user:', user.id)
+
+    // Verify payment with Razorpay
+    const response = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+      headers: {
+        'Authorization': `Basic ${btoa(razorpayKey + ':')}`
+      }
+    })
+
+    const paymentData = await response.json()
+    console.log('Razorpay payment data:', paymentData)
+
+    if (paymentData.error) {
+      throw new Error(`Payment verification failed: ${paymentData.error.description}`)
+    }
+
+    if (paymentData.status !== 'captured') {
+      throw new Error(`Payment not captured. Status: ${paymentData.status}`)
+    }
+
+    // Get plan details
+    const planAmounts = {
+      hourly: 2500,
+      daily: 15000,
+      monthly: 299900
+    }
+
+    // Insert plan using the set_plan_limits trigger
+    const { data: planData, error: insertError } = await supabase
       .from('user_plans')
       .insert([
         {
           user_id: user.id,
           plan_type: planType,
           status: 'active',
+          amount_paid: planAmounts[planType],
+          start_time: new Date().toISOString()
         }
       ])
+      .select()
+      .single()
 
     if (insertError) {
       console.error('Plan insertion error:', insertError)
       throw new Error('Failed to create plan')
     }
 
-    console.log('Payment verified and plan created successfully')
+    console.log('Plan created successfully:', planData)
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Payment verified and plan activated' 
+      JSON.stringify({
+        success: true,
+        message: 'Payment verified and plan activated',
+        plan: planData
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
