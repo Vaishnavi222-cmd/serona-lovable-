@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -123,15 +124,22 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         throw new Error('No active session found. Please sign in again.');
       }
 
+      console.log('Creating payment order...');
       // Create payment order
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating payment:', error);
+        throw error;
+      }
       if (!data || !data.orderId) {
+        console.error('Invalid response from create-payment:', data);
         throw new Error('Could not create payment order. Please try again.');
       }
+
+      console.log('Payment order created:', data);
 
       // Improved Razorpay options with better mobile support
       const options = {
@@ -152,22 +160,22 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             console.log('Payment modal dismissed');
             setIsLoading(false);
           },
-          confirm_close: false, // Changed to false to prevent issues on mobile
-          escape: false, // Changed to false to prevent issues on mobile
-          animation: true, // Enable animations
-          backdropClose: false, // Prevent closing on backdrop click
-          handleBack: true, // Handle back button press on mobile
+          confirm_close: false,
+          escape: false,
+          animation: true,
+          backdropClose: false,
+          handleBack: true,
         },
         retry: {
           enabled: true,
           max_count: 3,
         },
-        send_sms_hash: true, // Enable SMS OTP auto-read
-        remember_customer: true, // Remember customer details
+        send_sms_hash: true,
+        remember_customer: true,
         handler: async function (response: any) {
           try {
-            console.log('Payment success, verifying...', response);
-            const { error: verifyError } = await supabase.functions.invoke('verify-payment', {
+            console.log('Payment successful, verifying...', response);
+            const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
@@ -176,7 +184,18 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               },
             });
 
-            if (verifyError) throw verifyError;
+            console.log('Verification response:', verifyResponse);
+
+            if (verifyResponse.error) {
+              console.error('Verification error:', verifyResponse.error);
+              throw new Error(verifyResponse.error.message || 'Payment verification failed');
+            }
+
+            // Check if the verification was successful
+            if (!verifyResponse.data?.success) {
+              console.error('Verification unsuccessful:', verifyResponse.data);
+              throw new Error('Payment verification unsuccessful');
+            }
 
             toast({
               title: "Payment successful",
