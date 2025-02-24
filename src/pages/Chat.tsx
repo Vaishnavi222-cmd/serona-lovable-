@@ -50,6 +50,26 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
 
   useEffect(() => {
+    // Add meta tags for SEO
+    document.title = "Serona AI – AI That Understands You & Guides You Forward";
+    
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
+    
+    // Add indexing meta tag
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.setAttribute('name', 'robots');
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.setAttribute('content', 'index, follow');
+
     const controller = new AbortController();
     
     const checkSession = async () => {
