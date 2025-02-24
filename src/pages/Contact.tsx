@@ -1,13 +1,21 @@
-
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Contact = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Update meta tags for Contact page
+    document.title = "Serona AI - AI Chat bot for carrier guidance & decision making";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute("content", "Talk with AI for self-development and life choices. Serona AI offers AI conversation bot insights on career, relationships, and personality analysis.");
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
