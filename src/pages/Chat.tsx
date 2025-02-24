@@ -362,8 +362,8 @@ const Chat = () => {
 
       <div 
         ref={sidebarRef}
-        className={`fixed md:relative w-64 h-screen bg-black text-white overflow-auto z-40
-                   transition-transform duration-300 ease-in-out mt-[56px]
+        className={`fixed md:relative w-64 h-screen bg-black text-white z-40
+                   transition-transform duration-300 ease-in-out mt-[56px] sidebar-scrollbar
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >

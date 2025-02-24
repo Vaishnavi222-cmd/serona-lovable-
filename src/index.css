@@ -7,63 +7,13 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
- 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
- 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
- 
-    --radius: 0.5rem;
+    /* ... keep existing code (color variables) */
   }
  
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* ... keep existing code (dark theme variables) */
   }
 }
  
@@ -76,41 +26,67 @@
   }
 }
 
-/* Custom scrollbar - Always visible on desktop */
+/* Main content scrollbar - Always visible on desktop */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #CBD5E0 #EDF2F7;
-  overflow-y: scroll !important; /* Force scrollbar visibility */
+  overflow-y: auto !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 10px !important;
-  height: 10px !important;
+  width: 7px !important;
+  height: 7px !important;
   display: block !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #EDF2F7 !important;
-  border-radius: 4px;
+  background: #F7FAFC !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #CBD5E0 !important;
-  border-radius: 4px;
-  border: 2px solid #EDF2F7;
+  background-color: #E2E8F0 !important;
+  border-radius: 3px;
   min-height: 40px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #A0AEC0 !important;
+  background-color: #CBD5E0 !important;
 }
 
-/* Hide scrollbar on mobile devices */
+/* Sidebar scrollbar - Always visible on desktop with dark theme */
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 217, 227, 0.1) transparent;
+  overflow-y: auto !important;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+  display: block !important;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(217, 217, 227, 0.1) !important;
+  border-radius: 5px;
+  min-height: 40px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(217, 217, 227, 0.2) !important;
+}
+
+/* Hide scrollbars on mobile devices */
 @media (max-width: 768px) {
-  .custom-scrollbar {
+  .custom-scrollbar, .sidebar-scrollbar {
     scrollbar-width: none;
   }
-  .custom-scrollbar::-webkit-scrollbar {
+  .custom-scrollbar::-webkit-scrollbar,
+  .sidebar-scrollbar::-webkit-scrollbar {
     display: none;
   }
 }
