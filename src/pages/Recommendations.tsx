@@ -1,7 +1,6 @@
-
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const recommendations = [
@@ -32,6 +31,28 @@ const recommendations = [
 ];
 
 const Recommendations = () => {
+  useEffect(() => {
+    // Update meta tags for Recommendations page
+    document.title = "Serona AI - AI Chat bot for carrier guidance & decision making";
+    
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', 'Talk with AI for self-development and life choices. Serona AI offers AI conversation bot insights on career, relationships, and personality analysis.');
+    
+    // Add indexing meta tag
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.setAttribute('name', 'robots');
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.setAttribute('content', 'index, follow');
+  }, []);
+
   const navigate = useNavigate();
   const location = useLocation();
   const isDetailsPage = location.pathname.includes('/details');

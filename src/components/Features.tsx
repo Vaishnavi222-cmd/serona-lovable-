@@ -12,7 +12,8 @@ const featureContent = [
     ✔ Discover areas for personal growth
     
     🔍 Gain deeper self-awareness with AI-driven insights!`,
-    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158"
+    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
+    alt: "AI chat online for self improvement and life choices"
   },
   {
     title: "Get Career & Life Guidance",
@@ -22,7 +23,8 @@ const featureContent = [
     ✔ Make informed decisions with AI-backed guidance
     
     🚀 Shape your future with intelligent career insights!`,
-    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+    alt: "Speak to an AI for personal growth and career guidance"
   },
   {
     title: "Improve Relationships",
@@ -32,7 +34,8 @@ const featureContent = [
     ✔ Build healthier personal & professional relationships
     
     💬 Enhance your connections through AI-powered relationship insights!`,
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475"
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+    alt: "AI chatbot online for relationship guidance and self development"
   },
   {
     title: "AI-Powered Deep Analysis",
@@ -42,7 +45,8 @@ const featureContent = [
     ✔ Real-time feedback for a continuous growth journey
     
     🌟 Experience the power of AI-driven self-discovery!`,
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6"
+    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
+    alt: "Talk with AI to understand yourself and make life choices"
   }
 ];
 
@@ -86,6 +90,7 @@ const Features = () => {
               title={feature.title}
               description={feature.description}
               image={feature.image}
+              alt={feature.alt}
             />
           ))}
         </div>
@@ -128,9 +133,9 @@ const Features = () => {
   );
 };
 
-const FeatureCard = ({ title, description, image }: { title: string; description: string; image: string }) => (
+const FeatureCard = ({ title, description, image, alt }: { title: string; description: string; image: string; alt: string }) => (
   <div className="group p-6 rounded-2xl bg-serona-secondary/80 backdrop-blur-lg border border-serona-primary/20 transition-all duration-300 hover:scale-105">
-    <img src={image} alt={title} className="w-full h-48 object-cover rounded-lg mb-6" loading="lazy" />
+    <img src={image} alt={alt} className="w-full h-48 object-cover rounded-lg mb-6" loading="lazy" />
     <h3 className="text-xl font-semibold text-serona-dark mb-3">{title}</h3>
     <p className="text-serona-dark/70 whitespace-pre-line">{description}</p>
   </div>
