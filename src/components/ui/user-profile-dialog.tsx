@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -28,12 +29,26 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
       console.log('Current user:', user);
 
-      // First try to get plans that are active
+      // First update expired plans
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('user_plans')
+        .update({ status: 'expired' })
+        .eq('user_id', user?.id)
+        .eq('status', 'active')
+        .lt('end_time', now);
+
+      if (updateError) {
+        console.error('Error updating expired plans:', updateError);
+      }
+
+      // Then get active plan
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
         .eq('user_id', user?.id)
         .eq('status', 'active')
+        .gt('end_time', now)
         .order('created_at', { ascending: false })
         .maybeSingle();
 
@@ -64,7 +79,40 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     }
   };
 
-  // Fetch data when dialog opens or when component mounts
+  // Set up real-time subscription for plan updates
+  useEffect(() => {
+    if (!open) return;
+
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const channel = supabase
+        .channel('user-plans-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_plans',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log('Real-time update received:', payload);
+            fetchUserData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    setupSubscription();
+  }, [open]);
+
+  // Fetch data when dialog opens
   useEffect(() => {
     if (open) {
       fetchUserData();

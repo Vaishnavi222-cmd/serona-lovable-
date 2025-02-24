@@ -212,26 +212,29 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
             console.log('Verification successful:', verifyResponse);
 
-            // Poll for plan update with increased timeout
-            const planUpdated = await pollForPlanUpdate(user.id, 15); // Increased to 15 attempts
+            // Poll for plan update with increased timeout and delay
+            const planUpdated = await pollForPlanUpdate(user.id, 15, 2000); // 15 attempts, 2 second delay
             
             if (!planUpdated) {
-              // If plan update fails, log the error but don't throw
               console.error('Plan update verification failed');
               toast({
                 title: "Payment processed",
                 description: "Your payment was successful but plan activation is taking longer than expected. Please refresh the page in a few moments.",
-                duration: 10000, // Show for 10 seconds
+                duration: 10000,
               });
             } else {
               toast({
                 title: "Payment successful",
                 description: `Your ${planType} plan is now active`,
               });
+              
+              // Refresh the profile dialog data if it's open
+              if (showProfileDialog) {
+                // This will trigger a re-fetch in UserProfileDialog
+                setShowProfileDialog(false);
+                setTimeout(() => setShowProfileDialog(true), 100);
+              }
             }
-
-            // Force reload to ensure everything is up to date
-            window.location.reload();
 
           } catch (error: any) {
             console.error('Verification error:', error);
