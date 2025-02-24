@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -367,7 +368,7 @@ const Chat = () => {
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
-        <div className="h-full overflow-y-auto sidebar-scrollbar">
+        <div className="h-full overflow-y-auto custom-scrollbar sidebar-scrollbar">
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <button
