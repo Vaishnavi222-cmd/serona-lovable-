@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +63,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   };
 
   // Poll for plan update
-  const pollForPlanUpdate = async (userId: string, maxAttempts = 10): Promise<boolean> => {
+  const pollForPlanUpdate = async (userId: string, maxAttempts = 15): Promise<boolean> => {
+    const delay = 2000; // 2 second delay between attempts
     for (let i = 0; i < maxAttempts; i++) {
       const { data, error } = await supabase
         .from('user_plans')
@@ -75,17 +75,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         .limit(1)
         .single();
 
-      if (error) {
-        console.error('Error checking plan:', error);
-        continue;
-      }
-
       if (data) {
-        console.log('Plan update confirmed:', data);
         return true;
       }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
     return false;
   };
@@ -212,8 +205,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
             console.log('Verification successful:', verifyResponse);
 
-            // Poll for plan update with increased timeout and delay
-            const planUpdated = await pollForPlanUpdate(user.id, 15, 2000); // 15 attempts, 2 second delay
+            // Poll for plan update with increased timeout
+            const planUpdated = await pollForPlanUpdate(user.id, 15); // 15 attempts with 2 second delay
             
             if (!planUpdated) {
               console.error('Plan update verification failed');
