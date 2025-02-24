@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -75,72 +76,41 @@
   }
 }
 
-/* Custom scrollbar for light backgrounds - Always visible on desktop */
+/* Custom scrollbar - Always visible on desktop */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #E2E8F0 #F7FAFC;
-  overflow-y: scroll !important;
+  scrollbar-color: #CBD5E0 #EDF2F7;
+  overflow-y: scroll !important; /* Force scrollbar visibility */
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
+  width: 10px !important;
+  height: 10px !important;
   display: block !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #F7FAFC !important;
+  background: #EDF2F7 !important;
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #E2E8F0 !important;
+  background-color: #CBD5E0 !important;
   border-radius: 4px;
-  border: none;
+  border: 2px solid #EDF2F7;
   min-height: 40px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #CBD5E0 !important;
-}
-
-/* Custom scrollbar for dark backgrounds - Always visible on desktop */
-.custom-scrollbar-dark {
-  scrollbar-width: thin;
-  scrollbar-color: #4A5568 #2D3748;
-  overflow-y: scroll !important;
-}
-
-.custom-scrollbar-dark::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-  display: block !important;
-}
-
-.custom-scrollbar-dark::-webkit-scrollbar-track {
-  background: #2D3748 !important;
-  border-radius: 4px;
-}
-
-.custom-scrollbar-dark::-webkit-scrollbar-thumb {
-  background-color: #4A5568 !important;
-  border-radius: 4px;
-  border: none;
-  min-height: 40px;
-}
-
-.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
-  background-color: #718096 !important;
+  background-color: #A0AEC0 !important;
 }
 
 /* Hide scrollbar on mobile devices */
 @media (max-width: 768px) {
-  .custom-scrollbar,
-  .custom-scrollbar-dark {
+  .custom-scrollbar {
     scrollbar-width: none;
   }
-  .custom-scrollbar::-webkit-scrollbar,
-  .custom-scrollbar-dark::-webkit-scrollbar {
+  .custom-scrollbar::-webkit-scrollbar {
     display: none;
   }
 }

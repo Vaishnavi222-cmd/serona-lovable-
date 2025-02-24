@@ -367,7 +367,7 @@ const Chat = () => {
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
-        <div className="h-full overflow-y-auto custom-scrollbar-dark">
+        <div className="h-full overflow-y-auto custom-scrollbar">
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <button
@@ -416,7 +416,7 @@ const Chat = () => {
             </Button>
           </div>
 
-          <div className="flex-1 px-2 py-2 space-y-2 overflow-y-auto custom-scrollbar-dark">
+          <div className="flex-1 px-2 py-2 space-y-2">
             {chats.map((chat) => (
               <div
                 key={chat.id}
