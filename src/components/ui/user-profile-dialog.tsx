@@ -133,6 +133,11 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     return `${startTime.toLocaleString()} - ${endTime.toLocaleString()}`;
   };
 
+  const formatAmount = (amountInPaise: number) => {
+    // Convert paise to rupees for display
+    return `₹${amountInPaise}`;
+  };
+
   const handleResetPassword = async () => {
     try {
       setIsLoading(true);
@@ -227,7 +232,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                         Status: <span className="capitalize">{purchase.status}</span>
                       </p>
                       <p className="text-sm text-gray-500">
-                        Amount: ₹{(purchase.amount_paid / 100).toFixed(2)}
+                        Amount: {formatAmount(purchase.amount_paid)}
                       </p>
                     </div>
                   ))}
@@ -268,3 +273,4 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     </Dialog>
   );
 }
+
