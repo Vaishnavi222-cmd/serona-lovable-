@@ -1,4 +1,4 @@
-
+import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useState } from 'react';
@@ -9,29 +9,55 @@ const recommendations = [
     id: 1,
     name: "Understanding Your Personality Type",
     description: "A comprehensive guide to personality analysis and self-discovery, helping you understand your core traits and behavioral patterns.",
-    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
+    alt: "AI chat online for self improvement and life choices"
   },
   {
     id: 2,
     name: "Career Development Masterclass",
     description: "Learn how to align your personality traits with career choices and develop a successful professional path.",
-    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+    alt: "Speak to an AI for personal growth and career guidance"
   },
   {
     id: 3,
     name: "Emotional Intelligence in Relationships",
     description: "Enhance your relationship skills through understanding emotional patterns and improving communication.",
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475"
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+    alt: "AI chatbot online for relationship guidance and self development"
   },
   {
     id: 4,
     name: "The Art of Self-Improvement",
     description: "A comprehensive guide to personal growth, habit formation, and achieving your life goals.",
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6"
+    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
+    alt: "Talk with AI to understand yourself and make life choices"
   }
 ];
 
 const Recommendations = () => {
+  useEffect(() => {
+    // Update meta tags for Recommendations page
+    document.title = "Serona AI - AI Chat bot for carrier guidance & decision making";
+    
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', 'Talk with AI for self-development and life choices. Serona AI offers AI conversation bot insights on career, relationships, and personality analysis.');
+    
+    // Add indexing meta tag
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.setAttribute('name', 'robots');
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.setAttribute('content', 'index, follow');
+  }, []);
+
   const navigate = useNavigate();
   const location = useLocation();
   const isDetailsPage = location.pathname.includes('/details');
