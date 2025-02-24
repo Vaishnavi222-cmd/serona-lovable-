@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,8 +16,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const razorpaySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !razorpaySecret) {
       throw new Error('Missing environment variables');
     }
 
@@ -24,11 +26,44 @@ serve(async (req) => {
     
     // Log request data
     const { orderId, paymentId, signature, planType, userId } = await req.json();
-    console.log('Processing payment:', { orderId, paymentId, planType, userId });
+    console.log('Processing payment verification:', { orderId, paymentId, planType, userId });
 
     // Enhanced validation
     if (!orderId || !paymentId || !signature || !planType || !userId) {
       throw new Error('Missing required payment information');
+    }
+
+    // Verify Razorpay signature
+    const encoder = new TextEncoder();
+    const message = `${orderId}|${paymentId}`;
+    const key = encoder.encode(razorpaySecret);
+    const data = encoder.encode(message);
+    
+    const hashBuffer = await crypto.subtle.importKey(
+      "raw",
+      key,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signatureBuffer = await crypto.subtle.sign(
+      "HMAC",
+      hashBuffer,
+      data
+    );
+    
+    const generatedSignature = Array.from(new Uint8Array(signatureBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    console.log('Signature verification:', {
+      received: signature,
+      generated: generatedSignature
+    });
+
+    if (generatedSignature !== signature) {
+      throw new Error('Invalid payment signature');
     }
 
     // Verify user exists
@@ -68,7 +103,9 @@ serve(async (req) => {
         end_time: new Date(Date.now() + (planType === 'hourly' ? 3600000 : planType === 'daily' ? 43200000 : 2592000000)).toISOString(),
         remaining_output_tokens: planType === 'hourly' ? 9000 : planType === 'daily' ? 108000 : 3240000,
         remaining_input_tokens: planType === 'hourly' ? 5000 : planType === 'daily' ? 60000 : 1800000,
-        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
+        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
+        order_id: orderId,
+        payment_id: paymentId
       }])
       .select();
 
