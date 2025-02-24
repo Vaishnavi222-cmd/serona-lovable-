@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +25,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const { toast } = useToast();
 
-  // Enhanced Razorpay script loading
+  // Enhanced Razorpay script loading with better error handling
   const loadRazorpayScript = useCallback(() => {
     return new Promise<void>((resolve, reject) => {
       if (typeof (window as any).Razorpay !== 'undefined') {
@@ -53,7 +54,42 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     });
   }, []);
 
-  // Load script on mount
+  // Enhanced session verification
+  const verifySession = async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) {
+      throw new Error('No active session found. Please sign in again.');
+    }
+    return session;
+  };
+
+  // Poll for plan update
+  const pollForPlanUpdate = async (userId: string, maxAttempts = 10): Promise<boolean> => {
+    for (let i = 0; i < maxAttempts; i++) {
+      const { data, error } = await supabase
+        .from('user_plans')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error checking plan:', error);
+        continue;
+      }
+
+      if (data) {
+        console.log('Plan update confirmed:', data);
+        return true;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    return false;
+  };
+
   useEffect(() => {
     loadRazorpayScript().catch(error => {
       console.error('Error loading Razorpay:', error);
@@ -64,7 +100,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       });
     });
 
-    // Cleanup function
     return () => {
       const script = document.getElementById('razorpay-script');
       if (script) {
@@ -100,18 +135,17 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
     try {
       setIsLoading(true);
-      
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      if (!session) {
-        throw new Error('No active session found. Please sign in again.');
-      }
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('User session expired');
+      // Verify session is active
+      const session = await verifySession();
+      const user = session.user;
 
       console.log('Creating payment for user:', user.id);
+
+      // Ensure Razorpay is loaded
+      if (!isRazorpayLoaded) {
+        await loadRazorpayScript();
+      }
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
@@ -163,21 +197,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
             console.log('Verification successful:', verifyResponse);
 
-            // Add a delay to allow the database to update
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Double check that the plan was created
-            const { data: planData, error: planError } = await supabase
-              .from('user_plans')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            if (planError) {
-              console.error('Error checking plan:', planError);
-            } else {
-              console.log('Latest plan data:', planData);
+            // Poll for plan update instead of using a fixed delay
+            const planUpdated = await pollForPlanUpdate(user.id);
+            
+            if (!planUpdated) {
+              throw new Error('Failed to confirm plan activation. Please contact support.');
             }
 
             toast({
