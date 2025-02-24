@@ -363,7 +363,7 @@ const Chat = () => {
       <div 
         ref={sidebarRef}
         className={`fixed md:relative w-64 h-screen bg-black text-white overflow-auto z-40
-                   transition-transform duration-300 ease-in-out mt-[56px]
+                   transition-transform duration-300 ease-in-out mt-[56px] sidebar-scrollbar
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
@@ -477,7 +477,7 @@ const Chat = () => {
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
-                <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
+                <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[75%] md:mx-auto px-4 mt-8">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
                     Hello! I'm your personal growth partner—here to support and guide you! 💡 Let me know how I can help😊
                   </h1>
