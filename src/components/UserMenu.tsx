@@ -108,8 +108,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       }
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User session expired');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('User session expired');
 
       console.log('Creating payment for user:', user.id);
 
@@ -118,8 +118,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       });
 
       if (error || !data?.orderId) {
+        console.error('Create payment error:', error);
         throw new Error('Could not create payment order. Please try again.');
       }
+
+      console.log('Payment order created:', data);
 
       const options = {
         key: data.keyId,
@@ -147,6 +150,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               body: {
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
                 planType,
                 userId: user.id
               }
@@ -158,6 +162,23 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             }
 
             console.log('Verification successful:', verifyResponse);
+
+            // Add a delay to allow the database to update
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Double check that the plan was created
+            const { data: planData, error: planError } = await supabase
+              .from('user_plans')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (planError) {
+              console.error('Error checking plan:', planError);
+            } else {
+              console.log('Latest plan data:', planData);
+            }
 
             toast({
               title: "Payment successful",
@@ -174,6 +195,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               description: error.message,
               variant: "destructive",
             });
+          } finally {
+            setIsLoading(false);
           }
         },
       };
