@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -262,7 +263,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             </span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 bg-white border rounded-md shadow-md">
           <DropdownMenuItem
             onClick={() => setShowProfileDialog(true)}
             className="cursor-pointer"
