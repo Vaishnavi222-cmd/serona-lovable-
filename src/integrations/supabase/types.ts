@@ -158,6 +158,8 @@ export type Database = {
           created_at: string
           end_time: string
           id: string
+          order_id: string | null
+          payment_id: string | null
           plan_type: Database["public"]["Enums"]["plan_type"]
           remaining_input_tokens: number
           remaining_output_tokens: number
@@ -170,6 +172,8 @@ export type Database = {
           created_at?: string
           end_time: string
           id?: string
+          order_id?: string | null
+          payment_id?: string | null
           plan_type: Database["public"]["Enums"]["plan_type"]
           remaining_input_tokens: number
           remaining_output_tokens: number
@@ -182,6 +186,8 @@ export type Database = {
           created_at?: string
           end_time?: string
           id?: string
+          order_id?: string | null
+          payment_id?: string | null
           plan_type?: Database["public"]["Enums"]["plan_type"]
           remaining_input_tokens?: number
           remaining_output_tokens?: number
