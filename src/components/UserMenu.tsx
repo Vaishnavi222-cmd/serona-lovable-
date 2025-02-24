@@ -138,13 +138,22 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
       // Verify session is active
       const session = await verifySession();
+      if (!session?.user?.id) {
+        throw new Error('Session verification failed. Please sign in again.');
+      }
       const user = session.user;
 
       console.log('Creating payment for user:', user.id);
 
       // Ensure Razorpay is loaded
       if (!isRazorpayLoaded) {
+        console.log('Loading Razorpay script...');
         await loadRazorpayScript();
+      }
+
+      // Verify Razorpay is available
+      if (typeof (window as any).Razorpay === 'undefined') {
+        throw new Error('Payment system failed to initialize. Please refresh the page.');
       }
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -173,11 +182,17 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         modal: {
           ondismiss: () => {
+            console.log('Payment modal dismissed');
             setIsLoading(false);
           },
+          escape: true,
         },
         handler: async function (response: any) {
           try {
+            if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
+              throw new Error('Invalid payment response received');
+            }
+
             console.log('Payment successful, verifying...', response);
             
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
@@ -190,24 +205,30 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               }
             });
 
-            if (verifyResponse.error) {
+            if (verifyResponse.error || !verifyResponse.data) {
               console.error('Verification error:', verifyResponse.error);
-              throw new Error(verifyResponse.error);
+              throw new Error(verifyResponse.error || 'Payment verification failed');
             }
 
             console.log('Verification successful:', verifyResponse);
 
-            // Poll for plan update instead of using a fixed delay
-            const planUpdated = await pollForPlanUpdate(user.id);
+            // Poll for plan update with increased timeout
+            const planUpdated = await pollForPlanUpdate(user.id, 15); // Increased to 15 attempts
             
             if (!planUpdated) {
-              throw new Error('Failed to confirm plan activation. Please contact support.');
+              // If plan update fails, log the error but don't throw
+              console.error('Plan update verification failed');
+              toast({
+                title: "Payment processed",
+                description: "Your payment was successful but plan activation is taking longer than expected. Please refresh the page in a few moments.",
+                duration: 10000, // Show for 10 seconds
+              });
+            } else {
+              toast({
+                title: "Payment successful",
+                description: `Your ${planType} plan is now active`,
+              });
             }
-
-            toast({
-              title: "Payment successful",
-              description: `Your ${planType} plan is now active`,
-            });
 
             // Force reload to ensure everything is up to date
             window.location.reload();
@@ -216,7 +237,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             console.error('Verification error:', error);
             toast({
               title: "Error activating plan",
-              description: error.message,
+              description: error.message || "An unexpected error occurred",
               variant: "destructive",
             });
           } finally {
