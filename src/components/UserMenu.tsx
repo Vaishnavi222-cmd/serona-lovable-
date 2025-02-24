@@ -129,7 +129,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     try {
       setIsLoading(true);
 
-      // Verify session is active
       const session = await verifySession();
       if (!session?.user?.id) {
         throw new Error('Session verification failed. Please sign in again.');
@@ -138,13 +137,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
       console.log('Creating payment for user:', user.id);
 
-      // Ensure Razorpay is loaded
       if (!isRazorpayLoaded) {
         console.log('Loading Razorpay script...');
         await loadRazorpayScript();
       }
 
-      // Verify Razorpay is available
       if (typeof (window as any).Razorpay === 'undefined') {
         throw new Error('Payment system failed to initialize. Please refresh the page.');
       }
@@ -223,7 +220,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               
               // Refresh the profile dialog data if it's open
               if (showProfileDialog) {
-                // This will trigger a re-fetch in UserProfileDialog
                 setShowProfileDialog(false);
                 setTimeout(() => setShowProfileDialog(true), 100);
               }
