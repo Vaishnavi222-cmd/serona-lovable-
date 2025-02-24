@@ -13,13 +13,13 @@ import { LimitReachedDialog } from "@/components/ui/limit-reached-dialog";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 
 interface Message {
-  id: string;  // Changed from number to string to match UUID
+  id: string;
   text: string;
   sender: 'user' | 'ai';
 }
 
 interface Chat {
-  id: string;  // Changed from number to string to match UUID
+  id: string;
   title: string;
   active: boolean;
 }
@@ -28,7 +28,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Changed to false by default
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
@@ -367,7 +367,7 @@ const Chat = () => {
                    ${!isSidebarOpen ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ height: 'calc(100vh - 56px)' }}
       >
-        <div className="h-full overflow-y-auto custom-scrollbar">
+        <div className="h-full overflow-y-auto sidebar-scrollbar">
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <button
