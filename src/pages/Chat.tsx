@@ -416,7 +416,7 @@ const Chat = () => {
             </Button>
           </div>
 
-          <div className="flex-1 px-2 py-2 space-y-2">
+          <div className="flex-1 px-2 py-2 space-y-2 overflow-y-auto custom-scrollbar">
             {chats.map((chat) => (
               <div
                 key={chat.id}
@@ -477,7 +477,7 @@ const Chat = () => {
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
-                <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8">
+                <div className="flex flex-col items-center justify-center min-h-[40vh] max-w-4xl mx-auto px-4 mt-8 md:ml-32">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
                     Hello! I'm your personal growth partner—here to support and guide you! 💡 Let me know how I can help😊
                   </h1>
