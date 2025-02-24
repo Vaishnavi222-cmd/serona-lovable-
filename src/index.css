@@ -30,39 +30,41 @@
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #CBD5E0 #EDF2F7;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 7px !important;
-  height: 7px !important;
+  width: 10px !important;
+  height: 10px !important;
   display: block !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #F7FAFC !important;
+  background: #EDF2F7 !important;
+  border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #E2E8F0 !important;
-  border-radius: 3px;
+  background-color: #CBD5E0 !important;
+  border-radius: 4px;
+  border: 2px solid #EDF2F7;
   min-height: 40px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #CBD5E0 !important;
+  background-color: #A0AEC0 !important;
 }
 
 /* Sidebar scrollbar - Always visible on desktop with dark theme */
 .sidebar-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(217, 217, 227, 0.1) transparent;
-  overflow-y: auto !important;
+  scrollbar-color: rgba(217, 217, 227, 0.3) transparent;
+  overflow-y: scroll !important;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
+  width: 8px !important;
+  height: 8px !important;
   display: block !important;
 }
 
@@ -71,13 +73,13 @@
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(217, 217, 227, 0.1) !important;
-  border-radius: 5px;
+  background-color: rgba(217, 217, 227, 0.3) !important;
+  border-radius: 4px;
   min-height: 40px;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(217, 217, 227, 0.2) !important;
+  background-color: rgba(217, 217, 227, 0.4) !important;
 }
 
 /* Hide scrollbars on mobile devices */
