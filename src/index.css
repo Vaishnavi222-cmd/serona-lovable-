@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -75,29 +76,28 @@
   }
 }
 
-/* Main content scrollbar - Always visible on desktop */
+/* Custom scrollbar - Always visible on desktop */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #CBD5E0 #EDF2F7;
-  overflow-y: scroll !important;
+  overflow-y: scroll !important; /* Force scrollbar visibility */
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px !important;
-  height: 8px !important;
+  width: 10px !important;
+  height: 10px !important;
   display: block !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 8px;
+  background: #EDF2F7 !important;
+  border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #CBD5E0 !important;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+  border-radius: 4px;
+  border: 2px solid #EDF2F7;
   min-height: 40px;
 }
 
@@ -105,41 +105,12 @@
   background-color: #A0AEC0 !important;
 }
 
-/* Sidebar scrollbar - Always visible on desktop with dark theme */
-.sidebar-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #4A5568 #1A1A1A;
-  overflow-y: auto !important;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-  display: block !important;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 6px;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #4A5568 !important;
-  border-radius: 6px;
-  min-height: 40px;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #718096 !important;
-}
-
-/* Hide scrollbars on mobile devices */
+/* Hide scrollbar on mobile devices */
 @media (max-width: 768px) {
-  .custom-scrollbar, .sidebar-scrollbar {
+  .custom-scrollbar {
     scrollbar-width: none;
   }
-  .custom-scrollbar::-webkit-scrollbar, 
-  .sidebar-scrollbar::-webkit-scrollbar {
+  .custom-scrollbar::-webkit-scrollbar {
     display: none;
   }
 }
