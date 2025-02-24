@@ -1,7 +1,6 @@
-
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const recommendations = [
@@ -9,25 +8,29 @@ const recommendations = [
     id: 1,
     name: "Understanding Your Personality Type",
     description: "A comprehensive guide to personality analysis and self-discovery, helping you understand your core traits and behavioral patterns.",
-    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
+    alt: "AI chat online for self improvement and life choices"
   },
   {
     id: 2,
     name: "Career Development Masterclass",
     description: "Learn how to align your personality traits with career choices and develop a successful professional path.",
-    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+    alt: "Speak to an AI for personal growth and career guidance"
   },
   {
     id: 3,
     name: "Emotional Intelligence in Relationships",
     description: "Enhance your relationship skills through understanding emotional patterns and improving communication.",
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475"
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+    alt: "AI chatbot online for relationship guidance and self development"
   },
   {
     id: 4,
     name: "The Art of Self-Improvement",
     description: "A comprehensive guide to personal growth, habit formation, and achieving your life goals.",
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6"
+    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
+    alt: "Talk with AI to understand yourself and make life choices"
   }
 ];
 
@@ -35,6 +38,14 @@ const Recommendations = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isDetailsPage = location.pathname.includes('/details');
+
+  useEffect(() => {
+    document.title = "Serona AI - AI Chat bot for carrier guidance & decision making";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute("content", "Talk with AI for self-development and life choices. Serona AI offers AI conversation bot insights on career, relationships, and personality analysis.");
+    }
+  }, []);
 
   if (isDetailsPage) {
     return (
@@ -71,7 +82,7 @@ const Recommendations = () => {
             >
               <img
                 src={item.image}
-                alt={item.name}
+                alt={item.alt}
                 className="w-full h-48 object-cover"
                 loading="lazy"
               />
