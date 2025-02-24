@@ -25,12 +25,17 @@ const Hero = () => {
 
   return (
     <section className="min-h-[85vh] md:min-h-[70vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6 py-4 md:py-16">
-      <div className="absolute inset-0 bg-[url('/photo-1485827404703-89b55fcc595e')] bg-cover bg-center opacity-10" />
+      <div className="absolute inset-0 bg-[url('/photo-1485827404703-89b55fcc595e')] bg-cover bg-center opacity-10" 
+           role="img" 
+           aria-label="AI chat online for self improvement and life choices" 
+      />
       
       <div className="container mx-auto relative z-10">
         <div className="text-center" ref={contentRef}>
           <div className="mb-4 md:mb-10">
-            <Brain className="w-14 h-14 md:w-20 md:h-20 mx-auto text-serona-primary animate-pulse" />
+            <Brain className="w-14 h-14 md:w-20 md:h-20 mx-auto text-serona-primary animate-pulse" 
+                  aria-label="AI chatbot online for making decisions and self development" 
+            />
           </div>
           
           <h1 className="text-3xl md:text-7xl font-bold text-serona-secondary mb-4 md:mb-8 opacity-0 animate-fade-up flex flex-col space-y-1 md:space-y-2" style={{ animationDelay: '0.3s' }}>
