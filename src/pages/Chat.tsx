@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -7,155 +8,15 @@ import { Button } from "@/components/ui/button"
 import { Send, Loader2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Slider } from "@/components/ui/slider"
-import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ModeToggle } from "@/components/mode-toggle"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { CalendarIcon } from "@radix-ui/react-icons"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { CalendarDateRangePicker } from "@/components/calendar-date-range-picker"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { AspectRatio } from "@/components/ui/aspect-ratio"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import * as z from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { InputWithButton } from "@/components/input-with-button"
-import { useSearchParams } from 'react-router-dom';
-import { useMutation } from "@tanstack/react-query"
-import { SendMessage } from "@/integrations/convex/agent/api"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useUser } from "@clerk/clerk-react"
-import { toast } from "@/components/ui/use-toast"
-import { useSubscription } from "@/hooks/use-subscription"
-import { Icons } from "@/components/icons"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { Settings } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  CommandListNavigation,
-  CommandListSearch,
-  CommandListSection,
-} from "@/components/command-list"
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import { Theme } from "@/components/theme-provider"
-import { useTheme } from 'next-themes';
-import { SeparatorVertical } from "@/components/ui/separator"
-import { Text } from "@radix-ui/react-slot"
-import { useMediaQuery } from "@/hooks/use-media-query"
-import { SettingsDialog } from "@/components/settings-dialog"
-import { Messages } from "@/components/messages"
-import { InputArea } from "@/components/input-area"
 
 const Chat = () => {
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const { toast } = useToast();
+
   useEffect(() => {
     document.title = "Serona AI - AI Chatbot online for Self Development & Guidance";
     
@@ -177,47 +38,97 @@ const Chat = () => {
     robotsMeta.setAttribute('content', 'index, follow');
   }, []);
 
-  const [open, setOpen] = React.useState(false)
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
-  const [isInputAreaVisible, setIsInputAreaVisible] = React.useState(true)
-  const [isMobileView, setIsMobileView] = useState(false);
-
-  const { isLoaded, userId, user } = useUser();
-  const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const defaultMessage = searchParams.get("default");
-  const router = null;
-  const { theme } = useTheme();
-  const isSm = useMediaQuery("(max-width: 768px)");
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    setIsMobileView(window.innerWidth <= 768);
+    scrollToBottom();
+  }, [messages]);
 
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth <= 768);
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!message.trim()) return;
 
-    window.addEventListener('resize', handleResize);
+    try {
+      setIsLoading(true);
+      // Add user message to chat
+      setMessages(prev => [...prev, { role: 'user', content: message }]);
+      setMessage('');
+      
+      // Here you would typically make an API call to your AI service
+      // For now, we'll just simulate a response
+      setTimeout(() => {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: "This is a placeholder response. The actual AI integration will be implemented later." 
+        }]);
+        setIsLoading(false);
+      }, 1000);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 relative">
-        <div className="flex flex-col h-full">
-          <Messages />
+        <div className="flex flex-col h-full max-w-3xl mx-auto">
+          <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
+              >
+                <div
+                  className={`max-w-[80%] p-4 rounded-lg ${
+                    msg.role === 'assistant'
+                      ? 'bg-gray-100 text-gray-800'
+                      : 'bg-blue-500 text-white'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
           <Separator className="my-2" />
-          <InputArea />
+          
+          <form onSubmit={handleSubmit} className="relative">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type your message..."
+              className="min-h-[80px] w-full pr-12"
+              disabled={isLoading}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className="absolute bottom-2 right-2"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
         </div>
       </main>
 
       <Footer />
-      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </div>
   );
 };
