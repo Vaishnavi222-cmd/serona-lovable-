@@ -43,31 +43,6 @@ serve(async (req) => {
       throw new Error('Invalid user');
     }
 
-    // Calculate durations and tokens based on plan type
-    let duration, outputTokens, inputTokens, amount;
-    switch (planType) {
-      case 'hourly':
-        duration = '1 hour';
-        outputTokens = 9000;
-        inputTokens = 5000;
-        amount = 2500;
-        break;
-      case 'daily':
-        duration = '12 hours';
-        outputTokens = 108000;
-        inputTokens = 60000;
-        amount = 15000;
-        break;
-      case 'monthly':
-        duration = '30 days';
-        outputTokens = 3240000;
-        inputTokens = 1800000;
-        amount = 299900;
-        break;
-      default:
-        throw new Error('Invalid plan type');
-    }
-
     // First, mark any existing active plans as expired
     const { error: updateError } = await supabase
       .from('user_plans')
@@ -91,9 +66,9 @@ serve(async (req) => {
         status: 'active',
         start_time: new Date().toISOString(),
         end_time: new Date(Date.now() + (planType === 'hourly' ? 3600000 : planType === 'daily' ? 43200000 : 2592000000)).toISOString(),
-        remaining_output_tokens: outputTokens,
-        remaining_input_tokens: inputTokens,
-        amount_paid: amount
+        remaining_output_tokens: planType === 'hourly' ? 9000 : planType === 'daily' ? 108000 : 3240000,
+        remaining_input_tokens: planType === 'hourly' ? 5000 : planType === 'daily' ? 60000 : 1800000,
+        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
       }])
       .select();
 
