@@ -57,7 +57,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_email: string
-          user_id: string
+          user_id?: string
         }
         Update: {
           created_at?: string | null
