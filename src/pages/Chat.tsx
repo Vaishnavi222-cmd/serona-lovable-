@@ -190,17 +190,25 @@ const Chat = () => {
       // Log the full session object immediately after fetching
       console.log("Full session object:", session);
       
-      console.log("Current session before chat creation:", {
-        session,
-        user: session?.user,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email
+      // Check if we have a valid user email
+      const userEmail = session?.user?.email || user?.email;
+      const userId = session?.user?.id || user?.id;
+
+      console.log("Session and user data check:", {
+        sessionEmail: session?.user?.email,
+        userStateEmail: user?.email,
+        finalEmail: userEmail,
+        sessionUserId: session?.user?.id,
+        userStateId: user?.id,
+        finalUserId: userId
       });
 
-      if (!session?.user?.id || !session?.user?.email) {
+      if (!userId || !userEmail) {
         console.error('Missing user data:', {
-          id: session?.user?.id,
-          email: session?.user?.email
+          id: userId,
+          email: userEmail,
+          sessionUser: session?.user,
+          componentUser: user
         });
         toast({
           title: "Error",
@@ -212,18 +220,18 @@ const Chat = () => {
 
       const defaultTitle = 'New Chat';
       
-      // Log final data just before insert
+      // Log final data before inserting chat
       console.log("Final data before inserting chat:", {
-        user_id: session?.user?.id,
-        user_email: session?.user?.email
+        user_id: userId,
+        user_email: userEmail
       });
       
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert([{
           title: defaultTitle,
-          user_id: session.user.id,
-          user_email: session.user.email
+          user_id: userId,
+          user_email: userEmail
         }])
         .select()
         .single();
@@ -232,8 +240,8 @@ const Chat = () => {
         newChat, 
         chatError,
         requestData: {
-          user_id: session.user.id,
-          user_email: session.user.email
+          user_id: userId,
+          user_email: userEmail
         }
       });
 
@@ -241,8 +249,8 @@ const Chat = () => {
         console.error('Error creating new chat:', chatError);
         // Log detailed error information
         console.log('Failed request details:', {
-          userId: session.user.id,
-          userEmail: session.user.email,
+          userId,
+          userEmail,
           error: chatError
         });
         
