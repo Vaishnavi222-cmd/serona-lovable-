@@ -1,48 +1,66 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export const chatService = {
-  async createChat(userId: string, userEmail: string) {
-    const defaultTitle = 'New Chat';
+export async function createChat(userId: string, userEmail: string) {
+  const { data, error } = await supabase
+    .from('chats')
+    .insert([{ 
+      title: 'New Chat',
+      user_id: userId,
+      user_email: userEmail 
+    }])
+    .select();
     
-    const { data: newChat, error } = await supabase
-      .from('chats')
-      .insert([{
-        title: defaultTitle,
-        user_id: userId,
-        user_email: userEmail
-      }])
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    return newChat;
-  },
-
-  async saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert({
-        chat_session_id: chatId,
-        input_message: message,
-        user_id: userId,
-        user_email: userEmail
-      })
-      .select()
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
-  },
-
-  async fetchMessages(chatId: string) {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('chat_session_id', chatId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    return data;
+  if (error) {
+    console.error(error);
+    return null;
   }
-};
+  return data ? data[0] : null;
+}
+
+export async function fetchChats(userId: string) {
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+    
+  if (error) {
+    console.error(error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert([{ 
+      chat_session_id: chatId, 
+      input_message: message,
+      user_id: userId,
+      user_email: userEmail
+    }])
+    .select()
+    .maybeSingle();
+    
+  if (error) {
+    console.error(error);
+    return null;
+  }
+  return data;
+}
+
+export async function fetchMessages(chatId: string) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('chat_session_id', chatId)
+    .order('created_at', { ascending: true });
+    
+  if (error) {
+    console.error(error);
+    return [];
+  }
+  return data || [];
+}

@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { chatService } from "@/services/chatService";
+import { createChat, fetchChats, saveMessage, fetchMessages } from "@/services/chatService";
 import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
@@ -177,88 +177,43 @@ const Chat = () => {
   };
 
   const handleNewChat = async () => {
-    console.log("🔎 DEBUG: Starting new chat creation");
-    
-    if (!user) {
-      console.log("❌ No user in component state, showing auth dialog");
+    if (!user || !user.email) {
       setShowAuthDialog(true);
       return;
     }
 
     try {
-      // Get current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.user?.email) {
-        console.error("❌ Session validation failed:", sessionError);
-        toast({
-          title: "Authentication Error",
-          description: "Please sign in again to continue.",
-          variant: "destructive",
-        });
-        setShowAuthDialog(true);
-        return;
-      }
-
-      // Create new chat using service
-      const newChat = await chatService.createChat(session.user.id, session.user.email);
-      
-      if (!newChat) {
-        toast({
-          title: "Error",
-          description: "Failed to create new chat. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Clear current messages and set new chat
-      setMessages([]);
-      setMessage('');
-      setCurrentChatId(newChat.id);
-      
-      // Update chats list
-      const updatedChats = chats.map(chat => ({ ...chat, active: false }));
-      updatedChats.unshift({
-        id: newChat.id,
-        title: newChat.title,
-        active: true,
-        chat_session_id: newChat.id
-      });
-      setChats(updatedChats);
-
-      // Fetch messages for the new chat (should be empty but ensures consistency)
-      const messages = await chatService.fetchMessages(newChat.id);
-      if (messages) {
-        const formattedMessages = messages.map(msg => ({
-          id: msg.id,
-          text: msg.input_message || msg.output_message,
-          sender: msg.input_message ? 'user' : 'ai'
+      const newChat = await createChat(user.id, user.email);
+      if (newChat) {
+        setMessages([]); // Clear messages
+        setCurrentChatId(newChat.id);
+        
+        // Refresh chat list
+        const updatedChats = await fetchChats(user.id);
+        const formattedChats = updatedChats.map(chat => ({
+          id: chat.id,
+          title: chat.title,
+          active: chat.id === newChat.id,
+          chat_session_id: chat.id
         }));
-        setMessages(formattedMessages);
-      }
+        setChats(formattedChats);
 
-      if (isMobile) {
-        setIsSidebarOpen(false);
+        if (isMobile) {
+          setIsSidebarOpen(false);
+        }
       }
-
-      console.log("✅ Chat created successfully:", newChat);
     } catch (error) {
-      console.error('❌ Unexpected error:', error);
+      console.error('Error creating new chat:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "Failed to create new chat. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   const handleSend = async () => {
-    if (!message.trim()) {
-      toast({
-        title: "Empty message",
-        description: "Please enter a message to send",
-      });
+    if (!message.trim() || !user?.email || !currentChatId) {
       return;
     }
 
@@ -273,22 +228,15 @@ const Chat = () => {
     }
 
     try {
-      if (!currentChatId) {
-        await handleNewChat();
-        return;
-      }
-
-      // Save message using service
-      const savedMessage = await chatService.saveMessage(
+      const savedMessage = await saveMessage(
         currentChatId,
         message.trim(),
         user.id,
-        user.email || ''
+        user.email
       );
 
       if (savedMessage) {
-        // Update UI immediately
-        const newMessage = {
+        const newMessage: Message = {
           id: savedMessage.id,
           text: message.trim(),
           sender: 'user'
@@ -297,7 +245,6 @@ const Chat = () => {
         setMessages(prev => [...prev, newMessage]);
         setMessage('');
       }
-      
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -310,7 +257,29 @@ const Chat = () => {
 
   useEffect(() => {
     if (user) {
-      loadUserChats();
+      const loadChats = async () => {
+        const fetchedChats = await fetchChats(user.id);
+        const formattedChats = fetchedChats.map((chat, index) => ({
+          id: chat.id,
+          title: chat.title,
+          active: index === 0,
+          chat_session_id: chat.id
+        }));
+        setChats(formattedChats);
+        
+        if (formattedChats.length > 0) {
+          setCurrentChatId(formattedChats[0].id);
+          const messages = await fetchMessages(formattedChats[0].id);
+          const formattedMessages = messages.map(msg => ({
+            id: msg.id,
+            text: msg.input_message || msg.output_message || '',
+            sender: msg.input_message ? 'user' : 'ai'
+          }));
+          setMessages(formattedMessages);
+        }
+      };
+      
+      loadChats();
     }
   }, [user]);
 
