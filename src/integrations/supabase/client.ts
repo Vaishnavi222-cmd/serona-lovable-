@@ -10,12 +10,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
   }
 });
 
-// Add a debug listener for auth state changes (this won't affect functionality)
+// Add a debug listener for auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
   console.log("Auth state changed:", event);
-  console.log("Session user ID:", session?.user?.id);
+  console.log("Session:", session);
 });

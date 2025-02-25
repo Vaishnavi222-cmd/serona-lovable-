@@ -183,85 +183,57 @@ const Chat = () => {
     }
 
     try {
-      // Force refresh the session before getting user data
-      await supabase.auth.refreshSession();
-      const { data: { session } } = await supabase.auth.getSession();
+      // First ensure we have a valid session
+      let currentUser = user;
       
-      // Log the full session object immediately after fetching
-      console.log("Full session object:", session);
+      // Force refresh the session
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
       
-      // Check if we have a valid user email
-      const userEmail = session?.user?.email || user?.email;
-      const userId = session?.user?.id || user?.id;
+      if (sessionError) {
+        console.error("Session refresh error:", sessionError);
+        setShowAuthDialog(true);
+        return;
+      }
 
-      console.log("Session and user data check:", {
-        sessionEmail: session?.user?.email,
-        userStateEmail: user?.email,
-        finalEmail: userEmail,
-        sessionUserId: session?.user?.id,
-        userStateId: user?.id,
-        finalUserId: userId
-      });
+      if (!session?.user) {
+        console.error("No valid session found after refresh");
+        setShowAuthDialog(true);
+        return;
+      }
 
-      if (!userId || !userEmail) {
-        console.error('Missing user data:', {
-          id: userId,
-          email: userEmail,
-          sessionUser: session?.user,
-          componentUser: user
-        });
+      // Update our current user with the refreshed session data
+      currentUser = session.user;
+
+      if (!currentUser.email) {
+        console.error("No email found in user data");
         toast({
           title: "Error",
-          description: "User session data is incomplete. Please try logging in again.",
+          description: "Unable to create chat. Please sign out and sign in again.",
           variant: "destructive",
         });
         return;
       }
 
       const defaultTitle = 'New Chat';
-      
-      // Log final data before inserting chat
-      console.log("Final data before inserting chat:", {
-        user_id: userId,
-        user_email: userEmail
-      });
-      
+
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert([{
           title: defaultTitle,
-          user_id: userId,
-          user_email: userEmail
+          user_id: currentUser.id,
+          user_email: currentUser.email
         }])
         .select()
         .single();
 
-      console.log("Chat creation response:", { 
-        newChat, 
-        chatError,
-        requestData: {
-          user_id: userId,
-          user_email: userEmail
-        }
-      });
-
       if (chatError) {
         console.error('Error creating new chat:', chatError);
-        // Log detailed error information
-        console.log('Failed request details:', {
-          userId,
-          userEmail,
-          error: chatError
-        });
         
         if (chatError.code === '42501') {
-          const currentSession = await supabase.auth.getSession();
-          console.log("Session during error:", currentSession);
-          if (!currentSession.data.session) {
-            setShowAuthDialog(true);
-            return;
-          }
+          setShowAuthDialog(true);
+          return;
         }
+        
         toast({
           title: "Error",
           description: "Failed to create new chat. Please try again.",
@@ -271,7 +243,6 @@ const Chat = () => {
       }
 
       if (!newChat) {
-        console.error('No chat data returned after creation');
         toast({
           title: "Error",
           description: "Failed to create new chat. Please try again.",
