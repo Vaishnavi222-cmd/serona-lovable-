@@ -47,13 +47,12 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  // Simplified useEffect for loading chats
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, "Session:", session);
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
-        console.log("User set after sign in:", session.user);
+        await loadChats();
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setChats([]);
@@ -62,120 +61,47 @@ const Chat = () => {
       }
     });
 
-    // Get initial session
+    // Initial session check
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        console.log("Initial session user:", session.user);
         setUser(session.user);
+        await loadChats();
       }
     };
 
     getInitialSession();
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleChatSelect = async (chatId: string) => {
-    console.log("Selecting chat with ID:", chatId);
-    setChats(prevChats => 
-      prevChats.map(chat => ({
-        ...chat,
-        active: chat.id === chatId
-      }))
-    );
-
-    setCurrentChatId(chatId);
-    console.log("Set current chat ID to:", chatId);
-    await loadChatMessages(chatId);
-
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  };
-
-  const loadUserChats = async () => {
+  // Simplified loadChats function
+  const loadChats = async () => {
     if (!user) return;
-
     try {
-      console.log("Loading chats for user:", user.id);
-      const { data, error } = await supabase
-        .from('chats')
-        .select('id, title, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      console.log("Loaded chats:", data, "Error:", error);
-
-      if (error) {
-        console.error('Error loading chats:', error);
-        return;
-      }
-
-      const userChats = data.map((chat, index) => ({
+      const fetchedChats = await fetchChats(user.id);
+      const formattedChats = fetchedChats.map((chat, index) => ({
         id: chat.id,
         title: chat.title,
         active: index === 0,
-        chat_session_id: chat.id // Using the chat id as the session id
+        chat_session_id: chat.id
       }));
-
-      console.log("Formatted chats:", userChats);
-      setChats(userChats);
+      setChats(formattedChats);
       
-      if (userChats.length > 0) {
-        setCurrentChatId(userChats[0].id);
-        console.log("Setting initial current chat ID:", userChats[0].id);
-        await loadChatMessages(userChats[0].id);
+      if (formattedChats.length > 0 && !currentChatId) {
+        setCurrentChatId(formattedChats[0].id);
+        await loadChatMessages(formattedChats[0].id);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chats. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const loadChatMessages = async (chatId: string) => {
-    if (!user) return;
-
-    try {
-      console.log("Loading messages for chat ID:", chatId);
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('id, input_message, output_message, created_at, chat_session_id')
-        .eq('chat_session_id', chatId)
-        .order('created_at');
-
-      console.log("Messages loaded:", data, "Error:", error);
-
-      if (error) {
-        console.error('Error loading messages:', error);
-        return;
-      }
-
-      const formattedMessages = data.reduce((acc: Message[], msg) => {
-        if (msg.input_message) {
-          acc.push({
-            id: msg.id,
-            text: msg.input_message,
-            sender: 'user'
-          });
-        }
-        if (msg.output_message) {
-          acc.push({
-            id: `${msg.id}-response`,
-            text: msg.output_message,
-            sender: 'ai'
-          });
-        }
-        return acc;
-      }, []);
-      
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    }
-  };
-
+  // Simplified handleNewChat function
   const handleNewChat = async () => {
     if (!user || !user.email) {
       setShowAuthDialog(true);
@@ -187,16 +113,7 @@ const Chat = () => {
       if (newChat) {
         setMessages([]); // Clear messages
         setCurrentChatId(newChat.id);
-        
-        // Refresh chat list
-        const updatedChats = await fetchChats(user.id);
-        const formattedChats = updatedChats.map(chat => ({
-          id: chat.id,
-          title: chat.title,
-          active: chat.id === newChat.id,
-          chat_session_id: chat.id
-        }));
-        setChats(formattedChats);
+        await loadChats(); // Refresh chat list
 
         if (isMobile) {
           setIsSidebarOpen(false);
@@ -212,10 +129,29 @@ const Chat = () => {
     }
   };
 
-  const handleSend = async () => {
-    if (!message.trim() || !user?.email || !currentChatId) {
-      return;
+  const loadChatMessages = async (chatId: string) => {
+    if (!user) return;
+    
+    try {
+      const fetchedMessages = await fetchMessages(chatId);
+      const formattedMessages = fetchedMessages.map(msg => ({
+        id: msg.id,
+        text: msg.input_message || msg.output_message || '',
+        sender: msg.input_message ? 'user' : 'ai'
+      }));
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load messages. Please try again.",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleSend = async () => {
+    if (!message.trim() || !user?.email || !currentChatId) return;
 
     if (!user) {
       setShowAuthDialog(true);
@@ -241,7 +177,6 @@ const Chat = () => {
           text: message.trim(),
           sender: 'user'
         };
-        
         setMessages(prev => [...prev, newMessage]);
         setMessage('');
       }
@@ -254,34 +189,6 @@ const Chat = () => {
       });
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      const loadChats = async () => {
-        const fetchedChats = await fetchChats(user.id);
-        const formattedChats = fetchedChats.map((chat, index) => ({
-          id: chat.id,
-          title: chat.title,
-          active: index === 0,
-          chat_session_id: chat.id
-        }));
-        setChats(formattedChats);
-        
-        if (formattedChats.length > 0) {
-          setCurrentChatId(formattedChats[0].id);
-          const messages = await fetchMessages(formattedChats[0].id);
-          const formattedMessages = messages.map(msg => ({
-            id: msg.id,
-            text: msg.input_message || msg.output_message || '',
-            sender: msg.input_message ? 'user' : 'ai'
-          }));
-          setMessages(formattedMessages);
-        }
-      };
-      
-      loadChats();
-    }
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;
