@@ -16,9 +16,8 @@ export type Database = {
           id: string
           input_message: string | null
           output_message: string | null
-          title: string
           updated_at: string
-          user_email: string
+          user_email: string | null
           user_id: string
         }
         Insert: {
@@ -27,9 +26,8 @@ export type Database = {
           id?: string
           input_message?: string | null
           output_message?: string | null
-          title?: string
           updated_at?: string
-          user_email: string
+          user_email?: string | null
           user_id: string
         }
         Update: {
@@ -38,8 +36,34 @@ export type Database = {
           id?: string
           input_message?: string | null
           output_message?: string | null
-          title?: string
           updated_at?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chats: {
+        Row: {
+          created_at: string | null
+          id: string
+          title: string
+          updated_at: string | null
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
           user_email?: string
           user_id?: string
         }
