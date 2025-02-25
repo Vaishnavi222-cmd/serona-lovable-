@@ -46,6 +46,60 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  // Updated handleNewChat function with direct Supabase call
+  const handleNewChat = async () => {
+    if (!user || !user.email) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to start a chat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("chats")
+        .insert([{ 
+          user_email: user.email, 
+          title: "New Chat",
+          user_id: user.id
+        }])
+        .select();
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const newChat = data[0];
+        const formattedChat = {
+          id: newChat.id,
+          title: newChat.title,
+          active: true,
+          chat_session_id: newChat.id
+        };
+        
+        setChats(prevChats => prevChats.map(chat => ({
+          ...chat,
+          active: false
+        })).concat(formattedChat));
+        
+        setCurrentChatId(newChat.id);
+        setMessages([]); // Clear messages for new chat
+
+        if (isMobile) {
+          setIsSidebarOpen(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create a new chat. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Simplified useEffect for loading chats
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -133,34 +187,6 @@ const Chat = () => {
     );
     if (isMobile) {
       setIsSidebarOpen(false);
-    }
-  };
-
-  // Simplified handleNewChat function
-  const handleNewChat = async () => {
-    if (!user || !user.email) {
-      setShowAuthDialog(true);
-      return;
-    }
-
-    try {
-      const newChat = await createChat(user.id, user.email);
-      if (newChat) {
-        setMessages([]); // Clear messages
-        setCurrentChatId(newChat.id);
-        await loadChats(); // Refresh chat list
-
-        if (isMobile) {
-          setIsSidebarOpen(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error creating new chat:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create new chat. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
