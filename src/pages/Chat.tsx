@@ -44,7 +44,7 @@ const Chat = () => {
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
-  const [currentChatSession, setCurrentChatSession] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   const loadUserChats = async () => {
     if (!user) return;
@@ -64,13 +64,14 @@ const Chat = () => {
       const userChats = data.map((chat, index) => ({
         id: chat.id,
         title: chat.title,
-        active: index === 0
+        active: index === 0,
+        chat_session_id: chat.id // Using the chat id as the session id
       }));
 
       setChats(userChats);
       
       if (userChats.length > 0) {
-        setCurrentChatSession(userChats[0].id);
+        setCurrentChatId(userChats[0].id);
         await loadChatMessages(userChats[0].id);
       }
     } catch (error) {
@@ -148,13 +149,14 @@ const Chat = () => {
 
       setMessages([]);
       setMessage('');
-      setCurrentChatSession(newChat.id);
+      setCurrentChatId(newChat.id);
       
       const updatedChats = chats.map(chat => ({ ...chat, active: false }));
       updatedChats.unshift({
         id: newChat.id,
         title: defaultTitle,
-        active: true
+        active: true,
+        chat_session_id: newChat.id // Using the chat id as the session id
       });
       setChats(updatedChats);
 
@@ -179,7 +181,7 @@ const Chat = () => {
       }))
     );
 
-    setCurrentChatSession(chatId);
+    setCurrentChatId(chatId);
     await loadChatMessages(chatId);
 
     if (isMobile) {
@@ -207,14 +209,14 @@ const Chat = () => {
     }
 
     try {
-      if (!currentChatSession) {
+      if (!currentChatId) {
         await handleNewChat();
       }
 
       const { error: messageError } = await supabase
         .from('chat_messages')
         .insert({
-          chat_session_id: currentChatSession,
+          chat_session_id: currentChatId,
           input_message: message.trim(),
           user_id: user.id,
           user_email: user.email
@@ -262,8 +264,8 @@ const Chat = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          if (currentChatSession) {
-            loadChatMessages(currentChatSession);
+          if (currentChatId) {
+            loadChatMessages(currentChatId);
           }
         }
       )
@@ -272,7 +274,7 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, currentChatSession]);
+  }, [user, currentChatId]);
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     console.log('Selected plan:', planType);
@@ -461,7 +463,7 @@ const Chat = () => {
                 key={chat.id}
                 className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
                            ${chat.active ? 'bg-gray-800' : ''}`}
-                onClick={() => handleChatSelect(chat.chat_session_id)}
+                onClick={() => handleChatSelect(chat.id)}
               >
                 <MessageSquare className="w-4 h-4" />
                 <span className="text-sm truncate">{chat.title}</span>
