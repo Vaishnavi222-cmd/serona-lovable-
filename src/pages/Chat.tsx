@@ -183,35 +183,61 @@ const Chat = () => {
     }
 
     try {
-      const defaultTitle = 'New Chat';
-      
-      // Log detailed auth state
-      console.log("Attempting to create chat with auth state:", {
-        isAuthenticated: !!user,
-        userId: user.id,
-        userEmail: user.email,
-        currentSession: await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Current session before chat creation:", {
+        session,
+        user: session?.user,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email
       });
+
+      if (!session?.user?.id || !session?.user?.email) {
+        console.error('Missing user data:', {
+          id: session?.user?.id,
+          email: session?.user?.email
+        });
+        toast({
+          title: "Error",
+          description: "User session data is incomplete. Please try logging in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const defaultTitle = 'New Chat';
       
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert([{
           title: defaultTitle,
-          user_id: user.id,
-          user_email: user.email
+          user_id: session.user.id,
+          user_email: session.user.email
         }])
         .select()
         .single();
 
-      console.log("Chat creation response:", { newChat, chatError });
+      console.log("Chat creation response:", { 
+        newChat, 
+        chatError,
+        requestData: {
+          user_id: session.user.id,
+          user_email: session.user.email
+        }
+      });
 
       if (chatError) {
         console.error('Error creating new chat:', chatError);
+        // Log detailed error information
+        console.log('Failed request details:', {
+          userId: session.user.id,
+          userEmail: session.user.email,
+          error: chatError
+        });
+        
         if (chatError.code === '42501') {
-          // If we get an RLS error, double check auth state
-          const { data: { session } } = await supabase.auth.getSession();
-          console.log("Current session during error:", session);
-          if (!session) {
+          const currentSession = await supabase.auth.getSession();
+          console.log("Session during error:", currentSession);
+          if (!currentSession.data.session) {
             setShowAuthDialog(true);
             return;
           }
