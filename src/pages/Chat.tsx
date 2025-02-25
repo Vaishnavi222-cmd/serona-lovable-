@@ -183,7 +183,13 @@ const Chat = () => {
     }
 
     try {
+      // Force refresh the session before getting user data
+      await supabase.auth.refreshSession();
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Log the full session object immediately after fetching
+      console.log("Full session object:", session);
+      
       console.log("Current session before chat creation:", {
         session,
         user: session?.user,
@@ -205,6 +211,12 @@ const Chat = () => {
       }
 
       const defaultTitle = 'New Chat';
+      
+      // Log final data just before insert
+      console.log("Final data before inserting chat:", {
+        user_id: session?.user?.id,
+        user_email: session?.user?.email
+      });
       
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
