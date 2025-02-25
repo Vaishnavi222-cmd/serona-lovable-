@@ -46,6 +46,37 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, "Session:", session);
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        console.log("User set after sign in:", session.user);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setChats([]);
+        setMessages([]);
+        setCurrentChatId(null);
+      }
+    });
+
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log("Initial session user:", session.user);
+        setUser(session.user);
+      }
+    };
+
+    getInitialSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const handleChatSelect = async (chatId: string) => {
     console.log("Selecting chat with ID:", chatId);
     setChats(prevChats => 
@@ -146,6 +177,7 @@ const Chat = () => {
 
   const handleNewChat = async () => {
     if (!user) {
+      console.log("No user found, showing auth dialog");
       setShowAuthDialog(true);
       return;
     }
@@ -153,12 +185,12 @@ const Chat = () => {
     try {
       const defaultTitle = 'New Chat';
       
-      // Log the request payload and user info for debugging
-      console.log("Creating new chat with user info:", {
-        title: defaultTitle,
-        user_id: user.id,
-        user_email: user.email,
-        auth_status: "User is authenticated"
+      // Log detailed auth state
+      console.log("Attempting to create chat with auth state:", {
+        isAuthenticated: !!user,
+        userId: user.id,
+        userEmail: user.email,
+        currentSession: await supabase.auth.getSession()
       });
       
       const { data: newChat, error: chatError } = await supabase
@@ -171,11 +203,19 @@ const Chat = () => {
         .select()
         .single();
 
-      // Log the response
-      console.log("New chat creation response:", newChat, "Error:", chatError);
+      console.log("Chat creation response:", { newChat, chatError });
 
       if (chatError) {
         console.error('Error creating new chat:', chatError);
+        if (chatError.code === '42501') {
+          // If we get an RLS error, double check auth state
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log("Current session during error:", session);
+          if (!session) {
+            setShowAuthDialog(true);
+            return;
+          }
+        }
         toast({
           title: "Error",
           description: "Failed to create new chat. Please try again.",
@@ -197,7 +237,6 @@ const Chat = () => {
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
-      console.log("Set current chat ID to:", newChat.id);
       
       const updatedChats = chats.map(chat => ({ ...chat, active: false }));
       updatedChats.unshift({
