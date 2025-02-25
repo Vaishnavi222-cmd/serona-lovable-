@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -186,17 +185,11 @@ const Chat = () => {
     }
 
     try {
-      // Get current user with email validation
-      const { user: currentUser, error: userError } = await getCurrentUser();
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      console.log("🔎 DEBUG: Current user check:", {
-        user: currentUser,
-        error: userError,
-        hasEmail: currentUser?.email ? true : false
-      });
-
-      if (userError || !currentUser) {
-        console.error("❌ User validation failed:", userError);
+      if (sessionError || !session?.user?.email) {
+        console.error("❌ Session validation failed:", sessionError);
         toast({
           title: "Authentication Error",
           description: "Please sign in again to continue.",
@@ -206,33 +199,17 @@ const Chat = () => {
         return;
       }
 
-      // Double-check email presence
-      if (!currentUser.email) {
-        console.error("❌ No email in validated user data");
-        toast({
-          title: "Authentication Error",
-          description: "Unable to verify user email. Please sign in again.",
-          variant: "destructive",
-        });
-        setShowAuthDialog(true);
-        return;
-      }
-
       const defaultTitle = 'New Chat';
 
-      // Create new chat with verified user data - using explicit insert data
-      const insertData = {
-        title: defaultTitle,
-        user_id: currentUser.id,
-        user_email: currentUser.email // Ensuring this is not null
-      };
-
-      console.log("🔎 DEBUG: Attempting to create chat with data:", insertData);
-
+      // Create new chat
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
-        .insert([insertData])
-        .select('id, title')
+        .insert([{
+          title: defaultTitle,
+          user_id: session.user.id,
+          user_email: session.user.email
+        }])
+        .select()
         .maybeSingle();
 
       console.log("🔎 DEBUG: Chat creation response:", {
@@ -240,31 +217,22 @@ const Chat = () => {
         error: chatError
       });
 
-      if (chatError) {
+      if (chatError || !newChat) {
         console.error('❌ Chat creation error:', chatError);
         toast({
           title: "Error",
-          description: chatError.message || "Failed to create chat. Please try again.",
+          description: "Failed to create new chat. Please try again.",
           variant: "destructive",
         });
         return;
       }
 
-      if (!newChat) {
-        console.error('❌ No chat data returned after creation');
-        toast({
-          title: "Error",
-          description: "Failed to create chat. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update UI with new chat
+      // Clear current messages
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
       
+      // Update chats list
       const updatedChats = chats.map(chat => ({ ...chat, active: false }));
       updatedChats.unshift({
         id: newChat.id,
@@ -273,6 +241,23 @@ const Chat = () => {
         chat_session_id: newChat.id
       });
       setChats(updatedChats);
+
+      // Refresh chat list
+      const { data: refreshedChats } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+
+      if (refreshedChats) {
+        const formattedChats = refreshedChats.map(chat => ({
+          id: chat.id,
+          title: chat.title,
+          active: chat.id === newChat.id,
+          chat_session_id: chat.id
+        }));
+        setChats(formattedChats);
+      }
 
       if (isMobile) {
         setIsSidebarOpen(false);
