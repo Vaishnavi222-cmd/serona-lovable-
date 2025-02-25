@@ -153,11 +153,12 @@ const Chat = () => {
     try {
       const defaultTitle = 'New Chat';
       
-      // Log the request payload
-      console.log("Creating new chat:", {
+      // Log the request payload and user info for debugging
+      console.log("Creating new chat with user info:", {
         title: defaultTitle,
         user_id: user.id,
-        user_email: user.email
+        user_email: user.email,
+        auth_status: "User is authenticated"
       });
       
       const { data: newChat, error: chatError } = await supabase
@@ -171,7 +172,7 @@ const Chat = () => {
         .single();
 
       // Log the response
-      console.log("New chat created:", newChat, "Error:", chatError);
+      console.log("New chat creation response:", newChat, "Error:", chatError);
 
       if (chatError) {
         console.error('Error creating new chat:', chatError);
