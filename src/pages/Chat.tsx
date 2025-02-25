@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +24,8 @@ interface Chat {
   active: boolean;
 }
 
+type ChatList = Array<Chat>;
+
 const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -39,12 +40,21 @@ const Chat = () => {
   const headerMenuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const sidebarButtonRef = useRef<HTMLButtonElement>(null);
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [chats, setChats] = useState<ChatList>([]);
   const [showLimitReachedDialog, setShowLimitReachedDialog] = useState(false);
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
+  const createNewChatObject = (id: string, title: string): Chat => ({
+    id,
+    title,
+    active: true
+  });
+
+  const deactivateExistingChats = (existingChats: ChatList): ChatList => 
+    existingChats.map(chat => ({ ...chat, active: false }));
 
   const handleNewChat = async () => {
     if (!user) {
@@ -73,32 +83,14 @@ const Chat = () => {
         return;
       }
 
-      // Reset states
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
 
-      // Create new chat array manually without using map
-      const newChats: Chat[] = [];
+      const newChatItem = createNewChatObject(newChat.id, 'New Chat');
+      const inactiveChats = deactivateExistingChats(chats);
       
-      // Add new chat first
-      newChats.push({
-        id: newChat.id,
-        title: 'New Chat',
-        active: true
-      });
-      
-      // Add existing chats as inactive
-      for (const chat of chats) {
-        newChats.push({
-          id: chat.id,
-          title: chat.title,
-          active: false
-        });
-      }
-
-      // Update chats state with new array
-      setChats(newChats);
+      setChats([newChatItem, ...inactiveChats]);
 
       if (isMobile) {
         setIsSidebarOpen(false);
