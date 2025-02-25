@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -72,25 +73,32 @@ const Chat = () => {
         return;
       }
 
-      // Clear messages and input
+      // Reset states
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
 
-      // Create a completely new array for chats
-      const existingChatsInactive = chats.map(chat => ({
-        id: chat.id,
-        title: chat.title,
-        active: false
-      }));
-
-      const newChatArray: Chat[] = [{
+      // Create new chat array manually without using map
+      const newChats: Chat[] = [];
+      
+      // Add new chat first
+      newChats.push({
         id: newChat.id,
         title: 'New Chat',
         active: true
-      }, ...existingChatsInactive];
+      });
+      
+      // Add existing chats as inactive
+      for (const chat of chats) {
+        newChats.push({
+          id: chat.id,
+          title: chat.title,
+          active: false
+        });
+      }
 
-      setChats(newChatArray);
+      // Update chats state with new array
+      setChats(newChats);
 
       if (isMobile) {
         setIsSidebarOpen(false);
