@@ -46,66 +46,6 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatSession, setCurrentChatSession] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Add meta tags for SEO
-    document.title = "Serona AI – AI That Understands You & Guides You Forward";
-    
-    let metaDescription = document.querySelector('meta[name="description"]');
-    if (!metaDescription) {
-      metaDescription = document.createElement('meta');
-      metaDescription.setAttribute('name', 'description');
-      document.head.appendChild(metaDescription);
-    }
-    metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
-    
-    // Add indexing meta tag
-    let robotsMeta = document.querySelector('meta[name="robots"]');
-    if (!robotsMeta) {
-      robotsMeta = document.createElement('meta');
-      robotsMeta.setAttribute('name', 'robots');
-      document.head.appendChild(robotsMeta);
-    }
-    robotsMeta.setAttribute('content', 'index, follow');
-
-    const controller = new AbortController();
-    
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error checking session:', error);
-          return;
-        }
-        setUser(session?.user ?? null);
-      } catch (error) {
-        console.error('Session check failed:', error);
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setShowAuthDialog(false);
-        toast({
-          title: "Successfully authenticated",
-          description: "You can now send messages",
-        });
-      } else {
-        toast({
-          title: "Signed out",
-          description: "You have been signed out successfully",
-        });
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      controller.abort();
-    };
-  }, [toast]);
-
   const handleNewChat = async () => {
     if (!user) {
       setShowAuthDialog(true);
@@ -113,13 +53,19 @@ const Chat = () => {
     }
 
     try {
+      const defaultTitle = 'New Chat';
       const newChatSessionId = crypto.randomUUID();
+
       const { data: newChat, error: chatError } = await supabase
         .from('chat_messages')
         .insert({
+          chat_session_id: newChatSessionId,
           user_id: user.id,
           user_email: user.email,
-          chat_session_id: newChatSessionId,
+          title: defaultTitle,
+          input_message: null,
+          output_message: null,
+          created_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -141,7 +87,7 @@ const Chat = () => {
       const newChats = chats.map(chat => ({ ...chat, active: false }));
       newChats.unshift({
         id: newChat.id,
-        title: newChat.title,
+        title: defaultTitle,
         active: true,
         chat_session_id: newChatSessionId
       });
@@ -166,8 +112,9 @@ const Chat = () => {
     try {
       const { data, error } = await supabase
         .from('chat_messages')
-        .select('*')
+        .select('id, chat_session_id, title, created_at')
         .eq('user_id', user.id)
+        .not('title', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -175,15 +122,15 @@ const Chat = () => {
         return;
       }
 
-      // Group messages by chat_session_id and get the first message of each session
-      const chatSessions = data.reduce((acc: { [key: string]: any }, curr) => {
-        if (!acc[curr.chat_session_id]) {
-          acc[curr.chat_session_id] = curr;
+      // Remove duplicates by chat_session_id, keeping only the first occurrence
+      const uniqueChats = data.reduce((acc: any[], curr) => {
+        if (!acc.find(chat => chat.chat_session_id === curr.chat_session_id)) {
+          acc.push(curr);
         }
         return acc;
-      }, {});
+      }, []);
 
-      const userChats = Object.values(chatSessions).map((chat: any, index) => ({
+      const userChats = uniqueChats.map((chat, index) => ({
         id: chat.id,
         title: chat.title,
         active: index === 0,
@@ -207,7 +154,7 @@ const Chat = () => {
     try {
       const { data, error } = await supabase
         .from('chat_messages')
-        .select('*')
+        .select('id, input_message, output_message, created_at')
         .eq('chat_session_id', chatSessionId)
         .order('created_at');
 
@@ -217,41 +164,28 @@ const Chat = () => {
       }
 
       if (data) {
-        const formattedMessages = data.map(msg => ({
-          id: msg.id,
-          text: msg.input_message || msg.output_message,
-          sender: msg.input_message ? 'user' : 'ai'
-        }));
+        const formattedMessages = data.reduce((acc: Message[], msg) => {
+          if (msg.input_message) {
+            acc.push({
+              id: msg.id,
+              text: msg.input_message,
+              sender: 'user'
+            });
+          }
+          if (msg.output_message) {
+            acc.push({
+              id: `${msg.id}-response`,
+              text: msg.output_message,
+              sender: 'ai'
+            });
+          }
+          return acc;
+        }, []);
+        
         setMessages(formattedMessages);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
-    }
-  };
-
-  const updateChatTitle = async (chatSessionId: string, firstMessage: string) => {
-    try {
-      const title = firstMessage.split(' ').slice(0, 5).join(' ') + '...';
-      
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ title })
-        .eq('chat_session_id', chatSessionId);
-
-      if (error) {
-        console.error('Error updating chat title:', error);
-        return;
-      }
-
-      setChats(prevChats => 
-        prevChats.map(chat => 
-          chat.chat_session_id === chatSessionId
-            ? { ...chat, title }
-            : chat
-        )
-      );
-    } catch (error) {
-      console.error('Error updating chat title:', error);
     }
   };
 
@@ -319,8 +253,7 @@ const Chat = () => {
       }
 
       if (!currentChatSession) {
-        const newSessionId = crypto.randomUUID();
-        setCurrentChatSession(newSessionId);
+        await handleNewChat();
       }
 
       const { error: messageError } = await supabase
@@ -334,12 +267,7 @@ const Chat = () => {
 
       if (messageError) throw messageError;
 
-      // Update title if this is the first message
-      const isFirstMessage = messages.length === 0;
-      if (isFirstMessage && currentChatSession) {
-        await updateChatTitle(currentChatSession, message.trim());
-      }
-
+      // Update UI immediately
       const newMessage: Message = {
         id: Date.now().toString(),
         text: message.trim(),
@@ -364,6 +292,95 @@ const Chat = () => {
       });
     }
   };
+
+  const saveAIResponse = async (response: string) => {
+    if (!user || !currentChatSession) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ output_message: response })
+        .eq('chat_session_id', currentChatSession)
+        .eq('user_id', user.id)
+        .is('output_message', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error("Error updating AI response:", error);
+        return;
+      }
+
+      // Update messages in UI
+      setMessages(prev => [...prev, {
+        id: `${Date.now()}-response`,
+        text: response,
+        sender: 'ai'
+      }]);
+    } catch (error) {
+      console.error("Error saving AI response:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Add meta tags for SEO
+    document.title = "Serona AI – AI That Understands You & Guides You Forward";
+    
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
+    
+    // Add indexing meta tag
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.setAttribute('name', 'robots');
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.setAttribute('content', 'index, follow');
+
+    const controller = new AbortController();
+    
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error checking session:', error);
+          return;
+        }
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Session check failed:', error);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setShowAuthDialog(false);
+        toast({
+          title: "Successfully authenticated",
+          description: "You can now send messages",
+        });
+      } else {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      controller.abort();
+    };
+  }, [toast]);
 
   useEffect(() => {
     if (user) {
