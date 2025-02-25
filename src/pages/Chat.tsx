@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +23,6 @@ interface Chat {
   id: string;
   title: string;
   active: boolean;
-  chat_session_id: string;
 }
 
 const Chat = () => {
@@ -44,7 +44,7 @@ const Chat = () => {
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
-  const [currentChatSession, setCurrentChatSession] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   const handleNewChat = async () => {
     if (!user) {
@@ -53,19 +53,13 @@ const Chat = () => {
     }
 
     try {
-      const defaultTitle = 'New Chat';
-      const newChatSessionId = crypto.randomUUID();
-
+      // First create a new chat in the chats table
       const { data: newChat, error: chatError } = await supabase
-        .from('chat_messages')
+        .from('chats')
         .insert({
-          chat_session_id: newChatSessionId,
           user_id: user.id,
           user_email: user.email,
-          title: defaultTitle,
-          input_message: null,
-          output_message: null,
-          created_at: new Date().toISOString(),
+          title: 'New Chat',
         })
         .select()
         .single();
@@ -82,14 +76,13 @@ const Chat = () => {
 
       setMessages([]);
       setMessage('');
-      setCurrentChatSession(newChatSessionId);
+      setCurrentChatId(newChat.id);
       
       const newChats = chats.map(chat => ({ ...chat, active: false }));
       newChats.unshift({
         id: newChat.id,
-        title: defaultTitle,
-        active: true,
-        chat_session_id: newChatSessionId
+        title: 'New Chat',
+        active: true
       });
       setChats(newChats);
 
@@ -111,10 +104,9 @@ const Chat = () => {
 
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
-        .select('id, chat_session_id, title, created_at')
+        .from('chats')
+        .select('id, title, created_at')
         .eq('user_id', user.id)
-        .not('title', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -122,40 +114,31 @@ const Chat = () => {
         return;
       }
 
-      // Remove duplicates by chat_session_id, keeping only the first occurrence
-      const uniqueChats = data.reduce((acc: any[], curr) => {
-        if (!acc.find(chat => chat.chat_session_id === curr.chat_session_id)) {
-          acc.push(curr);
-        }
-        return acc;
-      }, []);
-
-      const userChats = uniqueChats.map((chat, index) => ({
+      const userChats = data.map((chat, index) => ({
         id: chat.id,
         title: chat.title,
-        active: index === 0,
-        chat_session_id: chat.chat_session_id
+        active: index === 0
       }));
 
       setChats(userChats);
       
       if (userChats.length > 0) {
-        setCurrentChatSession(userChats[0].chat_session_id);
-        await loadChatMessages(userChats[0].chat_session_id);
+        setCurrentChatId(userChats[0].id);
+        await loadChatMessages(userChats[0].id);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
     }
   };
 
-  const loadChatMessages = async (chatSessionId: string) => {
+  const loadChatMessages = async (chatId: string) => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('id, input_message, output_message, created_at')
-        .eq('chat_session_id', chatSessionId)
+        .eq('chat_id', chatId)
         .order('created_at');
 
       if (error) {
@@ -189,16 +172,16 @@ const Chat = () => {
     }
   };
 
-  const handleChatSelect = async (chatSessionId: string) => {
+  const handleChatSelect = async (chatId: string) => {
     setChats(prevChats => 
       prevChats.map(chat => ({
         ...chat,
-        active: chat.chat_session_id === chatSessionId
+        active: chat.id === chatId
       }))
     );
 
-    setCurrentChatSession(chatSessionId);
-    await loadChatMessages(chatSessionId);
+    setCurrentChatId(chatId);
+    await loadChatMessages(chatId);
 
     if (isMobile) {
       setIsSidebarOpen(false);
@@ -252,20 +235,41 @@ const Chat = () => {
         return;
       }
 
-      if (!currentChatSession) {
+      // If no current chat, create one
+      if (!currentChatId) {
         await handleNewChat();
       }
 
+      // Insert message into chat_messages
       const { error: messageError } = await supabase
         .from('chat_messages')
         .insert({
-          chat_session_id: currentChatSession,
-          input_message: message.trim(),
+          chat_id: currentChatId,
           user_id: user.id,
-          user_email: user.email
+          user_email: user.email,
+          input_message: message.trim()
         });
 
       if (messageError) throw messageError;
+
+      // Update chat title if it's the first message
+      if (chats.find(chat => chat.id === currentChatId)?.title === 'New Chat') {
+        const truncatedTitle = message.trim().slice(0, 30) + (message.length > 30 ? '...' : '');
+        const { error: updateError } = await supabase
+          .from('chats')
+          .update({ title: truncatedTitle })
+          .eq('id', currentChatId);
+
+        if (!updateError) {
+          setChats(prevChats =>
+            prevChats.map(chat =>
+              chat.id === currentChatId
+                ? { ...chat, title: truncatedTitle }
+                : chat
+            )
+          );
+        }
+      }
 
       // Update UI immediately
       const newMessage: Message = {
@@ -294,13 +298,13 @@ const Chat = () => {
   };
 
   const saveAIResponse = async (response: string) => {
-    if (!user || !currentChatSession) return;
+    if (!user || !currentChatId) return;
 
     try {
       const { error } = await supabase
         .from('chat_messages')
         .update({ output_message: response })
-        .eq('chat_session_id', currentChatSession)
+        .eq('chat_id', currentChatId)
         .eq('user_id', user.id)
         .is('output_message', null)
         .order('created_at', { ascending: false })
