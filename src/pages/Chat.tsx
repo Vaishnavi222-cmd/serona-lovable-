@@ -22,6 +22,7 @@ interface Chat {
   id: string;
   title: string;
   active: boolean;
+  chat_session_id: string;
 }
 
 const Chat = () => {
@@ -38,16 +39,12 @@ const Chat = () => {
   const headerMenuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const sidebarButtonRef = useRef<HTMLButtonElement>(null);
-  const [chats, setChats] = useState<Chat[]>([
-    { id: '1', title: "Deep Personality Analysis", active: true },
-    { id: '2', title: "Career Guidance Session", active: false },
-    { id: '3', title: "Mental Health Support", active: false },
-    { id: '4', title: "Life Goals Planning", active: false },
-  ]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [showLimitReachedDialog, setShowLimitReachedDialog] = useState(false);
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
+  const [currentChatSession, setCurrentChatSession] = useState<string | null>(null);
 
   useEffect(() => {
     // Add meta tags for SEO
@@ -116,15 +113,13 @@ const Chat = () => {
     }
 
     try {
-      // Generate a default title for new chat
-      const defaultTitle = 'New Chat';
-      
-      // Create a new chat in the database
+      const newChatSessionId = crypto.randomUUID();
       const { data: newChat, error: chatError } = await supabase
-        .from('chats')
+        .from('chat_messages')
         .insert({
-          title: defaultTitle,
-          user_id: user.id
+          user_id: user.id,
+          user_email: user.email,
+          chat_session_id: newChatSessionId,
         })
         .select()
         .single();
@@ -139,20 +134,19 @@ const Chat = () => {
         return;
       }
 
-      // Clear current messages
       setMessages([]);
       setMessage('');
+      setCurrentChatSession(newChatSessionId);
       
-      // Update chats list
-      const updatedChats = chats.map(chat => ({ ...chat, active: false }));
-      updatedChats.unshift({ 
-        id: newChat.id, 
-        title: newChat.title, 
-        active: true 
+      const newChats = chats.map(chat => ({ ...chat, active: false }));
+      newChats.unshift({
+        id: newChat.id,
+        title: newChat.title,
+        active: true,
+        chat_session_id: newChatSessionId
       });
-      setChats(updatedChats);
+      setChats(newChats);
 
-      // Close sidebar on mobile
       if (isMobile) {
         setIsSidebarOpen(false);
       }
@@ -166,14 +160,14 @@ const Chat = () => {
     }
   };
 
-  // Add function to load user's chats
   const loadUserChats = async () => {
     if (!user) return;
 
     try {
-      const { data: userChats, error } = await supabase
-        .from('chats')
+      const { data, error } = await supabase
+        .from('chat_messages')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -181,27 +175,40 @@ const Chat = () => {
         return;
       }
 
-      if (userChats) {
-        setChats(userChats.map((chat, index) => ({
-          id: chat.id,
-          title: chat.title,
-          active: index === 0
-        })));
+      // Group messages by chat_session_id and get the first message of each session
+      const chatSessions = data.reduce((acc: { [key: string]: any }, curr) => {
+        if (!acc[curr.chat_session_id]) {
+          acc[curr.chat_session_id] = curr;
+        }
+        return acc;
+      }, {});
+
+      const userChats = Object.values(chatSessions).map((chat: any, index) => ({
+        id: chat.id,
+        title: chat.title,
+        active: index === 0,
+        chat_session_id: chat.chat_session_id
+      }));
+
+      setChats(userChats);
+      
+      if (userChats.length > 0) {
+        setCurrentChatSession(userChats[0].chat_session_id);
+        await loadChatMessages(userChats[0].chat_session_id);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
     }
   };
 
-  // Add function to load chat messages
-  const loadChatMessages = async (chatId: string) => {
+  const loadChatMessages = async (chatSessionId: string) => {
     if (!user) return;
 
     try {
-      const { data: chatMessages, error } = await supabase
-        .from('messages')
+      const { data, error } = await supabase
+        .from('chat_messages')
         .select('*')
-        .eq('chat_id', chatId)
+        .eq('chat_session_id', chatSessionId)
         .order('created_at');
 
       if (error) {
@@ -209,39 +216,37 @@ const Chat = () => {
         return;
       }
 
-      if (chatMessages) {
-        setMessages(chatMessages.map(msg => ({
+      if (data) {
+        const formattedMessages = data.map(msg => ({
           id: msg.id,
-          text: msg.content,
-          sender: msg.sender as 'user' | 'ai'
-        })));
+          text: msg.input_message || msg.output_message,
+          sender: msg.input_message ? 'user' : 'ai'
+        }));
+        setMessages(formattedMessages);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
   };
 
-  // Function to update chat title based on first message
-  const updateChatTitle = async (chatId: string, firstMessage: string) => {
+  const updateChatTitle = async (chatSessionId: string, firstMessage: string) => {
     try {
-      // Generate a title from the first few words of the message
       const title = firstMessage.split(' ').slice(0, 5).join(' ') + '...';
       
       const { error } = await supabase
-        .from('chats')
+        .from('chat_messages')
         .update({ title })
-        .eq('id', chatId);
+        .eq('chat_session_id', chatSessionId);
 
       if (error) {
         console.error('Error updating chat title:', error);
         return;
       }
 
-      // Update local state
       setChats(prevChats => 
         prevChats.map(chat => 
-          chat.id === chatId 
-            ? { ...chat, title } 
+          chat.chat_session_id === chatSessionId
+            ? { ...chat, title }
             : chat
         )
       );
@@ -250,20 +255,17 @@ const Chat = () => {
     }
   };
 
-  // Function to handle chat selection from sidebar
-  const handleChatSelect = async (chatId: string) => {
-    // Update active status in chats
+  const handleChatSelect = async (chatSessionId: string) => {
     setChats(prevChats => 
       prevChats.map(chat => ({
         ...chat,
-        active: chat.id === chatId
+        active: chat.chat_session_id === chatSessionId
       }))
     );
 
-    // Load messages for selected chat
-    await loadChatMessages(chatId);
+    setCurrentChatSession(chatSessionId);
+    await loadChatMessages(chatSessionId);
 
-    // Close sidebar on mobile
     if (isMobile) {
       setIsSidebarOpen(false);
     }
@@ -287,7 +289,7 @@ const Chat = () => {
       setShowLimitReachedDialog(true);
       return;
     }
-    
+
     try {
       const { data: limitCheck, error: limitError } = await supabase.functions.invoke('check-plan-limits', {
         body: { 
@@ -316,42 +318,28 @@ const Chat = () => {
         return;
       }
 
-      // Find active chat or create new one
-      let activeChatId = chats.find(chat => chat.active)?.id;
-      
-      if (!activeChatId) {
-        const { data: newChat, error: chatError } = await supabase
-          .from('chats')
-          .insert({
-            title: 'New Chat',
-            user_id: user.id
-          })
-          .select()
-          .single();
-
-        if (chatError) throw chatError;
-        activeChatId = newChat.id;
+      if (!currentChatSession) {
+        const newSessionId = crypto.randomUUID();
+        setCurrentChatSession(newSessionId);
       }
 
-      // Save message to database
       const { error: messageError } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .insert({
-          chat_id: activeChatId,
-          content: message.trim(),
-          sender: 'user',
-          user_id: user.id
+          chat_session_id: currentChatSession,
+          input_message: message.trim(),
+          user_id: user.id,
+          user_email: user.email
         });
 
       if (messageError) throw messageError;
 
       // Update title if this is the first message
       const isFirstMessage = messages.length === 0;
-      if (isFirstMessage) {
-        await updateChatTitle(activeChatId, message.trim());
+      if (isFirstMessage && currentChatSession) {
+        await updateChatTitle(currentChatSession, message.trim());
       }
 
-      // Update local state
       const newMessage: Message = {
         id: Date.now().toString(),
         text: message.trim(),
@@ -377,14 +365,12 @@ const Chat = () => {
     }
   };
 
-  // Load user's chats when component mounts or user changes
   useEffect(() => {
     if (user) {
       loadUserChats();
     }
   }, [user]);
 
-  // Subscribe to real-time updates for chats
   useEffect(() => {
     if (!user) return;
 
@@ -395,7 +381,7 @@ const Chat = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'chats',
+          table: 'chat_messages',
           filter: `user_id=eq.${user.id}`
         },
         () => {
@@ -596,7 +582,7 @@ const Chat = () => {
                 key={chat.id}
                 className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
                            ${chat.active ? 'bg-gray-800' : ''}`}
-                onClick={() => handleChatSelect(chat.id)}
+                onClick={() => handleChatSelect(chat.chat_session_id)}
               >
                 <MessageSquare className="w-4 h-4" />
                 <span className="text-sm truncate">{chat.title}</span>
