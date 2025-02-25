@@ -50,19 +50,6 @@ export const getCurrentUser = async () => {
     return { user: null, error: new Error("No email in user data") };
   }
 
-  // Explicitly verify user data
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  
-  console.log("🔎 DEBUG: getCurrentUser - User verification:", {
-    user,
-    error: userError,
-    hasEmail: user?.email ? true : false
-  });
-
-  if (userError || !user?.email) {
-    console.error("❌ User verification failed:", userError);
-    return { user: null, error: userError || new Error("User verification failed") };
-  }
-
-  return { user, error: null };
+  return { user: session.user, error: null };
 };
+

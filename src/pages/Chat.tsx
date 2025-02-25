@@ -218,23 +218,22 @@ const Chat = () => {
         return;
       }
 
-      console.log("✅ Creating chat with verified user data:", {
-        email: currentUser.email,
-        id: currentUser.id
-      });
-
       const defaultTitle = 'New Chat';
 
-      // Create new chat with verified user data
+      // Create new chat with verified user data - using explicit insert data
+      const insertData = {
+        title: defaultTitle,
+        user_id: currentUser.id,
+        user_email: currentUser.email // Ensuring this is not null
+      };
+
+      console.log("🔎 DEBUG: Attempting to create chat with data:", insertData);
+
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
-        .insert([{
-          title: defaultTitle,
-          user_id: currentUser.id,
-          user_email: currentUser.email
-        }])
-        .select()
-        .single();
+        .insert([insertData])
+        .select('id, title')
+        .maybeSingle();
 
       console.log("🔎 DEBUG: Chat creation response:", {
         chat: newChat,
@@ -246,6 +245,16 @@ const Chat = () => {
         toast({
           title: "Error",
           description: chatError.message || "Failed to create chat. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!newChat) {
+        console.error('❌ No chat data returned after creation');
+        toast({
+          title: "Error",
+          description: "Failed to create chat. Please try again.",
           variant: "destructive",
         });
         return;
