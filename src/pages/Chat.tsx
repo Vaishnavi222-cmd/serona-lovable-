@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, validateAndRefreshSession } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
@@ -183,36 +183,31 @@ const Chat = () => {
     }
 
     try {
-      // First ensure we have a valid session
-      let currentUser = user;
-      
-      // Force refresh the session
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      
-      if (sessionError) {
-        console.error("Session refresh error:", sessionError);
-        setShowAuthDialog(true);
-        return;
-      }
+      // Use our enhanced session validation
+      const { valid, session, user: validatedUser, error } = await validateAndRefreshSession();
 
-      if (!session?.user) {
-        console.error("No valid session found after refresh");
-        setShowAuthDialog(true);
-        return;
-      }
-
-      // Update our current user with the refreshed session data
-      currentUser = session.user;
-
-      if (!currentUser.email) {
-        console.error("No email found in user data");
+      if (!valid || error || !validatedUser?.email) {
+        console.error("Session validation failed:", {
+          valid,
+          error,
+          userEmail: validatedUser?.email
+        });
+        
         toast({
-          title: "Error",
-          description: "Unable to create chat. Please sign out and sign in again.",
+          title: "Authentication Error",
+          description: "Please sign in again to continue.",
           variant: "destructive",
         });
+        
+        setShowAuthDialog(true);
         return;
       }
+
+      console.log("Creating chat with validated session:", {
+        email: validatedUser.email,
+        id: validatedUser.id,
+        sessionId: session?.access_token
+      });
 
       const defaultTitle = 'New Chat';
 
@@ -220,14 +215,20 @@ const Chat = () => {
         .from('chats')
         .insert([{
           title: defaultTitle,
-          user_id: currentUser.id,
-          user_email: currentUser.email
+          user_id: validatedUser.id,
+          user_email: validatedUser.email // This is guaranteed to exist now
         }])
         .select()
         .single();
 
       if (chatError) {
-        console.error('Error creating new chat:', chatError);
+        console.error('Chat creation error:', {
+          error: chatError,
+          user: {
+            id: validatedUser.id,
+            email: validatedUser.email
+          }
+        });
         
         if (chatError.code === '42501') {
           setShowAuthDialog(true);
@@ -236,7 +237,7 @@ const Chat = () => {
         
         toast({
           title: "Error",
-          description: "Failed to create new chat. Please try again.",
+          description: "Failed to create chat. Please try again.",
           variant: "destructive",
         });
         return;
@@ -251,6 +252,7 @@ const Chat = () => {
         return;
       }
 
+      // Success! Update the UI
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
@@ -268,10 +270,10 @@ const Chat = () => {
         setIsSidebarOpen(false);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Unexpected error:', error);
       toast({
         title: "Error",
-        description: "Failed to create new chat. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
