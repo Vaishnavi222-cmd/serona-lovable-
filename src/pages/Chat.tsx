@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +52,6 @@ const Chat = () => {
     }
 
     try {
-      // First create a new chat in the chats table
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert({
@@ -78,13 +76,15 @@ const Chat = () => {
       setMessage('');
       setCurrentChatId(newChat.id);
       
-      const newChats = chats.map(chat => ({ ...chat, active: false }));
-      newChats.unshift({
-        id: newChat.id,
-        title: 'New Chat',
-        active: true
+      setChats(prevChats => {
+        const updatedChats = prevChats.map(chat => ({ ...chat, active: false }));
+        updatedChats.unshift({
+          id: newChat.id,
+          title: 'New Chat',
+          active: true
+        });
+        return updatedChats;
       });
-      setChats(newChats);
 
       if (isMobile) {
         setIsSidebarOpen(false);
@@ -114,17 +114,19 @@ const Chat = () => {
         return;
       }
 
-      const userChats = data.map((chat, index) => ({
-        id: chat.id,
-        title: chat.title,
-        active: index === 0
-      }));
+      if (data) {
+        const userChats = data.map((chat, index) => ({
+          id: chat.id,
+          title: chat.title,
+          active: index === 0
+        }));
 
-      setChats(userChats);
-      
-      if (userChats.length > 0) {
-        setCurrentChatId(userChats[0].id);
-        await loadChatMessages(userChats[0].id);
+        setChats(userChats);
+        
+        if (userChats.length > 0) {
+          setCurrentChatId(userChats[0].id);
+          await loadChatMessages(userChats[0].id);
+        }
       }
     } catch (error) {
       console.error('Error loading chats:', error);
@@ -172,7 +174,7 @@ const Chat = () => {
     }
   };
 
-  const handleChatSelect = async (chatId: string) => {
+  const handleChatSelect = (chatId: string) => {
     setChats(prevChats => 
       prevChats.map(chat => ({
         ...chat,
@@ -181,7 +183,7 @@ const Chat = () => {
     );
 
     setCurrentChatId(chatId);
-    await loadChatMessages(chatId);
+    loadChatMessages(chatId);
 
     if (isMobile) {
       setIsSidebarOpen(false);
@@ -235,12 +237,10 @@ const Chat = () => {
         return;
       }
 
-      // If no current chat, create one
       if (!currentChatId) {
         await handleNewChat();
       }
 
-      // Insert message into chat_messages
       const { error: messageError } = await supabase
         .from('chat_messages')
         .insert({
@@ -252,7 +252,6 @@ const Chat = () => {
 
       if (messageError) throw messageError;
 
-      // Update chat title if it's the first message
       if (chats.find(chat => chat.id === currentChatId)?.title === 'New Chat') {
         const truncatedTitle = message.trim().slice(0, 30) + (message.length > 30 ? '...' : '');
         const { error: updateError } = await supabase
@@ -271,7 +270,6 @@ const Chat = () => {
         }
       }
 
-      // Update UI immediately
       const newMessage: Message = {
         id: Date.now().toString(),
         text: message.trim(),
@@ -315,7 +313,6 @@ const Chat = () => {
         return;
       }
 
-      // Update messages in UI
       setMessages(prev => [...prev, {
         id: `${Date.now()}-response`,
         text: response,
@@ -327,7 +324,6 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Add meta tags for SEO
     document.title = "Serona AI – AI That Understands You & Guides You Forward";
     
     let metaDescription = document.querySelector('meta[name="description"]');
@@ -338,7 +334,6 @@ const Chat = () => {
     }
     metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
     
-    // Add indexing meta tag
     let robotsMeta = document.querySelector('meta[name="robots"]');
     if (!robotsMeta) {
       robotsMeta = document.createElement('meta');
@@ -406,7 +401,9 @@ const Chat = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          loadUserChats();
+          if (currentChatId) {
+            loadChatMessages(currentChatId);
+          }
         }
       )
       .subscribe();
@@ -414,7 +411,7 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, currentChatId]);
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     console.log('Selected plan:', planType);
@@ -508,7 +505,6 @@ const Chat = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile) {
-        // Handle header menu
         if (showHeaderMenu && 
             headerMenuRef.current && 
             !headerMenuRef.current.contains(event.target as Node) &&
@@ -517,7 +513,6 @@ const Chat = () => {
           setShowHeaderMenu(false);
         }
 
-        // Handle sidebar
         if (isSidebarOpen && 
             sidebarRef.current && 
             !sidebarRef.current.contains(event.target as Node) &&
@@ -603,7 +598,7 @@ const Chat = () => {
                 key={chat.id}
                 className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
                            ${chat.active ? 'bg-gray-800' : ''}`}
-                onClick={() => handleChatSelect(chat.chat_session_id)}
+                onClick={() => handleChatSelect(chat.id)}
               >
                 <MessageSquare className="w-4 h-4" />
                 <span className="text-sm truncate">{chat.title}</span>
