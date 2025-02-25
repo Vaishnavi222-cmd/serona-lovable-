@@ -22,9 +22,8 @@ interface Chat {
   id: string;
   title: string;
   active: boolean;
+  chat_session_id: string;
 }
-
-type ChatList = Array<Chat>;
 
 const Chat = () => {
   const [message, setMessage] = useState('');
@@ -40,21 +39,12 @@ const Chat = () => {
   const headerMenuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const sidebarButtonRef = useRef<HTMLButtonElement>(null);
-  const [chats, setChats] = useState<ChatList>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [showLimitReachedDialog, setShowLimitReachedDialog] = useState(false);
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-
-  const createNewChatObject = (id: string, title: string): Chat => ({
-    id,
-    title,
-    active: true
-  });
-
-  const deactivateExistingChats = (existingChats: ChatList): ChatList => 
-    existingChats.map(chat => ({ ...chat, active: false }));
+  const [currentChatSession, setCurrentChatSession] = useState<string | null>(null);
 
   const handleNewChat = async () => {
     if (!user) {
@@ -63,12 +53,19 @@ const Chat = () => {
     }
 
     try {
+      const defaultTitle = 'New Chat';
+      const newChatSessionId = crypto.randomUUID();
+
       const { data: newChat, error: chatError } = await supabase
-        .from('chats')
+        .from('chat_messages')
         .insert({
+          chat_session_id: newChatSessionId,
           user_id: user.id,
           user_email: user.email,
-          title: 'New Chat',
+          title: defaultTitle,
+          input_message: null,
+          output_message: null,
+          created_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -85,12 +82,16 @@ const Chat = () => {
 
       setMessages([]);
       setMessage('');
-      setCurrentChatId(newChat.id);
-
-      const newChatItem = createNewChatObject(newChat.id, 'New Chat');
-      const inactiveChats = deactivateExistingChats(chats);
+      setCurrentChatSession(newChatSessionId);
       
-      setChats([newChatItem, ...inactiveChats]);
+      const newChats = chats.map(chat => ({ ...chat, active: false }));
+      newChats.unshift({
+        id: newChat.id,
+        title: defaultTitle,
+        active: true,
+        chat_session_id: newChatSessionId
+      });
+      setChats(newChats);
 
       if (isMobile) {
         setIsSidebarOpen(false);
@@ -110,9 +111,10 @@ const Chat = () => {
 
     try {
       const { data, error } = await supabase
-        .from('chats')
-        .select('id, title, created_at')
+        .from('chat_messages')
+        .select('id, chat_session_id, title, created_at')
         .eq('user_id', user.id)
+        .not('title', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -120,33 +122,40 @@ const Chat = () => {
         return;
       }
 
-      if (data) {
-        const userChats = data.map((chat, index) => ({
-          id: chat.id,
-          title: chat.title,
-          active: index === 0
-        }));
-
-        setChats(userChats);
-        
-        if (userChats.length > 0) {
-          setCurrentChatId(userChats[0].id);
-          await loadChatMessages(userChats[0].id);
+      // Remove duplicates by chat_session_id, keeping only the first occurrence
+      const uniqueChats = data.reduce((acc: any[], curr) => {
+        if (!acc.find(chat => chat.chat_session_id === curr.chat_session_id)) {
+          acc.push(curr);
         }
+        return acc;
+      }, []);
+
+      const userChats = uniqueChats.map((chat, index) => ({
+        id: chat.id,
+        title: chat.title,
+        active: index === 0,
+        chat_session_id: chat.chat_session_id
+      }));
+
+      setChats(userChats);
+      
+      if (userChats.length > 0) {
+        setCurrentChatSession(userChats[0].chat_session_id);
+        await loadChatMessages(userChats[0].chat_session_id);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
     }
   };
 
-  const loadChatMessages = async (chatId: string) => {
+  const loadChatMessages = async (chatSessionId: string) => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('id, input_message, output_message, created_at')
-        .eq('chat_id', chatId)
+        .eq('chat_session_id', chatSessionId)
         .order('created_at');
 
       if (error) {
@@ -180,16 +189,16 @@ const Chat = () => {
     }
   };
 
-  const handleChatSelect = (chatId: string) => {
+  const handleChatSelect = async (chatSessionId: string) => {
     setChats(prevChats => 
       prevChats.map(chat => ({
         ...chat,
-        active: chat.id === chatId
+        active: chat.chat_session_id === chatSessionId
       }))
     );
 
-    setCurrentChatId(chatId);
-    loadChatMessages(chatId);
+    setCurrentChatSession(chatSessionId);
+    await loadChatMessages(chatSessionId);
 
     if (isMobile) {
       setIsSidebarOpen(false);
@@ -243,39 +252,22 @@ const Chat = () => {
         return;
       }
 
-      if (!currentChatId) {
+      if (!currentChatSession) {
         await handleNewChat();
       }
 
       const { error: messageError } = await supabase
         .from('chat_messages')
         .insert({
-          chat_id: currentChatId,
+          chat_session_id: currentChatSession,
+          input_message: message.trim(),
           user_id: user.id,
-          user_email: user.email,
-          input_message: message.trim()
+          user_email: user.email
         });
 
       if (messageError) throw messageError;
 
-      if (chats.find(chat => chat.id === currentChatId)?.title === 'New Chat') {
-        const truncatedTitle = message.trim().slice(0, 30) + (message.length > 30 ? '...' : '');
-        const { error: updateError } = await supabase
-          .from('chats')
-          .update({ title: truncatedTitle })
-          .eq('id', currentChatId);
-
-        if (!updateError) {
-          setChats(prevChats =>
-            prevChats.map(chat =>
-              chat.id === currentChatId
-                ? { ...chat, title: truncatedTitle }
-                : chat
-            )
-          );
-        }
-      }
-
+      // Update UI immediately
       const newMessage: Message = {
         id: Date.now().toString(),
         text: message.trim(),
@@ -302,13 +294,13 @@ const Chat = () => {
   };
 
   const saveAIResponse = async (response: string) => {
-    if (!user || !currentChatId) return;
+    if (!user || !currentChatSession) return;
 
     try {
       const { error } = await supabase
         .from('chat_messages')
         .update({ output_message: response })
-        .eq('chat_id', currentChatId)
+        .eq('chat_session_id', currentChatSession)
         .eq('user_id', user.id)
         .is('output_message', null)
         .order('created_at', { ascending: false })
@@ -319,6 +311,7 @@ const Chat = () => {
         return;
       }
 
+      // Update messages in UI
       setMessages(prev => [...prev, {
         id: `${Date.now()}-response`,
         text: response,
@@ -330,6 +323,7 @@ const Chat = () => {
   };
 
   useEffect(() => {
+    // Add meta tags for SEO
     document.title = "Serona AI – AI That Understands You & Guides You Forward";
     
     let metaDescription = document.querySelector('meta[name="description"]');
@@ -340,6 +334,7 @@ const Chat = () => {
     }
     metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
     
+    // Add indexing meta tag
     let robotsMeta = document.querySelector('meta[name="robots"]');
     if (!robotsMeta) {
       robotsMeta = document.createElement('meta');
@@ -407,9 +402,7 @@ const Chat = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          if (currentChatId) {
-            loadChatMessages(currentChatId);
-          }
+          loadUserChats();
         }
       )
       .subscribe();
@@ -417,7 +410,7 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, currentChatId]);
+  }, [user]);
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     console.log('Selected plan:', planType);
@@ -511,6 +504,7 @@ const Chat = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile) {
+        // Handle header menu
         if (showHeaderMenu && 
             headerMenuRef.current && 
             !headerMenuRef.current.contains(event.target as Node) &&
@@ -519,6 +513,7 @@ const Chat = () => {
           setShowHeaderMenu(false);
         }
 
+        // Handle sidebar
         if (isSidebarOpen && 
             sidebarRef.current && 
             !sidebarRef.current.contains(event.target as Node) &&
@@ -604,7 +599,7 @@ const Chat = () => {
                 key={chat.id}
                 className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
                            ${chat.active ? 'bg-gray-800' : ''}`}
-                onClick={() => handleChatSelect(chat.id)}
+                onClick={() => handleChatSelect(chat.chat_session_id)}
               >
                 <MessageSquare className="w-4 h-4" />
                 <span className="text-sm truncate">{chat.title}</span>
