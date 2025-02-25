@@ -4,7 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { supabase, getCurrentUser } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { chatService } from "@/services/chatService";
 import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
@@ -199,26 +200,10 @@ const Chat = () => {
         return;
       }
 
-      const defaultTitle = 'New Chat';
-
-      // Create new chat
-      const { data: newChat, error: chatError } = await supabase
-        .from('chats')
-        .insert([{
-          title: defaultTitle,
-          user_id: session.user.id,
-          user_email: session.user.email
-        }])
-        .select()
-        .maybeSingle();
-
-      console.log("🔎 DEBUG: Chat creation response:", {
-        chat: newChat,
-        error: chatError
-      });
-
-      if (chatError || !newChat) {
-        console.error('❌ Chat creation error:', chatError);
+      // Create new chat using service
+      const newChat = await chatService.createChat(session.user.id, session.user.email);
+      
+      if (!newChat) {
         toast({
           title: "Error",
           description: "Failed to create new chat. Please try again.",
@@ -227,7 +212,7 @@ const Chat = () => {
         return;
       }
 
-      // Clear current messages
+      // Clear current messages and set new chat
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
@@ -236,27 +221,21 @@ const Chat = () => {
       const updatedChats = chats.map(chat => ({ ...chat, active: false }));
       updatedChats.unshift({
         id: newChat.id,
-        title: defaultTitle,
+        title: newChat.title,
         active: true,
         chat_session_id: newChat.id
       });
       setChats(updatedChats);
 
-      // Refresh chat list
-      const { data: refreshedChats } = await supabase
-        .from('chats')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-
-      if (refreshedChats) {
-        const formattedChats = refreshedChats.map(chat => ({
-          id: chat.id,
-          title: chat.title,
-          active: chat.id === newChat.id,
-          chat_session_id: chat.id
+      // Fetch messages for the new chat (should be empty but ensures consistency)
+      const messages = await chatService.fetchMessages(newChat.id);
+      if (messages) {
+        const formattedMessages = messages.map(msg => ({
+          id: msg.id,
+          text: msg.input_message || msg.output_message,
+          sender: msg.input_message ? 'user' : 'ai'
         }));
-        setChats(formattedChats);
+        setMessages(formattedMessages);
       }
 
       if (isMobile) {
@@ -296,54 +275,28 @@ const Chat = () => {
     try {
       if (!currentChatId) {
         await handleNewChat();
+        return;
       }
 
-      // Log message processing attempt
-      console.log("Processing message with:", {
-        chat_session_id: currentChatId,
-        input_message: message.trim(),
-        user_id: user.id,
-        user_email: user.email
-      });
+      // Save message using service
+      const savedMessage = await chatService.saveMessage(
+        currentChatId,
+        message.trim(),
+        user.id,
+        user.email || ''
+      );
 
-      // Call the process-message edge function
-      const { data: processedData, error: processError } = await supabase.functions.invoke('process-message', {
-        body: {
-          prompt: message.trim(),
-          chatId: currentChatId
-        }
-      });
-
-      console.log("Edge function response:", processedData);
-
-      if (processError) {
-        console.error("Edge function error:", processError);
-        throw processError;
+      if (savedMessage) {
+        // Update UI immediately
+        const newMessage = {
+          id: savedMessage.id,
+          text: message.trim(),
+          sender: 'user'
+        };
+        
+        setMessages(prev => [...prev, newMessage]);
+        setMessage('');
       }
-
-      // Insert message to database
-      const { error: messageError } = await supabase
-        .from('chat_messages')
-        .insert({
-          chat_session_id: currentChatId,
-          input_message: message.trim(),
-          user_id: user.id,
-          user_email: user.email
-        });
-
-      console.log("Message insert error:", messageError);
-
-      if (messageError) throw messageError;
-
-      // Update UI immediately
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: message.trim(),
-        sender: 'user'
-      };
-      
-      setMessages(prev => [...prev, newMessage]);
-      setMessage('');
       
     } catch (error) {
       console.error('Error sending message:', error);
