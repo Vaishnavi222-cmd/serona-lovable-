@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { supabase, validateAndRefreshSession } from "@/integrations/supabase/client";
+import { supabase, validateAndRefreshSession, getCurrentUser } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
@@ -176,83 +176,81 @@ const Chat = () => {
   };
 
   const handleNewChat = async () => {
+    console.log("🔎 DEBUG: Starting new chat creation");
+    
     if (!user) {
-      console.log("No user found, showing auth dialog");
+      console.log("❌ No user in component state, showing auth dialog");
       setShowAuthDialog(true);
       return;
     }
 
     try {
-      // Use our enhanced session validation
-      const { valid, session, user: validatedUser, error } = await validateAndRefreshSession();
+      // Get current user with email validation
+      const { user: currentUser, error: userError } = await getCurrentUser();
 
-      if (!valid || error || !validatedUser?.email) {
-        console.error("Session validation failed:", {
-          valid,
-          error,
-          userEmail: validatedUser?.email
-        });
-        
+      console.log("🔎 DEBUG: Current user check:", {
+        user: currentUser,
+        error: userError,
+        hasEmail: currentUser?.email ? true : false
+      });
+
+      if (userError || !currentUser) {
+        console.error("❌ User validation failed:", userError);
         toast({
           title: "Authentication Error",
           description: "Please sign in again to continue.",
           variant: "destructive",
         });
-        
         setShowAuthDialog(true);
         return;
       }
 
-      console.log("Creating chat with validated session:", {
-        email: validatedUser.email,
-        id: validatedUser.id,
-        sessionId: session?.access_token
+      // Double-check email presence
+      if (!currentUser.email) {
+        console.error("❌ No email in validated user data");
+        toast({
+          title: "Authentication Error",
+          description: "Unable to verify user email. Please sign in again.",
+          variant: "destructive",
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+
+      console.log("✅ Creating chat with verified user data:", {
+        email: currentUser.email,
+        id: currentUser.id
       });
 
       const defaultTitle = 'New Chat';
 
+      // Create new chat with verified user data
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert([{
           title: defaultTitle,
-          user_id: validatedUser.id,
-          user_email: validatedUser.email // This is guaranteed to exist now
+          user_id: currentUser.id,
+          user_email: currentUser.email
         }])
         .select()
         .single();
 
+      console.log("🔎 DEBUG: Chat creation response:", {
+        chat: newChat,
+        error: chatError
+      });
+
       if (chatError) {
-        console.error('Chat creation error:', {
-          error: chatError,
-          user: {
-            id: validatedUser.id,
-            email: validatedUser.email
-          }
-        });
-        
-        if (chatError.code === '42501') {
-          setShowAuthDialog(true);
-          return;
-        }
-        
+        console.error('❌ Chat creation error:', chatError);
         toast({
           title: "Error",
-          description: "Failed to create chat. Please try again.",
+          description: chatError.message || "Failed to create chat. Please try again.",
           variant: "destructive",
         });
         return;
       }
 
-      if (!newChat) {
-        toast({
-          title: "Error",
-          description: "Failed to create new chat. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Success! Update the UI
+      // Update UI with new chat
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
@@ -269,8 +267,10 @@ const Chat = () => {
       if (isMobile) {
         setIsSidebarOpen(false);
       }
+
+      console.log("✅ Chat created successfully:", newChat);
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error('❌ Unexpected error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
