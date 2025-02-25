@@ -62,6 +62,9 @@ const Chat = () => {
         return;
       }
 
+      // Log the chats data to verify structure
+      console.log("Loaded chats:", data);
+
       const userChats = data.map((chat, index) => ({
         id: chat.id,
         title: chat.title,
@@ -73,6 +76,7 @@ const Chat = () => {
       
       if (userChats.length > 0) {
         setCurrentChatId(userChats[0].id);
+        console.log("Setting current chat ID:", userChats[0].id);
         await loadChatMessages(userChats[0].id);
       }
     } catch (error) {
@@ -84,11 +88,14 @@ const Chat = () => {
     if (!user) return;
 
     try {
+      console.log("Loading messages for chat ID:", chatId);
       const { data, error } = await supabase
         .from('chat_messages')
-        .select('id, input_message, output_message, created_at')
+        .select('id, input_message, output_message, created_at, chat_session_id')
         .eq('chat_session_id', chatId)
         .order('created_at');
+
+      console.log("Messages loaded:", data, "Error:", error);
 
       if (error) {
         console.error('Error loading messages:', error);
@@ -128,15 +135,25 @@ const Chat = () => {
     try {
       const defaultTitle = 'New Chat';
       
+      // Log the request payload
+      console.log("Creating new chat:", {
+        title: defaultTitle,
+        user_id: user.id,
+        user_email: user.email
+      });
+      
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
-        .insert([{  // Changed to array format for insert
+        .insert([{
           title: defaultTitle,
           user_id: user.id,
           user_email: user.email
         }])
         .select()
         .single();
+
+      // Log the response
+      console.log("New chat created:", newChat, "Error:", chatError);
 
       if (chatError) {
         console.error('Error creating new chat:', chatError);
@@ -161,6 +178,7 @@ const Chat = () => {
       setMessages([]);
       setMessage('');
       setCurrentChatId(newChat.id);
+      console.log("Set current chat ID to:", newChat.id);
       
       const updatedChats = chats.map(chat => ({ ...chat, active: false }));
       updatedChats.unshift({
@@ -181,22 +199,6 @@ const Chat = () => {
         description: "Failed to create new chat. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleChatSelect = async (chatId: string) => {
-    setChats(prevChats => 
-      prevChats.map(chat => ({
-        ...chat,
-        active: chat.id === chatId
-      }))
-    );
-
-    setCurrentChatId(chatId);
-    await loadChatMessages(chatId);
-
-    if (isMobile) {
-      setIsSidebarOpen(false);
     }
   };
 
@@ -224,6 +226,14 @@ const Chat = () => {
         await handleNewChat();
       }
 
+      // Log message insertion attempt
+      console.log("Inserting message with:", {
+        chat_session_id: currentChatId,
+        input_message: message.trim(),
+        user_id: user.id,
+        user_email: user.email
+      });
+
       const { error: messageError } = await supabase
         .from('chat_messages')
         .insert({
@@ -232,6 +242,8 @@ const Chat = () => {
           user_id: user.id,
           user_email: user.email
         });
+
+      console.log("Message insert error:", messageError);
 
       if (messageError) throw messageError;
 
