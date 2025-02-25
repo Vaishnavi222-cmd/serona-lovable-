@@ -284,14 +284,30 @@ const Chat = () => {
         await handleNewChat();
       }
 
-      // Log message insertion attempt
-      console.log("Inserting message with:", {
+      // Log message processing attempt
+      console.log("Processing message with:", {
         chat_session_id: currentChatId,
         input_message: message.trim(),
         user_id: user.id,
         user_email: user.email
       });
 
+      // Call the process-message edge function
+      const { data: processedData, error: processError } = await supabase.functions.invoke('process-message', {
+        body: {
+          prompt: message.trim(),
+          chatId: currentChatId
+        }
+      });
+
+      console.log("Edge function response:", processedData);
+
+      if (processError) {
+        console.error("Edge function error:", processError);
+        throw processError;
+      }
+
+      // Insert message to database
       const { error: messageError } = await supabase
         .from('chat_messages')
         .insert({
