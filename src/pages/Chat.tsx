@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -129,16 +130,26 @@ const Chat = () => {
       
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
-        .insert({
+        .insert([{  // Changed to array format for insert
           title: defaultTitle,
           user_id: user.id,
           user_email: user.email
-        })
+        }])
         .select()
         .single();
 
       if (chatError) {
         console.error('Error creating new chat:', chatError);
+        toast({
+          title: "Error",
+          description: "Failed to create new chat. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!newChat) {
+        console.error('No chat data returned after creation');
         toast({
           title: "Error",
           description: "Failed to create new chat. Please try again.",
@@ -156,7 +167,7 @@ const Chat = () => {
         id: newChat.id,
         title: defaultTitle,
         active: true,
-        chat_session_id: newChat.id // Using the chat id as the session id
+        chat_session_id: newChat.id
       });
       setChats(updatedChats);
 
