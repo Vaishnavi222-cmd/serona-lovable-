@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -47,23 +46,41 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  const handleChatSelect = async (chatId: string) => {
+    console.log("Selecting chat with ID:", chatId);
+    setChats(prevChats => 
+      prevChats.map(chat => ({
+        ...chat,
+        active: chat.id === chatId
+      }))
+    );
+
+    setCurrentChatId(chatId);
+    console.log("Set current chat ID to:", chatId);
+    await loadChatMessages(chatId);
+
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   const loadUserChats = async () => {
     if (!user) return;
 
     try {
+      console.log("Loading chats for user:", user.id);
       const { data, error } = await supabase
         .from('chats')
         .select('id, title, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      console.log("Loaded chats:", data, "Error:", error);
+
       if (error) {
         console.error('Error loading chats:', error);
         return;
       }
-
-      // Log the chats data to verify structure
-      console.log("Loaded chats:", data);
 
       const userChats = data.map((chat, index) => ({
         id: chat.id,
@@ -72,11 +89,12 @@ const Chat = () => {
         chat_session_id: chat.id // Using the chat id as the session id
       }));
 
+      console.log("Formatted chats:", userChats);
       setChats(userChats);
       
       if (userChats.length > 0) {
         setCurrentChatId(userChats[0].id);
-        console.log("Setting current chat ID:", userChats[0].id);
+        console.log("Setting initial current chat ID:", userChats[0].id);
         await loadChatMessages(userChats[0].id);
       }
     } catch (error) {
