@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,6 +100,42 @@ const Chat = () => {
     }
   };
 
+  const loadChatMessages = async (chatId: string) => {
+    if (!user) return;
+    
+    try {
+      const fetchedMessages = await fetchMessages(chatId);
+      const formattedMessages: Message[] = fetchedMessages.map(msg => ({
+        id: msg.id,
+        text: msg.input_message || msg.output_message || '',
+        sender: msg.input_message ? 'user' as const : 'ai' as const
+      }));
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load messages. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add handleChatSelect function
+  const handleChatSelect = async (chatId: string) => {
+    setCurrentChatId(chatId);
+    await loadChatMessages(chatId);
+    setChats(prevChats => 
+      prevChats.map(chat => ({
+        ...chat,
+        active: chat.id === chatId
+      }))
+    );
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   // Simplified handleNewChat function
   const handleNewChat = async () => {
     if (!user || !user.email) {
@@ -124,27 +159,6 @@ const Chat = () => {
       toast({
         title: "Error",
         description: "Failed to create new chat. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const loadChatMessages = async (chatId: string) => {
-    if (!user) return;
-    
-    try {
-      const fetchedMessages = await fetchMessages(chatId);
-      const formattedMessages = fetchedMessages.map(msg => ({
-        id: msg.id,
-        text: msg.input_message || msg.output_message || '',
-        sender: msg.input_message ? 'user' : 'ai'
-      }));
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages. Please try again.",
         variant: "destructive",
       });
     }
