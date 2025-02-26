@@ -1,12 +1,12 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getCurrentUser } from "@/integrations/supabase/client";
 
 export async function createChat() {
-  // Verify authenticated user first
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  // Use the enhanced getCurrentUser helper
+  const { user, error: userError } = await getCurrentUser();
   
-  if (authError || !user) {
-    console.error("Authentication error:", authError);
+  if (userError || !user) {
+    console.error("Authentication error:", userError);
     return { error: "Authentication error", data: null };
   }
 

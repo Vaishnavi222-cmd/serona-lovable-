@@ -189,7 +189,9 @@ const Chat = () => {
   };
 
   // Simplified useEffect for loading chats
-  
+  useEffect(() => {
+    loadChats();
+  }, [user]);
 
   // Simplified loadChats function
   
