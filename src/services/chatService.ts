@@ -3,25 +3,53 @@ import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
   try {
+    console.log("🔍 DEBUG - Starting createChat...");
+    
+    // Try to refresh the session first
+    console.log("🔄 DEBUG - Refreshing session...");
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
+    if (refreshError) {
+      console.error("❌ Session refresh error:", refreshError);
+    } else {
+      console.log("✅ Session refreshed:", {
+        session: refreshData.session,
+        user: refreshData.session?.user,
+        hasEmail: refreshData.session?.user?.email ? true : false
+      });
+    }
+
     // Get the current session
+    console.log("🔄 DEBUG - Getting fresh session...");
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError || !session?.user) {
-      console.error("Session error:", sessionError);
+      console.error("❌ Session error or no user:", {
+        error: sessionError,
+        session: session,
+        hasUser: session?.user ? true : false
+      });
       return { error: "Authentication error", data: null };
     }
 
     const user = session.user;
+    console.log("🔍 DEBUG - Final user object:", JSON.stringify(user, null, 2));
     
     // Double check email existence
     if (!user.email) {
-      console.error("User email is missing", user);
+      console.error("❌ User email is missing", {
+        user: user,
+        userMetadata: user.user_metadata,
+        sessionState: session
+      });
       return { error: "User email is required", data: null };
     }
 
-    console.log("Creating chat with user data:", {
+    console.log("✅ Creating chat with user data:", {
       userId: user.id,
-      userEmail: user.email
+      userEmail: user.email,
+      sessionState: true,
+      authenticated: true
     });
 
     const { data, error: insertError } = await supabase
@@ -35,13 +63,18 @@ export async function createChat() {
       .maybeSingle();
 
     if (insertError) {
-      console.error("Error creating chat:", insertError);
+      console.error("❌ Error creating chat:", {
+        error: insertError,
+        user: user,
+        hasEmail: user.email ? true : false
+      });
       return { error: insertError.message, data: null };
     }
 
+    console.log("✅ Chat created successfully:", data);
     return { error: null, data };
   } catch (error: any) {
-    console.error("Unexpected error in createChat:", error);
+    console.error("❌ Unexpected error in createChat:", error);
     return { error: error.message, data: null };
   }
 }

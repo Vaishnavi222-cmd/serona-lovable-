@@ -9,30 +9,65 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storage: localStorage
+    storage: localStorage,
+    detectSessionInUrl: true,
+    debug: true
   }
 });
 
-// Debug listener for auth state changes
+// Enhanced debug listener for auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log("🔎 DEBUG: Auth state changed:", event);
-  console.log("🔎 DEBUG: Session:", {
-    session,
-    user: session?.user,
-    email: session?.user?.email,
-    timestamp: new Date().toISOString()
+  console.log("🔄 DEBUG - Auth state changed:", {
+    event,
+    timestamp: new Date().toISOString(),
+    hasSession: session ? true : false,
+    hasUser: session?.user ? true : false,
+    hasEmail: session?.user?.email ? true : false,
+    sessionDetails: {
+      user: session?.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        hasEmailVerified: session.user.email_confirmed_at ? true : false,
+        hasUserMetadata: session.user.user_metadata ? true : false,
+        authProvider: session.user.app_metadata?.provider,
+      } : null,
+      expiresAt: session?.expires_at,
+    }
   });
 });
 
-// Helper function to get current user with email validation
+// Enhanced helper function to get current user with email validation
 export const getCurrentUser = async () => {
-  // First try to get the session
+  console.log("🔍 DEBUG - getCurrentUser started");
+  
+  // First try to refresh the session
+  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+  
+  if (refreshError) {
+    console.error("❌ Session refresh error:", refreshError);
+  } else {
+    console.log("✅ Session refreshed successfully:", {
+      hasUser: refreshData.session?.user ? true : false,
+      hasEmail: refreshData.session?.user?.email ? true : false
+    });
+  }
+  
+  // Get the fresh session
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  console.log("🔎 DEBUG: getCurrentUser - Session check:", {
-    session,
+  console.log("🔍 DEBUG - Session check:", {
+    hasSession: session ? true : false,
     error: sessionError,
-    hasEmail: session?.user?.email ? true : false
+    sessionDetails: session ? {
+      hasUser: session.user ? true : false,
+      hasEmail: session.user?.email ? true : false,
+      userDetails: session.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        hasEmailVerified: session.user.email_confirmed_at ? true : false,
+        hasUserMetadata: session.user.user_metadata ? true : false
+      } : null
+    } : null
   });
 
   if (sessionError) {
@@ -46,10 +81,18 @@ export const getCurrentUser = async () => {
   }
 
   if (!session.user.email) {
-    console.error("❌ No email in user data");
+    console.error("❌ No email in user data:", {
+      user: session.user,
+      metadata: session.user.user_metadata
+    });
     return { user: null, error: new Error("No email in user data") };
   }
 
+  console.log("✅ User retrieved successfully:", {
+    id: session.user.id,
+    email: session.user.email,
+    hasEmailVerified: session.user.email_confirmed_at ? true : false
+  });
+
   return { user: session.user, error: null };
 };
-
