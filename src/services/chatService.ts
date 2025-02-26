@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -51,22 +50,56 @@ export async function createChat() {
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
   try {
-    console.log("🔍 DEBUG - Starting saveMessage with params:", {
+    console.log("🔍 DEBUG - Starting saveMessage with FULL params:", {
       chatId,
+      message,
       messageLength: message.length,
-      userId
+      userId,
+      userEmail,
+      timestamp: new Date().toISOString()
     });
 
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session?.user) {
-      console.error("❌ Authentication error:", sessionError);
+      console.error("❌ Authentication error in saveMessage:", {
+        error: sessionError,
+        hasSession: !!session,
+        hasUser: session?.user ? true : false
+      });
       throw new Error("Authentication required");
     }
 
     if (session.user.id !== userId) {
-      console.error("❌ User mismatch");
+      console.error("❌ User mismatch in saveMessage:", {
+        sessionUserId: session.user.id,
+        providedUserId: userId
+      });
       throw new Error("User authentication mismatch");
+    }
+
+    // Verify chat exists and belongs to user
+    const { data: chatData, error: chatError } = await supabase
+      .from('chats')
+      .select('id, user_id')
+      .eq('id', chatId)
+      .single();
+
+    if (chatError || !chatData) {
+      console.error("❌ Chat verification failed:", {
+        error: chatError,
+        chatId,
+        userId
+      });
+      throw new Error("Chat verification failed");
+    }
+
+    if (chatData.user_id !== userId) {
+      console.error("❌ Chat ownership verification failed:", {
+        chatUserId: chatData.user_id,
+        requestUserId: userId
+      });
+      throw new Error("Chat ownership verification failed");
     }
 
     const insertData = {
@@ -76,7 +109,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       sender: 'user'
     };
 
-    console.log("🔍 DEBUG - Inserting message:", insertData);
+    console.log("🔍 DEBUG - Attempting to insert message with data:", insertData);
 
     const { data, error } = await supabase
       .from('messages')
@@ -85,15 +118,89 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .single();
 
     if (error) {
-      console.error("❌ Error saving message:", error);
+      console.error("❌ Error saving message to 'messages' table:", {
+        error,
+        errorCode: error.code,
+        errorMessage: error.message,
+        details: error.details,
+        hint: error.hint,
+        insertData
+      });
       throw error;
     }
 
-    console.log("✅ Message saved successfully:", data);
+    console.log("✅ Message saved successfully to 'messages' table:", {
+      savedData: data,
+      chatId,
+      messageId: data.id,
+      timestamp: new Date().toISOString()
+    });
+    
     return data;
   } catch (error: any) {
-    console.error("❌ Error in saveMessage:", error);
+    console.error("❌ Detailed error in saveMessage:", {
+      error,
+      errorMessage: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     throw error;
+  }
+}
+
+export async function fetchMessages(chatId: string) {
+  try {
+    console.log("🔍 Starting fetchMessages for chatId:", chatId);
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.user) {
+      console.error("❌ Session error in fetchMessages:", {
+        error: sessionError,
+        hasSession: !!session,
+        hasUser: session?.user ? true : false
+      });
+      return [];
+    }
+
+    console.log("🔍 Attempting to fetch messages from 'messages' table:", {
+      chatId,
+      userId: session.user.id
+    });
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_session_id', chatId)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error("❌ Error fetching messages:", {
+        error,
+        errorCode: error.code,
+        errorMessage: error.message,
+        details: error.details,
+        hint: error.hint,
+        chatId
+      });
+      return [];
+    }
+
+    console.log("✅ Messages fetched successfully:", {
+      messageCount: data?.length || 0,
+      chatId,
+      firstMessage: data?.[0],
+      timestamp: new Date().toISOString()
+    });
+    
+    return data || [];
+  } catch (error) {
+    console.error("❌ Unexpected error in fetchMessages:", {
+      error,
+      chatId,
+      timestamp: new Date().toISOString()
+    });
+    return [];
   }
 }
 
@@ -121,36 +228,6 @@ export async function fetchChats(userId: string) {
     return data || [];
   } catch (error) {
     console.error("Unexpected error in fetchChats:", error);
-    return [];
-  }
-}
-
-export async function fetchMessages(chatId: string) {
-  try {
-    console.log("🔍 Starting fetchMessages for chatId:", chatId);
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session?.user) {
-      console.error("Session error:", sessionError);
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('chat_session_id', chatId)
-      .order('created_at', { ascending: true });
-    
-    if (error) {
-      console.error("❌ Error fetching messages:", error);
-      return [];
-    }
-
-    console.log("✅ Messages fetched:", data?.length || 0, "messages");
-    return data || [];
-  } catch (error) {
-    console.error("❌ Unexpected error in fetchMessages:", error);
     return [];
   }
 }
