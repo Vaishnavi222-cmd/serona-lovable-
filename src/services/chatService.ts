@@ -1,19 +1,20 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    console.error("User not found", error);
-    return null;
+  // Verify authenticated user first
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    console.error("Authentication error:", authError);
+    return { error: "Authentication error", data: null };
   }
 
   const userId = user.id;
   const userEmail = user.email;
 
   if (!userId || !userEmail) {
-    console.error("Missing user data: ", { userId, userEmail });
-    return null;
+    console.error("Missing user data:", { userId, userEmail });
+    return { error: "Missing user data", data: null };
   }
 
   const { data, error: insertError } = await supabase
@@ -23,14 +24,15 @@ export async function createChat() {
       user_id: userId,
       user_email: userEmail
     }])
-    .select();
+    .select()
+    .maybeSingle();
 
   if (insertError) {
-    console.error("Error inserting chat:", insertError);
-    return null;
+    console.error("Error creating chat:", insertError);
+    return { error: insertError.message, data: null };
   }
 
-  return data ? data[0] : null;
+  return { error: null, data };
 }
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {

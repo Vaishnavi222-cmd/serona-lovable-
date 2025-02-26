@@ -22,7 +22,7 @@ interface Chat {
   id: string;
   title: string;
   active: boolean;
-  chat_session_id: string;
+  chat_session_id?: string;
 }
 
 const Chat = () => {
@@ -125,68 +125,55 @@ const Chat = () => {
 
   // Updated handleNewChat function with proper user verification
   const handleNewChat = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) {
-      console.error("User not found", error);
+    if (!user) {
       toast({
-        title: "Error",
+        title: "Authentication Required",
         description: "Please sign in to create a new chat.",
         variant: "destructive",
       });
-      return;
-    }
-
-    const userId = user.id;
-    const userEmail = user.email;
-
-    if (!userId || !userEmail) {
-      console.error("Missing user data: ", { userId, userEmail });
-      toast({
-        title: "Error",
-        description: "Unable to create chat. Missing user information.",
-        variant: "destructive",
-      });
+      setShowAuthDialog(true);
       return;
     }
 
     try {
-      const { data, error: insertError } = await supabase
-        .from("chats")
-        .insert([{ 
-          user_email: userEmail, 
-          title: "New Chat",
-          user_id: userId
-        }])
-        .select();
+      const { error, data: newChat } = await createChat();
 
-      if (insertError) throw insertError;
-
-      if (data && data.length > 0) {
-        const newChat = data[0];
-        const formattedChat = {
-          id: newChat.id,
-          title: newChat.title,
-          active: true,
-          chat_session_id: newChat.id
-        };
-        
-        setChats(prevChats => prevChats.map(chat => ({
-          ...chat,
-          active: false
-        })).concat(formattedChat));
-        
-        setCurrentChatId(newChat.id);
-        setMessages([]); // Clear messages for new chat
-
-        if (isMobile) {
-          setIsSidebarOpen(false);
-        }
+      if (error || !newChat) {
+        console.error("Failed to create chat:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create a new chat. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      // Update chats list with the new chat
+      const updatedChats = chats.map(chat => ({
+        ...chat,
+        active: false
+      }));
+
+      const newChatFormatted: Chat = {
+        id: newChat.id,
+        title: newChat.title,
+        active: true,
+        chat_session_id: newChat.id
+      };
+
+      setChats([newChatFormatted, ...updatedChats]);
+      setCurrentChatId(newChat.id);
+      setMessages([]); // Clear messages for new chat
+
+      if (isMobile) {
+        setIsSidebarOpen(false);
+      }
+
     } catch (error) {
-      console.error("Error creating new chat:", error);
+      console.error("Unexpected error creating chat:", error);
       toast({
         title: "Error",
-        description: "Failed to create a new chat. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
