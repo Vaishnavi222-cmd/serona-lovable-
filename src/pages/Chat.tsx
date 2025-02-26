@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -46,28 +47,43 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
-  // Updated handleNewChat function with direct Supabase call
+  // Updated handleNewChat function with proper user verification
   const handleNewChat = async () => {
-    if (!user || !user.email) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      console.error("User not found", error);
       toast({
         title: "Error",
-        description: "You must be logged in to start a chat.",
+        description: "Please sign in to create a new chat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const userId = user.id;
+    const userEmail = user.email;
+
+    if (!userId || !userEmail) {
+      console.error("Missing user data: ", { userId, userEmail });
+      toast({
+        title: "Error",
+        description: "Unable to create chat. Missing user information.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error: insertError } = await supabase
         .from("chats")
         .insert([{ 
-          user_email: user.email, 
+          user_email: userEmail, 
           title: "New Chat",
-          user_id: user.id
+          user_id: userId
         }])
         .select();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       if (data && data.length > 0) {
         const newChat = data[0];
