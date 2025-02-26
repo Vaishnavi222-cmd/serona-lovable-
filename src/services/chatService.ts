@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -9,38 +8,71 @@ export async function createChat() {
     console.log("🔄 DEBUG - Refreshing session...");
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
     
+    console.log("🔄 DEBUG - Session refresh result:", {
+      success: !refreshError,
+      error: refreshError,
+      session: refreshData?.session ? {
+        hasUser: refreshData.session.user ? true : false,
+        hasEmail: refreshData.session.user?.email ? true : false,
+        userDetails: refreshData.session.user ? {
+          id: refreshData.session.user.id,
+          email: refreshData.session.user.email,
+          metadata: refreshData.session.user.user_metadata,
+          rawUser: refreshData.session.user // Added full user object for debugging
+        } : null,
+        rawSession: refreshData.session // Added full session object for debugging
+      } : null
+    });
+
     if (refreshError) {
       console.error("❌ Session refresh error:", refreshError);
-    } else {
-      console.log("✅ Session refreshed:", {
-        session: refreshData.session,
-        user: refreshData.session?.user,
-        hasEmail: refreshData.session?.user?.email ? true : false
-      });
     }
 
     // Get the current session
     console.log("🔄 DEBUG - Getting fresh session...");
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
+    console.log("🔍 DEBUG - Session check result:", {
+      hasSession: session ? true : false,
+      error: sessionError,
+      sessionDetails: session ? {
+        hasUser: session.user ? true : false,
+        hasEmail: session.user?.email ? true : false,
+        userDetails: session.user ? {
+          id: session.user.id,
+          email: session.user.email,
+          metadata: session.user.user_metadata,
+          rawUser: session.user // Added full user object for debugging
+        } : null,
+        rawSession: session // Added full session object for debugging
+      } : null
+    });
+
     if (sessionError || !session?.user) {
       console.error("❌ Session error or no user:", {
         error: sessionError,
         session: session,
-        hasUser: session?.user ? true : false
+        hasUser: session?.user ? true : false,
+        rawSession: session // Added full session object for debugging
       });
       return { error: "Authentication error", data: null };
     }
 
     const user = session.user;
-    console.log("🔍 DEBUG - Final user object:", JSON.stringify(user, null, 2));
+    console.log("🔍 DEBUG - Final user object:", {
+      user: user,
+      metadata: user.user_metadata,
+      rawUser: user // Added full user object for debugging
+    });
     
     // Double check email existence
     if (!user.email) {
       console.error("❌ User email is missing", {
         user: user,
         userMetadata: user.user_metadata,
-        sessionState: session
+        sessionState: session,
+        rawUser: user, // Added full user object for debugging
+        rawSession: session // Added full session object for debugging
       });
       return { error: "User email is required", data: null };
     }
@@ -49,7 +81,9 @@ export async function createChat() {
       userId: user.id,
       userEmail: user.email,
       sessionState: true,
-      authenticated: true
+      authenticated: true,
+      metadata: user.user_metadata,
+      rawUser: user // Added full user object for debugging
     });
 
     const { data, error: insertError } = await supabase
@@ -66,12 +100,21 @@ export async function createChat() {
       console.error("❌ Error creating chat:", {
         error: insertError,
         user: user,
-        hasEmail: user.email ? true : false
+        hasEmail: user.email ? true : false,
+        rawUser: user // Added full user object for debugging
       });
       return { error: insertError.message, data: null };
     }
 
-    console.log("✅ Chat created successfully:", data);
+    console.log("✅ Chat created successfully:", {
+      chatData: data,
+      userData: {
+        id: user.id,
+        email: user.email,
+        metadata: user.user_metadata
+      }
+    });
+    
     return { error: null, data };
   } catch (error: any) {
     console.error("❌ Unexpected error in createChat:", error);

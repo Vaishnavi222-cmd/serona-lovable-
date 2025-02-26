@@ -15,7 +15,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Enhanced debug listener for auth state changes
+// Enhanced debug listener for auth state changes with more detailed session info
 supabase.auth.onAuthStateChange((event, session) => {
   console.log("🔄 DEBUG - Auth state changed:", {
     event,
@@ -29,33 +29,46 @@ supabase.auth.onAuthStateChange((event, session) => {
         email: session.user.email,
         hasEmailVerified: session.user.email_confirmed_at ? true : false,
         hasUserMetadata: session.user.user_metadata ? true : false,
+        metadata: session.user.user_metadata,
         authProvider: session.user.app_metadata?.provider,
+        rawUserObject: session.user // Added full user object for debugging
       } : null,
       expiresAt: session?.expires_at,
+      rawSession: session // Added full session object for debugging
     }
   });
 });
 
-// Enhanced helper function to get current user with email validation
+// Enhanced helper function to get current user with more detailed logging
 export const getCurrentUser = async () => {
   console.log("🔍 DEBUG - getCurrentUser started");
   
   // First try to refresh the session
   const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
   
+  console.log("🔄 DEBUG - Session refresh attempt:", {
+    success: !refreshError,
+    error: refreshError,
+    hasSession: refreshData?.session ? true : false,
+    sessionDetails: refreshData?.session ? {
+      user: refreshData.session.user ? {
+        id: refreshData.session.user.id,
+        email: refreshData.session.user.email,
+        metadata: refreshData.session.user.user_metadata,
+        rawUser: refreshData.session.user // Added full user object for debugging
+      } : null,
+      rawSession: refreshData.session // Added full session object for debugging
+    } : null
+  });
+
   if (refreshError) {
     console.error("❌ Session refresh error:", refreshError);
-  } else {
-    console.log("✅ Session refreshed successfully:", {
-      hasUser: refreshData.session?.user ? true : false,
-      hasEmail: refreshData.session?.user?.email ? true : false
-    });
   }
   
   // Get the fresh session
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  console.log("🔍 DEBUG - Session check:", {
+  console.log("🔍 DEBUG - Fresh session check:", {
     hasSession: session ? true : false,
     error: sessionError,
     sessionDetails: session ? {
@@ -65,8 +78,11 @@ export const getCurrentUser = async () => {
         id: session.user.id,
         email: session.user.email,
         hasEmailVerified: session.user.email_confirmed_at ? true : false,
-        hasUserMetadata: session.user.user_metadata ? true : false
-      } : null
+        hasUserMetadata: session.user.user_metadata ? true : false,
+        metadata: session.user.user_metadata,
+        rawUser: session.user // Added full user object for debugging
+      } : null,
+      rawSession: session // Added full session object for debugging
     } : null
   });
 
@@ -83,7 +99,8 @@ export const getCurrentUser = async () => {
   if (!session.user.email) {
     console.error("❌ No email in user data:", {
       user: session.user,
-      metadata: session.user.user_metadata
+      metadata: session.user.user_metadata,
+      rawUser: session.user // Added full user object for debugging
     });
     return { user: null, error: new Error("No email in user data") };
   }
@@ -91,8 +108,11 @@ export const getCurrentUser = async () => {
   console.log("✅ User retrieved successfully:", {
     id: session.user.id,
     email: session.user.email,
-    hasEmailVerified: session.user.email_confirmed_at ? true : false
+    hasEmailVerified: session.user.email_confirmed_at ? true : false,
+    metadata: session.user.user_metadata,
+    rawUser: session.user // Added full user object for debugging
   });
 
   return { user: session.user, error: null };
 };
+
