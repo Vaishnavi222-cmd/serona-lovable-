@@ -197,18 +197,32 @@ const Chat = () => {
   
 
   const loadChatMessages = async (chatId: string) => {
-    if (!user) return;
+    console.log("🔍 loadChatMessages started for chatId:", chatId);
+    
+    if (!user) {
+      console.log("❌ No user found in loadChatMessages");
+      return;
+    }
     
     try {
+      console.log("🔍 Fetching messages for chat:", chatId);
       const fetchedMessages = await fetchMessages(chatId);
+      console.log("✅ Messages fetched:", fetchedMessages);
+      
       const formattedMessages: Message[] = fetchedMessages.map(msg => ({
         id: msg.id,
         text: msg.content,
         sender: msg.sender as 'user' | 'ai'
       }));
+      
+      console.log("✅ Messages formatted:", formattedMessages);
       setMessages(formattedMessages);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.error("❌ Error loading messages:", {
+        error,
+        chatId,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Error",
         description: "Failed to load messages. Please try again.",
@@ -233,30 +247,42 @@ const Chat = () => {
   };
 
   const handleSend = async () => {
+    console.log("🔍 DEBUG - handleSend initiated with:", {
+      messageContent: message,
+      hasUser: !!user,
+      userEmail: user?.email,
+      currentChatId,
+      timestamp: new Date().toISOString()
+    });
+
     if (!message.trim() || !user?.email || !currentChatId) {
-      console.log("Cannot send message:", { 
+      console.log("❌ Cannot send message - Missing required data:", { 
         hasMessage: !!message.trim(), 
         hasUserEmail: !!user?.email, 
-        hasChatId: !!currentChatId 
+        hasChatId: !!currentChatId,
+        userId: user?.id
       });
       return;
     }
 
     if (!user) {
+      console.log("❌ No user found - Opening auth dialog");
       setShowAuthDialog(true);
       return;
     }
 
     if (isLimitReached) {
+      console.log("❌ User limit reached - Opening limit dialog");
       setShowLimitReachedDialog(true);
       return;
     }
 
     try {
-      console.log("Sending message with data:", {
+      console.log("🔍 Attempting to save message:", {
         chatId: currentChatId,
         messageLength: message.length,
-        userId: user.id
+        userId: user.id,
+        timestamp: new Date().toISOString()
       });
 
       const savedMessage = await saveMessage(
@@ -266,8 +292,10 @@ const Chat = () => {
         user.email
       );
 
+      console.log("✅ Message saved successfully:", savedMessage);
+
       if (savedMessage) {
-        console.log("Message saved, updating UI:", savedMessage);
+        console.log("🔄 Updating UI with new message");
         const newMessage = {
           id: savedMessage.id,
           text: savedMessage.content,
@@ -275,9 +303,15 @@ const Chat = () => {
         };
         setMessages(prev => [...prev, newMessage]);
         setMessage('');
+        console.log("✅ UI updated with new message");
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("❌ Error in handleSend:", {
+        error,
+        currentChatId,
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
