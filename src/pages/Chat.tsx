@@ -259,8 +259,9 @@ const Chat = () => {
         userEmail: user.email
       });
 
+      // Here's where we fixed the issue - we pass currentChatId directly as chat_session_id
       const savedMessage = await saveMessage(
-        currentChatId,
+        currentChatId, // This is the chat_session_id we need
         message.trim(),
         user.id,
         user.email
@@ -270,7 +271,7 @@ const Chat = () => {
         console.log("Message saved successfully:", savedMessage);
         const newMessage: Message = {
           id: savedMessage.id,
-          text: message.trim(),
+          text: savedMessage.content, // Changed from message to savedMessage.content
           sender: 'user'
         };
         setMessages(prev => [...prev, newMessage]);
