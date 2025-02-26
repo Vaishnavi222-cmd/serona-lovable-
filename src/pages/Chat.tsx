@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +45,83 @@ const Chat = () => {
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
+  // Simplified loadChats function
+  const loadChats = async () => {
+    if (!user) return;
+    
+    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !currentUser) {
+      console.error("User not found", authError);
+      toast({
+        title: "Error",
+        description: "Unable to load chats. Please sign in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const userId = currentUser.id;
+    if (!userId) {
+      console.error("User ID is null, cannot fetch chats.");
+      toast({
+        title: "Error",
+        description: "Unable to load chats. User ID is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const fetchedChats = await fetchChats(userId);
+      const formattedChats = fetchedChats.map((chat, index) => ({
+        id: chat.id,
+        title: chat.title,
+        active: index === 0,
+        chat_session_id: chat.id
+      }));
+      setChats(formattedChats);
+      
+      if (formattedChats.length > 0 && !currentChatId) {
+        setCurrentChatId(formattedChats[0].id);
+        await loadChatMessages(formattedChats[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading chats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chats. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Updated useEffect for loading chats
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        await loadChats();
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setChats([]);
+        setMessages([]);
+        setCurrentChatId(null);
+      }
+    });
+
+    // Initial session check
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        await loadChats();
+      }
+    };
+
+    getInitialSession();
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Updated handleNewChat function with proper user verification
   const handleNewChat = async () => {
@@ -117,58 +193,10 @@ const Chat = () => {
   };
 
   // Simplified useEffect for loading chats
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        await loadChats();
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setChats([]);
-        setMessages([]);
-        setCurrentChatId(null);
-      }
-    });
-
-    // Initial session check
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await loadChats();
-      }
-    };
-
-    getInitialSession();
-    return () => subscription.unsubscribe();
-  }, []);
+  
 
   // Simplified loadChats function
-  const loadChats = async () => {
-    if (!user) return;
-    try {
-      const fetchedChats = await fetchChats(user.id);
-      const formattedChats = fetchedChats.map((chat, index) => ({
-        id: chat.id,
-        title: chat.title,
-        active: index === 0,
-        chat_session_id: chat.id
-      }));
-      setChats(formattedChats);
-      
-      if (formattedChats.length > 0 && !currentChatId) {
-        setCurrentChatId(formattedChats[0].id);
-        await loadChatMessages(formattedChats[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading chats:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load chats. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  
 
   const loadChatMessages = async (chatId: string) => {
     if (!user) return;
