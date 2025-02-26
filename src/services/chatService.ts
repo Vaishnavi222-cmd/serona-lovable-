@@ -24,7 +24,7 @@ export async function createChat() {
     });
 
     const { data, error: insertError } = await supabase
-      .from('chats')  // Fixed: Using 'chats' table instead of 'messages'
+      .from('chats')
       .insert([{ 
         title: 'New Chat',
         user_id: user.id,
@@ -68,7 +68,12 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       chat_session_id: chatId,
       content: message,
       user_id: userId,
-      sender: 'user'
+      sender: 'user',
+      topic: 'chat',        // Added required field with default value
+      extension: null,      // Added required field
+      payload: null,        // Added required field
+      event: 'message',     // Added required field with default value
+      private: false        // Added required field with default value
     };
 
     console.log("[saveMessage] Inserting message:", insertData);
