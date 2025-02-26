@@ -253,26 +253,25 @@ const Chat = () => {
     }
 
     try {
-      console.log("Sending message:", {
+      console.log("Sending message with data:", {
         chatId: currentChatId,
-        userId: user.id,
-        userEmail: user.email
+        messageLength: message.length,
+        userId: user.id
       });
 
-      // Here's where we fixed the issue - we pass currentChatId directly as chat_session_id
       const savedMessage = await saveMessage(
-        currentChatId, // This is the chat_session_id we need
+        currentChatId,
         message.trim(),
         user.id,
         user.email
       );
 
       if (savedMessage) {
-        console.log("Message saved successfully:", savedMessage);
-        const newMessage: Message = {
+        console.log("Message saved, updating UI:", savedMessage);
+        const newMessage = {
           id: savedMessage.id,
-          text: savedMessage.content, // Changed from message to savedMessage.content
-          sender: 'user'
+          text: savedMessage.content,
+          sender: 'user' as const
         };
         setMessages(prev => [...prev, newMessage]);
         setMessage('');
