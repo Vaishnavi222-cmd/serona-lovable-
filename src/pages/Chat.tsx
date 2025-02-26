@@ -247,44 +247,36 @@ const Chat = () => {
   };
 
   const handleSend = async () => {
-    console.log("🔍 DEBUG - handleSend initiated with:", {
-      messageContent: message,
+    console.log("[handleSend] Starting with message:", {
+      message,
       hasUser: !!user,
-      userEmail: user?.email,
-      currentChatId,
-      timestamp: new Date().toISOString()
+      currentChatId
     });
 
     if (!message.trim() || !user?.email || !currentChatId) {
-      console.log("❌ Cannot send message - Missing required data:", { 
-        hasMessage: !!message.trim(), 
-        hasUserEmail: !!user?.email, 
-        hasChatId: !!currentChatId,
-        userId: user?.id
+      console.error("[handleSend] Missing required data:", {
+        hasMessage: !!message.trim(),
+        hasUserEmail: !!user?.email,
+        hasChatId: !!currentChatId
       });
       return;
     }
 
     if (!user) {
-      console.log("❌ No user found - Opening auth dialog");
+      console.log("[handleSend] No user - showing auth dialog");
       setShowAuthDialog(true);
       return;
     }
 
     if (isLimitReached) {
-      console.log("❌ User limit reached - Opening limit dialog");
+      console.log("[handleSend] Limit reached - showing dialog");
       setShowLimitReachedDialog(true);
       return;
     }
 
     try {
-      console.log("🔍 Attempting to save message:", {
-        chatId: currentChatId,
-        messageLength: message.length,
-        userId: user.id,
-        timestamp: new Date().toISOString()
-      });
-
+      console.log("[handleSend] Saving message...");
+      
       const savedMessage = await saveMessage(
         currentChatId,
         message.trim(),
@@ -292,26 +284,20 @@ const Chat = () => {
         user.email
       );
 
-      console.log("✅ Message saved successfully:", savedMessage);
+      console.log("[handleSend] Message saved:", savedMessage);
 
       if (savedMessage) {
-        console.log("🔄 Updating UI with new message");
         const newMessage = {
           id: savedMessage.id,
           text: savedMessage.content,
           sender: 'user' as const
         };
+        console.log("[handleSend] Updating UI with:", newMessage);
         setMessages(prev => [...prev, newMessage]);
         setMessage('');
-        console.log("✅ UI updated with new message");
       }
     } catch (error) {
-      console.error("❌ Error in handleSend:", {
-        error,
-        currentChatId,
-        userId: user.id,
-        timestamp: new Date().toISOString()
-      });
+      console.error("[handleSend] Error:", error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",

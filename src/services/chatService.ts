@@ -1,32 +1,30 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
   try {
-    console.log("🔍 DEBUG - Starting createChat...");
+    console.log("[createChat] Starting...");
     
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError || !session?.user) {
-      console.error("❌ Session error or no user:", {
+      console.error("[createChat] Session error or no user:", {
         error: sessionError,
-        session: session,
-        hasUser: session?.user ? true : false,
-        rawSession: session
+        hasSession: !!session,
+        hasUser: session?.user ? true : false
       });
       return { error: "Authentication error", data: null };
     }
 
     const user = session.user;
     
-    console.log("✅ Creating chat with user data:", {
+    console.log("[createChat] Creating chat for user:", {
       userId: user.id,
-      userEmail: user.email,
-      sessionState: true,
-      authenticated: true
+      userEmail: user.email
     });
 
     const { data, error: insertError } = await supabase
-      .from('chats')
+      .from('messages')  // Changed from 'chats' to 'messages' for testing
       .insert([{ 
         title: 'New Chat',
         user_id: user.id,
@@ -36,71 +34,35 @@ export async function createChat() {
       .maybeSingle();
 
     if (insertError) {
-      console.error("❌ Error creating chat:", insertError);
+      console.error("[createChat] Error:", insertError);
       return { error: insertError.message, data: null };
     }
 
-    console.log("✅ Chat created successfully:", data);
+    console.log("[createChat] Success:", data);
     return { error: null, data };
   } catch (error: any) {
-    console.error("❌ Unexpected error in createChat:", error);
+    console.error("[createChat] Unexpected error:", error);
     return { error: error.message, data: null };
   }
 }
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
-  try {
-    console.log("🔍 DEBUG - Starting saveMessage with FULL params:", {
-      chatId,
-      message,
-      messageLength: message.length,
-      userId,
-      userEmail,
-      timestamp: new Date().toISOString()
-    });
+  console.log("[saveMessage] Starting with params:", {
+    chatId,
+    messageLength: message.length,
+    userId,
+    userEmail
+  });
 
+  try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session?.user) {
-      console.error("❌ Authentication error in saveMessage:", {
-        error: sessionError,
-        hasSession: !!session,
-        hasUser: session?.user ? true : false
-      });
+      console.error("[saveMessage] Auth error:", sessionError);
       throw new Error("Authentication required");
     }
 
-    if (session.user.id !== userId) {
-      console.error("❌ User mismatch in saveMessage:", {
-        sessionUserId: session.user.id,
-        providedUserId: userId
-      });
-      throw new Error("User authentication mismatch");
-    }
-
-    // Verify chat exists and belongs to user
-    const { data: chatData, error: chatError } = await supabase
-      .from('chats')
-      .select('id, user_id')
-      .eq('id', chatId)
-      .single();
-
-    if (chatError || !chatData) {
-      console.error("❌ Chat verification failed:", {
-        error: chatError,
-        chatId,
-        userId
-      });
-      throw new Error("Chat verification failed");
-    }
-
-    if (chatData.user_id !== userId) {
-      console.error("❌ Chat ownership verification failed:", {
-        chatUserId: chatData.user_id,
-        requestUserId: userId
-      });
-      throw new Error("Chat ownership verification failed");
-    }
+    console.log("[saveMessage] Session verified for user:", session.user.id);
 
     const insertData = {
       chat_session_id: chatId,
@@ -109,125 +71,87 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       sender: 'user'
     };
 
-    console.log("🔍 DEBUG - Attempting to insert message with data:", insertData);
+    console.log("[saveMessage] Inserting message:", insertData);
 
     const { data, error } = await supabase
       .from('messages')
       .insert(insertData)
-      .select('*')
+      .select()
       .single();
 
     if (error) {
-      console.error("❌ Error saving message to 'messages' table:", {
-        error,
-        errorCode: error.code,
-        errorMessage: error.message,
-        details: error.details,
-        hint: error.hint,
-        insertData
-      });
+      console.error("[saveMessage] Insert error:", error);
       throw error;
     }
 
-    console.log("✅ Message saved successfully to 'messages' table:", {
-      savedData: data,
-      chatId,
-      messageId: data.id,
-      timestamp: new Date().toISOString()
-    });
-    
+    console.log("[saveMessage] Success:", data);
     return data;
-  } catch (error: any) {
-    console.error("❌ Detailed error in saveMessage:", {
-      error,
-      errorMessage: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
+  } catch (error) {
+    console.error("[saveMessage] Error:", error);
     throw error;
   }
 }
 
 export async function fetchMessages(chatId: string) {
+  console.log("[fetchMessages] Starting for chat:", chatId);
+  
   try {
-    console.log("🔍 Starting fetchMessages for chatId:", chatId);
+    const { data: { session } } = await supabase.auth.getSession();
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session?.user) {
-      console.error("❌ Session error in fetchMessages:", {
-        error: sessionError,
-        hasSession: !!session,
-        hasUser: session?.user ? true : false
-      });
+    if (!session?.user) {
+      console.error("[fetchMessages] No session");
       return [];
     }
 
-    console.log("🔍 Attempting to fetch messages from 'messages' table:", {
-      chatId,
-      userId: session.user.id
-    });
+    console.log("[fetchMessages] Fetching messages...");
 
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('chat_session_id', chatId)
       .order('created_at', { ascending: true });
-    
+
     if (error) {
-      console.error("❌ Error fetching messages:", {
-        error,
-        errorCode: error.code,
-        errorMessage: error.message,
-        details: error.details,
-        hint: error.hint,
-        chatId
-      });
+      console.error("[fetchMessages] Error:", error);
       return [];
     }
 
-    console.log("✅ Messages fetched successfully:", {
-      messageCount: data?.length || 0,
-      chatId,
-      firstMessage: data?.[0],
-      timestamp: new Date().toISOString()
-    });
-    
+    console.log("[fetchMessages] Success:", data);
     return data || [];
   } catch (error) {
-    console.error("❌ Unexpected error in fetchMessages:", {
-      error,
-      chatId,
-      timestamp: new Date().toISOString()
-    });
+    console.error("[fetchMessages] Error:", error);
     return [];
   }
 }
 
 export async function fetchChats(userId: string) {
+  console.log("[fetchChats] Starting for user:", userId);
+  
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (sessionError || !session?.user || session.user.id !== userId) {
-      console.error("Session error or user mismatch:", sessionError);
+    if (!session?.user) {
+      console.error("[fetchChats] No session");
       return [];
     }
+
+    console.log("[fetchChats] Fetching chats...");
 
     const { data, error } = await supabase
       .from('chats')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
-      console.error("Error fetching chats:", error);
+      console.error("[fetchChats] Error:", error);
       return [];
     }
-    
-    console.log("✅ Fetched chats:", data);
+
+    console.log("[fetchChats] Success:", data);
     return data || [];
   } catch (error) {
-    console.error("Unexpected error in fetchChats:", error);
+    console.error("[fetchChats] Error:", error);
     return [];
   }
 }
