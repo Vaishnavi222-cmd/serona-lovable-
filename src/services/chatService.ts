@@ -108,44 +108,85 @@ export async function createChat() {
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
   try {
-    console.log("🔍 Starting saveMessage...", { chatId, userId, userEmail });
+    console.log("🔍 DEBUG - Starting saveMessage with params:", {
+      chatId,
+      messageLength: message.length,
+      userId,
+      userEmail,
+      timestamp: new Date().toISOString()
+    });
 
     // Verify session and user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
+    console.log("🔍 DEBUG - Session check:", {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      sessionError: sessionError,
+      sessionUserId: session?.user?.id,
+      requestUserId: userId,
+      matchingIds: session?.user?.id === userId
+    });
+
     if (sessionError || !session?.user) {
-      console.error("Session error:", sessionError);
+      console.error("❌ Authentication error:", {
+        error: sessionError,
+        session: session,
+        userId: userId
+      });
       throw new Error("Authentication required");
     }
 
     // Verify user matches session
     if (session.user.id !== userId) {
-      console.error("User mismatch");
+      console.error("❌ User mismatch:", {
+        sessionUserId: session.user.id,
+        requestUserId: userId
+      });
       throw new Error("User authentication mismatch");
     }
 
-    console.log("✅ Inserting message into chat_messages...");
+    console.log("✅ DEBUG - Authentication verified, inserting message...");
     
+    const insertData = {
+      chat_session_id: chatId,
+      input_message: message,
+      user_id: userId,
+      user_email: userEmail
+    };
+
+    console.log("🔍 DEBUG - Attempting to insert:", insertData);
+
     const { data, error } = await supabase
       .from('chat_messages')
-      .insert({
-        chat_session_id: chatId,
-        input_message: message,
-        user_id: userId,
-        user_email: userEmail
-      })
+      .insert(insertData)
       .select('*')
       .single();
 
     if (error) {
-      console.error("❌ Error saving message:", error);
+      console.error("❌ Error saving message:", {
+        error: error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        details: error.details,
+        hint: error.hint,
+        insertData: insertData
+      });
       throw error;
     }
 
-    console.log("✅ Message saved successfully:", data);
+    console.log("✅ Message saved successfully:", {
+      savedData: data,
+      timestamp: new Date().toISOString()
+    });
     return data;
-  } catch (error) {
-    console.error("❌ Error in saveMessage:", error);
+  } catch (error: any) {
+    console.error("❌ Detailed error in saveMessage:", {
+      error: error,
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   }
 }
