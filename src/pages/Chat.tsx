@@ -159,15 +159,15 @@ const Chat = () => {
       return;
     }
 
-    try {
-      // Create temporary message for optimistic UI update
-      const tempMessageId = Date.now().toString();
-      const tempUserMessage = {
-        id: tempMessageId,
-        content: message.trim(),
-        sender: 'user' as const
-      };
+    // Move tempMessageId outside of try block so it's accessible in catch block
+    const tempMessageId = Date.now().toString();
+    const tempUserMessage = {
+      id: tempMessageId,
+      content: message.trim(),
+      sender: 'user' as const
+    };
 
+    try {
       // Optimistically add user message to UI
       setMessages(prev => [...prev, tempUserMessage]);
       setMessage(''); // Clear input
