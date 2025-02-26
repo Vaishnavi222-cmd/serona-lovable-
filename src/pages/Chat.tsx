@@ -95,6 +95,56 @@ const Chat = () => {
     }
   };
 
+  // Add handleNewChat function
+  const handleNewChat = async () => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
+    try {
+      const { data: newChat, error } = await createChat();
+      if (error) {
+        console.error("Error creating new chat:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create new chat. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (newChat) {
+        const formattedChat = {
+          id: newChat.id,
+          title: newChat.title,
+          active: true,
+          chat_session_id: newChat.id
+        };
+
+        // Set all other chats to inactive
+        setChats(prevChats => 
+          prevChats.map(chat => ({ ...chat, active: false }))
+        );
+        setChats(prevChats => [formattedChat, ...prevChats.map(chat => ({ ...chat, active: false }))]);
+
+        setCurrentChatId(newChat.id);
+        setMessages([]); // Clear messages for new chat
+        
+        if (isMobile) {
+          setIsSidebarOpen(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleNewChat:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create new chat. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Updated handleSend function
   const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
