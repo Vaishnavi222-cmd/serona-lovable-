@@ -2,28 +2,28 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
-  // Get the current session with email
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session?.user) {
-    console.error("Session error:", sessionError);
-    return { error: "Authentication error", data: null };
-  }
-
-  const user = session.user;
-  
-  // Double check email existence
-  if (!user.email) {
-    console.error("User email is missing");
-    return { error: "User email is required", data: null };
-  }
-
-  console.log("Creating chat with user data:", {
-    userId: user.id,
-    userEmail: user.email
-  });
-
   try {
+    // Get the current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user) {
+      console.error("Session error:", sessionError);
+      return { error: "Authentication error", data: null };
+    }
+
+    const user = session.user;
+    
+    // Double check email existence
+    if (!user.email) {
+      console.error("User email is missing", user);
+      return { error: "User email is required", data: null };
+    }
+
+    console.log("Creating chat with user data:", {
+      userId: user.id,
+      userEmail: user.email
+    });
+
     const { data, error: insertError } = await supabase
       .from('chats')
       .insert([{ 
@@ -47,21 +47,20 @@ export async function createChat() {
 }
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
-  // Get current session to verify authentication
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session?.user) {
-    console.error("Session error:", sessionError);
-    return null;
-  }
-
-  // Verify user matches session
-  if (session.user.id !== userId || session.user.email !== userEmail) {
-    console.error("User mismatch");
-    return null;
-  }
-
   try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.user) {
+      console.error("Session error:", sessionError);
+      return null;
+    }
+
+    // Verify user matches session
+    if (session.user.id !== userId || session.user.email !== userEmail) {
+      console.error("User mismatch");
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('chat_messages')
       .insert([{ 
@@ -85,15 +84,14 @@ export async function saveMessage(chatId: string, message: string, userId: strin
 }
 
 export async function fetchChats(userId: string) {
-  // Verify current session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session?.user || session.user.id !== userId) {
-    console.error("Session error or user mismatch:", sessionError);
-    return [];
-  }
-
   try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.user || session.user.id !== userId) {
+      console.error("Session error or user mismatch:", sessionError);
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('chats')
       .select('*')
@@ -112,15 +110,14 @@ export async function fetchChats(userId: string) {
 }
 
 export async function fetchMessages(chatId: string) {
-  // Verify current session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session?.user) {
-    console.error("Session error:", sessionError);
-    return [];
-  }
-
   try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.user) {
+      console.error("Session error:", sessionError);
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
