@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { createChat, fetchChats, saveMessage, fetchMessages } from "@/services/chatService";
 import type { User } from '@supabase/supabase-js';
 import { AuthDialog } from "@/components/ui/auth-dialog";
 import { UserMenu } from "@/components/UserMenu";
@@ -22,7 +23,6 @@ interface Chat {
   id: string;
   title: string;
   active: boolean;
-  chat_session_id?: string;
 }
 
 const Chat = () => {
@@ -39,298 +39,202 @@ const Chat = () => {
   const headerMenuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const sidebarButtonRef = useRef<HTMLButtonElement>(null);
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [chats, setChats] = useState<Chat[]>([
+    { id: '1', title: "Deep Personality Analysis", active: true },
+    { id: '2', title: "Career Guidance Session", active: false },
+    { id: '3', title: "Mental Health Support", active: false },
+    { id: '4', title: "Life Goals Planning", active: false },
+  ]);
   const [showLimitReachedDialog, setShowLimitReachedDialog] = useState(false);
   const [showUpgradePlansDialog, setShowUpgradePlansDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
-  // Simplified loadChats function
-  const loadChats = async () => {
-    if (!user) return;
-    
-    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !currentUser) {
-      console.error("User not found", authError);
-      toast({
-        title: "Error",
-        description: "Unable to load chats. Please sign in again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const userId = currentUser.id;
-    if (!userId) {
-      console.error("User ID is null, cannot fetch chats.");
-      toast({
-        title: "Error",
-        description: "Unable to load chats. User ID is missing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const fetchedChats = await fetchChats(userId);
-      const formattedChats = fetchedChats.map((chat, index) => ({
-        id: chat.id,
-        title: chat.title,
-        active: index === 0,
-        chat_session_id: chat.id
-      }));
-      setChats(formattedChats);
-      
-      if (formattedChats.length > 0 && !currentChatId) {
-        setCurrentChatId(formattedChats[0].id);
-        await loadChatMessages(formattedChats[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading chats:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load chats. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Updated useEffect for loading chats
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        await loadChats();
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setChats([]);
-        setMessages([]);
-        setCurrentChatId(null);
-      }
-    });
+    // Add meta tags for SEO
+    document.title = "Serona AI – AI That Understands You & Guides You Forward";
+    
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', 'Serona AI - Your personal AI companion for growth and guidance. Get personalized support for deep personality analysis, career guidance, and more.');
+    
+    // Add indexing meta tag
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.setAttribute('name', 'robots');
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.setAttribute('content', 'index, follow');
 
-    // Initial session check
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await loadChats();
+    const controller = new AbortController();
+    
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error checking session:', error);
+          return;
+        }
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Session check failed:', error);
       }
     };
 
-    getInitialSession();
-    return () => subscription.unsubscribe();
-  }, []);
+    checkSession();
 
-  // Updated handleNewChat function with better error handling
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setShowAuthDialog(false);
+        toast({
+          title: "Successfully authenticated",
+          description: "You can now send messages",
+        });
+      } else {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      controller.abort();
+    };
+  }, [toast]);
+
   const handleNewChat = async () => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to create a new chat.",
-        variant: "destructive",
-      });
       setShowAuthDialog(true);
       return;
     }
 
-    if (!user.email) {
-      toast({
-        title: "Email Required",
-        description: "Your account needs a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      const { error, data: newChat } = await createChat();
+      // Create a new chat in the database
+      const { data: newChat, error: chatError } = await supabase
+        .from('chats')
+        .insert({
+          title: 'New Chat',
+          user_id: user.id
+        })
+        .select()
+        .single();
 
-      if (error || !newChat) {
-        console.error("Failed to create chat:", error);
+      if (chatError) {
+        console.error('Error creating new chat:', chatError);
         toast({
           title: "Error",
-          description: error || "Failed to create a new chat. Please try again.",
+          description: "Failed to create new chat. Please try again.",
           variant: "destructive",
         });
         return;
       }
 
-      // Update chats list with the new chat
-      const updatedChats = chats.map(chat => ({
-        ...chat,
-        active: false
-      }));
+      // Clear current messages
+      setMessages([]);
+      setMessage('');
+      
+      // Update chats list
+      const updatedChats = chats.map(chat => ({ ...chat, active: false }));
+      updatedChats.unshift({ 
+        id: newChat.id, 
+        title: newChat.title, 
+        active: true 
+      });
+      setChats(updatedChats);
 
-      const newChatFormatted: Chat = {
-        id: newChat.id,
-        title: newChat.title,
-        active: true,
-        chat_session_id: newChat.id
-      };
-
-      setChats([newChatFormatted, ...updatedChats]);
-      setCurrentChatId(newChat.id);
-      setMessages([]); // Clear messages for new chat
-
+      // Close sidebar on mobile
       if (isMobile) {
         setIsSidebarOpen(false);
       }
-
-    } catch (error: any) {
-      console.error("Unexpected error creating chat:", error);
-      toast({
-        title: "Error",
-        description: error?.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Simplified useEffect for loading chats
-  useEffect(() => {
-    loadChats();
-  }, [user]);
-
-  // Simplified loadChats function
-  
-
-  const loadChatMessages = async (chatId: string) => {
-    console.log("🔍 loadChatMessages started for chatId:", chatId);
-    
-    if (!user) {
-      console.log("❌ No user found in loadChatMessages");
-      return;
-    }
-    
-    try {
-      console.log("🔍 Fetching messages for chat:", chatId);
-      const fetchedMessages = await fetchMessages(chatId);
-      console.log("✅ Messages fetched:", fetchedMessages);
-      
-      const formattedMessages: Message[] = fetchedMessages.map(msg => ({
-        id: msg.id,
-        text: msg.content,
-        sender: msg.sender as 'user' | 'ai'
-      }));
-      
-      console.log("✅ Messages formatted:", formattedMessages);
-      setMessages(formattedMessages);
     } catch (error) {
-      console.error("❌ Error loading messages:", {
-        error,
-        chatId,
-        timestamp: new Date().toISOString()
-      });
+      console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Failed to load messages. Please try again.",
+        description: "Failed to create new chat. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  // Add handleChatSelect function
-  const handleChatSelect = async (chatId: string) => {
-    setCurrentChatId(chatId);
-    await loadChatMessages(chatId);
-    setChats(prevChats => 
-      prevChats.map(chat => ({
-        ...chat,
-        active: chat.id === chatId
-      }))
-    );
-    if (isMobile) {
-      setIsSidebarOpen(false);
     }
   };
 
   const handleSend = async () => {
-    console.log("[handleSend] Starting with message:", {
-      message,
-      hasUser: !!user,
-      currentChatId
-    });
-
-    if (!message.trim() || !user?.email || !currentChatId) {
-      console.error("[handleSend] Missing required data:", {
-        hasMessage: !!message.trim(),
-        hasUserEmail: !!user?.email,
-        hasChatId: !!currentChatId
+    if (!message.trim()) {
+      toast({
+        title: "Empty message",
+        description: "Please enter a message to send",
       });
       return;
     }
 
     if (!user) {
-      console.log("[handleSend] No user - showing auth dialog");
       setShowAuthDialog(true);
       return;
     }
 
     if (isLimitReached) {
-      console.log("[handleSend] Limit reached - showing dialog");
       setShowLimitReachedDialog(true);
       return;
     }
-
+    
     try {
-      console.log("[handleSend] Saving message...");
+      const { data: limitCheck, error: limitError } = await supabase.functions.invoke('check-plan-limits', {
+        body: { 
+          input_tokens: message.length,
+          output_tokens: 400
+        }
+      });
+
+      if (limitError || !limitCheck.allowed) {
+        const errorMessage = limitError?.message || limitCheck?.error || "Usage limit reached";
+        
+        const timeMatch = errorMessage.match(/resets in (\d+) minutes/);
+        if (timeMatch) {
+          const minutes = parseInt(timeMatch[1]);
+          const hours = Math.floor(minutes / 60);
+          const remainingMinutes = minutes % 60;
+          setTimeRemaining(
+            hours > 0 
+              ? `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes > 0 ? `${remainingMinutes} minutes` : ''}`
+              : `${minutes} minutes`
+          );
+        }
+
+        setIsLimitReached(true);
+        setShowLimitReachedDialog(true);
+        return;
+      }
+
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: message.trim(),
+        sender: 'user'
+      };
       
-      const savedMessage = await saveMessage(
-        currentChatId,
-        message.trim(),
-        user.id,
-        user.email
-      );
-
-      console.log("[handleSend] Message saved:", savedMessage);
-
-      if (savedMessage) {
-        const newMessage = {
-          id: savedMessage.id,
-          text: savedMessage.content,
-          sender: 'user' as const
-        };
-        console.log("[handleSend] Updating UI with:", newMessage);
-        setMessages(prev => [...prev, newMessage]);
-        setMessage('');
+      setMessages(prev => [...prev, newMessage]);
+      setMessage('');
+      
+      if (limitCheck.warning) {
+        toast({
+          title: "Token Usage Warning",
+          description: limitCheck.warning,
+        });
       }
     } catch (error) {
-      console.error("[handleSend] Error:", error);
+      console.error('Error checking limits:', error);
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: "Failed to check usage limits. Please try again.",
         variant: "destructive",
       });
     }
   };
-
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('chat-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          if (currentChatId) {
-            loadChatMessages(currentChatId);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, currentChatId]);
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     console.log('Selected plan:', planType);
@@ -519,7 +423,6 @@ const Chat = () => {
                 key={chat.id}
                 className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors
                            ${chat.active ? 'bg-gray-800' : ''}`}
-                onClick={() => handleChatSelect(chat.id)}
               >
                 <MessageSquare className="w-4 h-4" />
                 <span className="text-sm truncate">{chat.title}</span>
