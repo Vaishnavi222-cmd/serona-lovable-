@@ -160,29 +160,65 @@ const Chat = () => {
     }
 
     try {
-      const savedMessage = await saveMessage(
-        currentChatId,
-        message.trim(),
-        user.id,
-        user.email || ''
-      );
+      // Optimistically add message to UI
+      const tempMessage = {
+        id: Date.now().toString(),
+        content: message.trim(),
+        sender: 'user' as const
+      };
+      setMessages(prev => [...prev, tempMessage]);
+      setMessage('');
 
-      if (savedMessage) {
-        const newMessage = {
-          id: savedMessage.id,
-          content: savedMessage.content,
-          sender: 'user' as const
-        };
-        setMessages(prev => [...prev, newMessage]);
-        setMessage('');
+      console.log("🚀 Sending message to process-message function:", {
+        chatId: currentChatId,
+        userId: user.id,
+        messageLength: message.length,
+        timestamp: new Date().toISOString()
+      });
+
+      // Send message to Edge Function
+      const { data: response, error } = await supabase.functions.invoke('process-message', {
+        body: {
+          content: message.trim(),
+          chat_session_id: currentChatId
+        }
+      });
+
+      if (error) {
+        console.error("❌ Error processing message:", {
+          error,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+        // Remove the optimistic message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        return;
       }
+
+      console.log("✅ Message processed successfully:", {
+        response,
+        timestamp: new Date().toISOString()
+      });
+
+      // Since we're using real-time subscriptions, we don't need to manually update the messages
+      // The subscription will handle updating the UI when the message is stored in the database
+
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("❌ Unexpected error:", {
+        error,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
     }
   };
 
