@@ -123,7 +123,7 @@ const Chat = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Updated handleNewChat function with proper user verification
+  // Updated handleNewChat function with better error handling
   const handleNewChat = async () => {
     if (!user) {
       toast({
@@ -135,6 +135,15 @@ const Chat = () => {
       return;
     }
 
+    if (!user.email) {
+      toast({
+        title: "Email Required",
+        description: "Your account needs a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error, data: newChat } = await createChat();
 
@@ -142,7 +151,7 @@ const Chat = () => {
         console.error("Failed to create chat:", error);
         toast({
           title: "Error",
-          description: "Failed to create a new chat. Please try again.",
+          description: error || "Failed to create a new chat. Please try again.",
           variant: "destructive",
         });
         return;
@@ -169,11 +178,11 @@ const Chat = () => {
         setIsSidebarOpen(false);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Unexpected error creating chat:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error?.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
