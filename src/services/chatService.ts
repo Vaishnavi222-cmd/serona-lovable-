@@ -160,8 +160,8 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     const { data, error } = await supabase
       .from('messages')
       .insert(insertData)
-      .select('*')
-      .single();
+      .select()
+      .maybeSingle();
 
     if (error) {
       console.error("❌ Error saving message:", {
@@ -173,6 +173,10 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         insertData: insertData
       });
       throw error;
+    }
+
+    if (!data) {
+      throw new Error("No data returned after message insertion");
     }
 
     console.log("✅ Message saved successfully:", {
