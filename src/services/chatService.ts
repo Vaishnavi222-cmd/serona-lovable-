@@ -82,7 +82,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .from('messages')
       .insert(insertData)
       .select()
-      .single();
+      .maybeSingle(); // Changed from single() to maybeSingle() for better error handling
 
     if (error) {
       console.error("[saveMessage] Insert error:", error);
@@ -121,7 +121,8 @@ export async function fetchMessages(chatId: string) {
       return [];
     }
 
-    console.log("[fetchMessages] Success:", data);
+    console.log("[fetchMessages] Success, found messages:", data?.length);
+    console.log("[fetchMessages] Messages data:", data);
     return data || [];
   } catch (error) {
     console.error("[fetchMessages] Error:", error);
@@ -153,7 +154,8 @@ export async function fetchChats(userId: string) {
       return [];
     }
 
-    console.log("[fetchChats] Success:", data);
+    console.log("[fetchChats] Success, found chats:", data?.length);
+    console.log("[fetchChats] Chats data:", data);
     return data || [];
   } catch (error) {
     console.error("[fetchChats] Error:", error);
