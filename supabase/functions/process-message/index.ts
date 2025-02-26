@@ -24,12 +24,7 @@ serve(async (req) => {
   }
 
   try {
-    // Environment check
-    console.log('[ENV Check] Supabase URL:', !!Deno.env.get('SUPABASE_URL'));
-    console.log('[ENV Check] Service Role Key:', !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
-
-    // Client initialization
-    console.log('[Setup] Initializing Supabase client');
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -39,94 +34,99 @@ serve(async (req) => {
         },
       }
     );
-    console.log('[Setup] Supabase client initialized');
 
-    // Authentication
-    console.log('[Auth] Getting user from token');
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
-    if (authError) {
+    if (authError || !user) {
       console.error('[Auth Error]:', {
         error: authError,
-        message: authError.message,
+        message: authError?.message || 'No user found',
         timestamp: new Date().toISOString()
       });
-      throw new Error('Unauthorized: ' + authError.message);
+      throw new Error('Unauthorized: ' + (authError?.message || 'No user found'));
     }
 
-    if (!user) {
-      console.error('[Auth Error] No user found in context');
-      throw new Error('User not found in auth context');
-    }
-
-    console.log('[Auth Success] User authenticated:', {
-      userId: user.id,
-      userEmail: user.email,
+    // Parse request body
+    const requestBody = await req.json();
+    console.log('[Request] Body:', {
+      hasContent: !!requestBody.content,
+      hasChatSessionId: !!requestBody.chat_session_id,
       timestamp: new Date().toISOString()
     });
 
-    // Request body parsing
-    console.log('[Request] Parsing request body');
-    const { prompt } = await req.json();
-    console.log('[Request] Prompt received:', {
-      promptExists: !!prompt,
-      promptLength: prompt?.length || 0,
+    // Validate required fields
+    if (!requestBody.content || !requestBody.chat_session_id) {
+      console.error('[Validation Error] Missing required fields');
+      throw new Error('Missing required fields: content and chat_session_id are required');
+    }
+
+    // Insert message
+    console.log('[DB] Attempting to insert message');
+    const { data, error } = await supabaseClient
+      .from("messages")
+      .insert([
+        {
+          sender: "user",
+          content: requestBody.content,
+          chat_session_id: requestBody.chat_session_id,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[DB Error] Error inserting message:", {
+        error,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        timestamp: new Date().toISOString()
+      });
+      throw new Error('Failed to insert message: ' + error.message);
+    }
+
+    console.log('[Success] Message inserted:', {
+      messageId: data?.id,
       timestamp: new Date().toISOString()
     });
-
-    // Processing message
-    console.log('[Processing] Starting message processing');
-    
-    // Add your message processing logic here
-    
-    console.log('[Processing] Message processed successfully');
 
     // Success response
-    console.log('=== END REQUEST PROCESSING ===');
     return new Response(
       JSON.stringify({ 
         status: 'success',
-        message: "Message processed successfully",
-        userId: user.id,
-        timestamp: new Date().toISOString(),
-        requestId: crypto.randomUUID() // Add a unique ID for tracking
+        data,
+        timestamp: new Date().toISOString()
       }),
       { 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'X-Request-ID': crypto.randomUUID()
+          'Content-Type': 'application/json'
         } 
       }
     );
+
   } catch (error) {
-    // Error logging
     console.error('=== ERROR IN REQUEST PROCESSING ===', {
       error: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString(),
-      type: error.constructor.name,
-      details: error.toString()
+      type: error.constructor.name
     });
 
-    // Error response
     return new Response(
       JSON.stringify({ 
         status: 'error',
         error: error.message,
-        timestamp: new Date().toISOString(),
-        requestId: crypto.randomUUID(),
-        details: error.toString()
+        timestamp: new Date().toISOString()
       }),
       { 
         status: error.message.includes('Unauthorized') ? 401 : 500,
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'X-Request-ID': crypto.randomUUID()
+          'Content-Type': 'application/json'
         }
       }
     );
