@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -68,12 +67,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       chat_session_id: chatId,
       content: message,
       user_id: userId,
-      sender: 'user',
-      topic: 'chat',        // Added required field with default value
-      extension: null,      // Added required field
-      payload: null,        // Added required field
-      event: 'message',     // Added required field with default value
-      private: false        // Added required field with default value
+      sender: 'user'
     };
 
     console.log("[saveMessage] Inserting message:", insertData);
@@ -82,7 +76,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .from('messages')
       .insert(insertData)
       .select()
-      .maybeSingle(); // Changed from single() to maybeSingle() for better error handling
+      .maybeSingle();
 
     if (error) {
       console.error("[saveMessage] Insert error:", error);
