@@ -145,7 +145,7 @@ const Chat = () => {
     }
   };
 
-  // Updated handleSend function
+  // Handle message sending
   const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
@@ -160,14 +160,17 @@ const Chat = () => {
     }
 
     try {
-      // Optimistically add message to UI
-      const tempMessage = {
-        id: Date.now().toString(),
+      // Create temporary message for optimistic UI update
+      const tempMessageId = Date.now().toString();
+      const tempUserMessage = {
+        id: tempMessageId,
         content: message.trim(),
         sender: 'user' as const
       };
-      setMessages(prev => [...prev, tempMessage]);
-      setMessage('');
+
+      // Optimistically add user message to UI
+      setMessages(prev => [...prev, tempUserMessage]);
+      setMessage(''); // Clear input
 
       console.log("🚀 Sending message to process-message function:", {
         chatId: currentChatId,
@@ -195,7 +198,7 @@ const Chat = () => {
           variant: "destructive",
         });
         // Remove the optimistic message on error
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
 
@@ -204,21 +207,17 @@ const Chat = () => {
         timestamp: new Date().toISOString()
       });
 
-      // Since we're using real-time subscriptions, we don't need to manually update the messages
-      // The subscription will handle updating the UI when the message is stored in the database
+      // We don't need to manually update messages here since we're using
+      // real-time subscriptions that will update the UI automatically
 
     } catch (error) {
-      console.error("❌ Unexpected error:", {
-        error,
-        timestamp: new Date().toISOString()
-      });
+      console.error("❌ Unexpected error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-      // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
     }
   };
 
