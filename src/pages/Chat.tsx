@@ -14,7 +14,7 @@ import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 
 interface Message {
   id: string;
-  text: string;
+  content: string;
   sender: 'user' | 'ai';
 }
 
@@ -46,57 +46,97 @@ const Chat = () => {
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
-  // Simplified loadChats function
+  // Modified loadChats to create a new chat if none exists
   const loadChats = async () => {
     if (!user) return;
     
     const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
     if (authError || !currentUser) {
       console.error("User not found", authError);
-      toast({
-        title: "Error",
-        description: "Unable to load chats. Please sign in again.",
-        variant: "destructive",
-      });
       return;
     }
 
     const userId = currentUser.id;
     if (!userId) {
-      console.error("User ID is null, cannot fetch chats.");
-      toast({
-        title: "Error",
-        description: "Unable to load chats. User ID is missing.",
-        variant: "destructive",
-      });
+      console.error("User ID is null");
       return;
     }
 
     try {
       const fetchedChats = await fetchChats(userId);
+      
+      // If no chats exist, create a new one
+      if (fetchedChats.length === 0) {
+        const { data: newChat, error } = await createChat();
+        if (error) {
+          console.error("Error creating new chat:", error);
+          return;
+        }
+        if (newChat) {
+          fetchedChats.push(newChat);
+        }
+      }
+
       const formattedChats = fetchedChats.map((chat, index) => ({
         id: chat.id,
         title: chat.title,
         active: index === 0,
         chat_session_id: chat.id
       }));
+      
       setChats(formattedChats);
       
-      if (formattedChats.length > 0 && !currentChatId) {
+      if (formattedChats.length > 0) {
         setCurrentChatId(formattedChats[0].id);
         await loadChatMessages(formattedChats[0].id);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
+    }
+  };
+
+  // Updated handleSend function
+  const handleSend = async () => {
+    if (!message.trim() || !user || !currentChatId) {
+      if (!user) {
+        setShowAuthDialog(true);
+      }
+      return;
+    }
+
+    if (isLimitReached) {
+      setShowLimitReachedDialog(true);
+      return;
+    }
+
+    try {
+      const savedMessage = await saveMessage(
+        currentChatId,
+        message.trim(),
+        user.id,
+        user.email || ''
+      );
+
+      if (savedMessage) {
+        const newMessage = {
+          id: savedMessage.id,
+          content: savedMessage.content,
+          sender: 'user' as const
+        };
+        setMessages(prev => [...prev, newMessage]);
+        setMessage('');
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
       toast({
         title: "Error",
-        description: "Failed to load chats. Please try again.",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  // Updated useEffect for loading chats
+  // Load initial chats when user logs in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
@@ -123,79 +163,6 @@ const Chat = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Updated handleNewChat function with better error handling
-  const handleNewChat = async () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to create a new chat.",
-        variant: "destructive",
-      });
-      setShowAuthDialog(true);
-      return;
-    }
-
-    if (!user.email) {
-      toast({
-        title: "Email Required",
-        description: "Your account needs a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error, data: newChat } = await createChat();
-
-      if (error || !newChat) {
-        console.error("Failed to create chat:", error);
-        toast({
-          title: "Error",
-          description: error || "Failed to create a new chat. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update chats list with the new chat
-      const updatedChats = chats.map(chat => ({
-        ...chat,
-        active: false
-      }));
-
-      const newChatFormatted: Chat = {
-        id: newChat.id,
-        title: newChat.title,
-        active: true,
-        chat_session_id: newChat.id
-      };
-
-      setChats([newChatFormatted, ...updatedChats]);
-      setCurrentChatId(newChat.id);
-      setMessages([]); // Clear messages for new chat
-
-      if (isMobile) {
-        setIsSidebarOpen(false);
-      }
-
-    } catch (error: any) {
-      console.error("Unexpected error creating chat:", error);
-      toast({
-        title: "Error",
-        description: error?.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Simplified useEffect for loading chats
-  useEffect(() => {
-    loadChats();
-  }, [user]);
-
-  // Simplified loadChats function
-  
-
   const loadChatMessages = async (chatId: string) => {
     console.log("🔍 loadChatMessages started for chatId:", chatId);
     
@@ -211,7 +178,7 @@ const Chat = () => {
       
       const formattedMessages: Message[] = fetchedMessages.map(msg => ({
         id: msg.id,
-        text: msg.content,
+        content: msg.content,
         sender: msg.sender as 'user' | 'ai'
       }));
       
@@ -243,66 +210,6 @@ const Chat = () => {
     );
     if (isMobile) {
       setIsSidebarOpen(false);
-    }
-  };
-
-  const handleSend = async () => {
-    console.log("[handleSend] Starting with message:", {
-      message,
-      hasUser: !!user,
-      currentChatId
-    });
-
-    if (!message.trim() || !user?.email || !currentChatId) {
-      console.error("[handleSend] Missing required data:", {
-        hasMessage: !!message.trim(),
-        hasUserEmail: !!user?.email,
-        hasChatId: !!currentChatId
-      });
-      return;
-    }
-
-    if (!user) {
-      console.log("[handleSend] No user - showing auth dialog");
-      setShowAuthDialog(true);
-      return;
-    }
-
-    if (isLimitReached) {
-      console.log("[handleSend] Limit reached - showing dialog");
-      setShowLimitReachedDialog(true);
-      return;
-    }
-
-    try {
-      console.log("[handleSend] Saving message...");
-      
-      const savedMessage = await saveMessage(
-        currentChatId,
-        message.trim(),
-        user.id,
-        user.email
-      );
-
-      console.log("[handleSend] Message saved:", savedMessage);
-
-      if (savedMessage) {
-        const newMessage = {
-          id: savedMessage.id,
-          text: savedMessage.content,
-          sender: 'user' as const
-        };
-        console.log("[handleSend] Updating UI with:", newMessage);
-        setMessages(prev => [...prev, newMessage]);
-        setMessage('');
-      }
-    } catch (error) {
-      console.error("[handleSend] Error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -349,7 +256,7 @@ const Chat = () => {
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      text: `Help me with ${topic}`,
+      content: `Help me with ${topic}`,
       sender: 'user'
     };
     setMessages(prev => [...prev, newMessage]);
@@ -631,7 +538,7 @@ const Chat = () => {
                           }
                           max-w-[92%] md:max-w-[85%] px-6 py-4`}
                       >
-                        <p className="text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap">{msg.text}</p>
+                        <p className="text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap">{msg.content}</p>
                       </div>
                     </div>
                   ))}
@@ -644,8 +551,18 @@ const Chat = () => {
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
                 value={message}
-                onChange={adjustTextareaHeight}
-                onKeyDown={handleKeyDown}
+                onChange={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                  setMessage(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  if (e.key === 'Enter' && !e.shiftKey && !isMobileDevice) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Message Serona AI..."
                 className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                          bg-white border border-gray-200 shadow-sm resize-none text-gray-800
