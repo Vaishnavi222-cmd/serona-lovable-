@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -46,22 +47,34 @@ export async function createChat() {
 }
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
-  console.log("[saveMessage] Starting with params:", {
+  console.log("[saveMessage] Starting with FULL params:", {
     chatId,
+    message,
     messageLength: message.length,
     userId,
-    userEmail
+    userEmail,
+    timestamp: new Date().toISOString()
   });
 
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session?.user) {
-      console.error("[saveMessage] Auth error:", sessionError);
+      console.error("[saveMessage] Auth error:", {
+        error: sessionError,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        timestamp: new Date().toISOString()
+      });
       throw new Error("Authentication required");
     }
 
-    console.log("[saveMessage] Session verified for user:", session.user.id);
+    console.log("[saveMessage] Session verified for user:", {
+      sessionUserId: session.user.id,
+      sessionUserEmail: session.user.email,
+      providedUserId: userId,
+      doTheyMatch: session.user.id === userId
+    });
 
     const insertData = {
       chat_session_id: chatId,
@@ -70,7 +83,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       sender: 'user'
     };
 
-    console.log("[saveMessage] Inserting message:", insertData);
+    console.log("[saveMessage] About to insert message with data:", {
+      ...insertData,
+      contentLength: message.length,
+      timestamp: new Date().toISOString()
+    });
 
     const { data, error } = await supabase
       .from('messages')
@@ -79,14 +96,26 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .maybeSingle();
 
     if (error) {
-      console.error("[saveMessage] Insert error:", error);
+      console.error("[saveMessage] Insert error:", {
+        error,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
 
-    console.log("[saveMessage] Success:", data);
+    console.log("[saveMessage] Success! Message saved:", {
+      savedData: data,
+      timestamp: new Date().toISOString()
+    });
     return data;
   } catch (error) {
-    console.error("[saveMessage] Error:", error);
+    console.error("[saveMessage] Caught error:", {
+      error,
+      errorMessage: error.message,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   }
 }
