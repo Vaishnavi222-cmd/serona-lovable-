@@ -24,7 +24,7 @@ export async function createChat() {
     });
 
     const { data, error: insertError } = await supabase
-      .from('messages')  // Changed from 'chats' to 'messages' for testing
+      .from('chats')  // Fixed: Using 'chats' table instead of 'messages'
       .insert([{ 
         title: 'New Chat',
         user_id: user.id,
