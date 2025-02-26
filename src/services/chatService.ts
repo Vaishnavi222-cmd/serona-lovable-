@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -18,9 +19,9 @@ export async function createChat() {
           id: refreshData.session.user.id,
           email: refreshData.session.user.email,
           metadata: refreshData.session.user.user_metadata,
-          rawUser: refreshData.session.user // Added full user object for debugging
+          rawUser: refreshData.session.user
         } : null,
-        rawSession: refreshData.session // Added full session object for debugging
+        rawSession: refreshData.session
       } : null
     });
 
@@ -42,9 +43,9 @@ export async function createChat() {
           id: session.user.id,
           email: session.user.email,
           metadata: session.user.user_metadata,
-          rawUser: session.user // Added full user object for debugging
+          rawUser: session.user
         } : null,
-        rawSession: session // Added full session object for debugging
+        rawSession: session
       } : null
     });
 
@@ -53,37 +54,20 @@ export async function createChat() {
         error: sessionError,
         session: session,
         hasUser: session?.user ? true : false,
-        rawSession: session // Added full session object for debugging
+        rawSession: session
       });
       return { error: "Authentication error", data: null };
     }
 
     const user = session.user;
-    console.log("🔍 DEBUG - Final user object:", {
-      user: user,
-      metadata: user.user_metadata,
-      rawUser: user // Added full user object for debugging
-    });
     
-    // Double check email existence
-    if (!user.email) {
-      console.error("❌ User email is missing", {
-        user: user,
-        userMetadata: user.user_metadata,
-        sessionState: session,
-        rawUser: user, // Added full user object for debugging
-        rawSession: session // Added full session object for debugging
-      });
-      return { error: "User email is required", data: null };
-    }
-
     console.log("✅ Creating chat with user data:", {
       userId: user.id,
       userEmail: user.email,
       sessionState: true,
       authenticated: true,
       metadata: user.user_metadata,
-      rawUser: user // Added full user object for debugging
+      rawUser: user
     });
 
     const { data, error: insertError } = await supabase
@@ -101,7 +85,7 @@ export async function createChat() {
         error: insertError,
         user: user,
         hasEmail: user.email ? true : false,
-        rawUser: user // Added full user object for debugging
+        rawUser: user
       });
       return { error: insertError.message, data: null };
     }
@@ -124,38 +108,45 @@ export async function createChat() {
 
 export async function saveMessage(chatId: string, message: string, userId: string, userEmail: string) {
   try {
+    console.log("🔍 Starting saveMessage...", { chatId, userId, userEmail });
+
+    // Verify session and user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session?.user) {
       console.error("Session error:", sessionError);
-      return null;
+      throw new Error("Authentication required");
     }
 
     // Verify user matches session
-    if (session.user.id !== userId || session.user.email !== userEmail) {
+    if (session.user.id !== userId) {
       console.error("User mismatch");
-      return null;
+      throw new Error("User authentication mismatch");
     }
 
+    console.log("✅ Inserting message into chat_messages...");
+    
     const { data, error } = await supabase
       .from('chat_messages')
-      .insert([{ 
+      .insert({
         chat_session_id: chatId,
         input_message: message,
         user_id: userId,
         user_email: userEmail
-      }])
-      .select()
-      .maybeSingle();
-    
+      })
+      .select('*')
+      .single();
+
     if (error) {
-      console.error("Error saving message:", error);
-      return null;
+      console.error("❌ Error saving message:", error);
+      throw error;
     }
+
+    console.log("✅ Message saved successfully:", data);
     return data;
   } catch (error) {
-    console.error("Unexpected error in saveMessage:", error);
-    return null;
+    console.error("❌ Error in saveMessage:", error);
+    throw error;
   }
 }
 
@@ -187,6 +178,8 @@ export async function fetchChats(userId: string) {
 
 export async function fetchMessages(chatId: string) {
   try {
+    console.log("🔍 Starting fetchMessages for chatId:", chatId);
+    
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session?.user) {
@@ -194,6 +187,8 @@ export async function fetchMessages(chatId: string) {
       return [];
     }
 
+    console.log("✅ Fetching messages...");
+    
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
@@ -201,12 +196,14 @@ export async function fetchMessages(chatId: string) {
       .order('created_at', { ascending: true });
     
     if (error) {
-      console.error("Error fetching messages:", error);
+      console.error("❌ Error fetching messages:", error);
       return [];
     }
+
+    console.log("✅ Messages fetched:", data?.length || 0, "messages");
     return data || [];
   } catch (error) {
-    console.error("Unexpected error in fetchMessages:", error);
+    console.error("❌ Unexpected error in fetchMessages:", error);
     return [];
   }
 }

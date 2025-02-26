@@ -233,7 +233,14 @@ const Chat = () => {
   };
 
   const handleSend = async () => {
-    if (!message.trim() || !user?.email || !currentChatId) return;
+    if (!message.trim() || !user?.email || !currentChatId) {
+      console.log("Cannot send message:", { 
+        hasMessage: !!message.trim(), 
+        hasUserEmail: !!user?.email, 
+        hasChatId: !!currentChatId 
+      });
+      return;
+    }
 
     if (!user) {
       setShowAuthDialog(true);
@@ -246,6 +253,12 @@ const Chat = () => {
     }
 
     try {
+      console.log("Sending message:", {
+        chatId: currentChatId,
+        userId: user.id,
+        userEmail: user.email
+      });
+
       const savedMessage = await saveMessage(
         currentChatId,
         message.trim(),
@@ -254,6 +267,7 @@ const Chat = () => {
       );
 
       if (savedMessage) {
+        console.log("Message saved successfully:", savedMessage);
         const newMessage: Message = {
           id: savedMessage.id,
           text: message.trim(),
