@@ -150,15 +150,15 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     
     const insertData = {
       chat_session_id: chatId,
-      input_message: message,
+      content: message,
       user_id: userId,
-      user_email: userEmail
+      sender: 'user'
     };
 
     console.log("🔍 DEBUG - Attempting to insert:", insertData);
 
     const { data, error } = await supabase
-      .from('chat_messages')
+      .from('messages')
       .insert(insertData)
       .select('*')
       .single();
@@ -231,7 +231,7 @@ export async function fetchMessages(chatId: string) {
     console.log("✅ Fetching messages...");
     
     const { data, error } = await supabase
-      .from('chat_messages')
+      .from('messages')
       .select('*')
       .eq('chat_session_id', chatId)
       .order('created_at', { ascending: true });
@@ -248,3 +248,4 @@ export async function fetchMessages(chatId: string) {
     return [];
   }
 }
+

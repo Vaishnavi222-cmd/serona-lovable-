@@ -203,8 +203,8 @@ const Chat = () => {
       const fetchedMessages = await fetchMessages(chatId);
       const formattedMessages: Message[] = fetchedMessages.map(msg => ({
         id: msg.id,
-        text: msg.input_message || msg.output_message || '',
-        sender: msg.input_message ? 'user' as const : 'ai' as const
+        text: msg.content,
+        sender: msg.sender as 'user' | 'ai'
       }));
       setMessages(formattedMessages);
     } catch (error) {
@@ -296,7 +296,7 @@ const Chat = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'chat_messages',
+          table: 'messages',
           filter: `user_id=eq.${user.id}`
         },
         () => {
