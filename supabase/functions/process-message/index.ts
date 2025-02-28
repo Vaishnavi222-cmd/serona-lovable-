@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,18 +9,13 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('🚀 Process Message Function Started', {
-    timestamp: new Date().toISOString(),
-    method: req.method
-  });
-
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase client
+    // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -27,94 +23,73 @@ serve(async (req) => {
       throw new Error('Missing Supabase environment variables');
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // Get the authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error('❌ Authentication Error:', {
-        error: authError,
-        timestamp: new Date().toISOString()
-      });
+      console.error('Authentication error:', authError);
       throw new Error('Unauthorized');
     }
-
-    console.log('✅ User authenticated:', {
-      userId: user.id,
-      timestamp: new Date().toISOString()
-    });
 
     // Parse request body
     const { content, chat_session_id } = await req.json();
 
     if (!content || !chat_session_id) {
-      console.error('❌ Validation Error: Missing required fields');
       throw new Error('Missing required fields');
     }
 
-    console.log('📝 Inserting message:', {
-      chatSessionId: chat_session_id,
+    console.log('Processing message:', {
+      chatId: chat_session_id,
       userId: user.id,
-      timestamp: new Date().toISOString()
+      contentLength: content.length
     });
 
-    // Insert message
-    const { data: message, error: insertError } = await supabaseClient
+    // Generate AI response (placeholder for now)
+    const aiResponse = {
+      content: "I'm here to help! However, I notice that the AI integration is not yet complete. This is a placeholder response. Please set up the OpenAI API key to enable full AI functionality.",
+      role: "assistant"
+    };
+
+    // Save AI response to database
+    const { data: savedResponse, error: saveError } = await supabase
       .from('messages')
       .insert({
-        content,
         chat_session_id,
+        content: aiResponse.content,
         user_id: user.id,
-        sender: 'user',
+        sender: 'ai'
       })
       .select()
       .single();
 
-    if (insertError) {
-      console.error('❌ Database Error:', {
-        error: insertError,
-        timestamp: new Date().toISOString()
-      });
-      throw insertError;
+    if (saveError) {
+      console.error('Error saving AI response:', saveError);
+      throw saveError;
     }
 
-    console.log('✅ Message inserted successfully:', {
-      messageId: message.id,
+    console.log('AI response saved successfully:', {
+      messageId: savedResponse.id,
       timestamp: new Date().toISOString()
     });
 
-    return new Response(
-      JSON.stringify({
-        message: 'Message processed successfully',
-        data: message,
-      }),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-        status: 200,
-      }
-    );
+    return new Response(JSON.stringify({ 
+      content: aiResponse.content,
+      message: savedResponse
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
+    });
 
   } catch (error) {
-    console.error('❌ Error processing message:', {
-      error: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-
+    console.error('Error in process-message function:', error);
     return new Response(
-      JSON.stringify({
-        error: error.message,
-      }),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-        status: error.message === 'Unauthorized' ? 401 : 500,
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
