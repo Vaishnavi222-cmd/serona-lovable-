@@ -75,24 +75,16 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     });
 
     // First, save the user's message
-    const userMessageData = {
-      chat_session_id: chatId,
-      content: message,
-      user_id: userId,
-      sender: 'user'
-    };
-
-    console.log("[saveMessage] About to insert user message:", {
-      ...userMessageData,
-      contentLength: message.length,
-      timestamp: new Date().toISOString()
-    });
-
     const { data: savedUserMessage, error: userMessageError } = await supabase
       .from('messages')
-      .insert(userMessageData)
+      .insert({
+        chat_session_id: chatId,
+        content: message,
+        user_id: userId,
+        sender: 'user'
+      })
       .select()
-      .single();
+      .maybeSingle();
 
     if (userMessageError) {
       console.error("[saveMessage] User message insert error:", {
@@ -105,7 +97,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     }
 
     console.log("[saveMessage] User message saved successfully:", {
-      savedData: savedUserMessage,
+      savedMessageId: savedUserMessage?.id,
       timestamp: new Date().toISOString()
     });
 
@@ -114,7 +106,8 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
         content: message,
-        chat_session_id: chatId
+        chat_session_id: chatId,
+        user_message_id: savedUserMessage?.id
       }
     });
 
@@ -126,10 +119,28 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw aiError;
     }
 
-    console.log("[saveMessage] AI response received:", {
-      response: aiResponse,
-      timestamp: new Date().toISOString()
-    });
+    // Save the AI response as a new message
+    if (aiResponse?.content) {
+      console.log("[saveMessage] Saving AI response");
+      const { error: aiMessageError } = await supabase
+        .from('messages')
+        .insert({
+          chat_session_id: chatId,
+          content: aiResponse.content,
+          user_id: userId,
+          sender: 'ai'
+        });
+
+      if (aiMessageError) {
+        console.error("[saveMessage] AI message insert error:", {
+          error: aiMessageError,
+          timestamp: new Date().toISOString()
+        });
+        throw aiMessageError;
+      }
+
+      console.log("[saveMessage] AI response saved successfully");
+    }
 
     return savedUserMessage;
   } catch (error) {
@@ -205,4 +216,3 @@ export async function fetchChats(userId: string) {
     return [];
   }
 }
-
