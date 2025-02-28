@@ -145,7 +145,6 @@ const Chat = () => {
     }
   };
 
-  // Handle message sending
   const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
@@ -159,65 +158,51 @@ const Chat = () => {
       return;
     }
 
-    // Move tempMessageId outside of try block so it's accessible in catch block
-    const tempMessageId = Date.now().toString();
-    const tempUserMessage = {
-      id: tempMessageId,
-      content: message.trim(),
-      sender: 'user' as const
-    };
+    const messageContent = message.trim();
+    setMessage(''); // Clear input immediately for better UX
 
     try {
-      // Optimistically add user message to UI
-      setMessages(prev => [...prev, tempUserMessage]);
-      setMessage(''); // Clear input
-
-      console.log("🚀 Sending message to process-message function:", {
+      console.log("🚀 Starting message save process:", {
         chatId: currentChatId,
         userId: user.id,
-        messageLength: message.length,
+        messageLength: messageContent.length,
         timestamp: new Date().toISOString()
       });
 
-      // Send message to Edge Function
-      const { data: response, error } = await supabase.functions.invoke('process-message', {
-        body: {
-          content: message.trim(),
-          chat_session_id: currentChatId
-        }
-      });
+      // Save the message to the database
+      const result = await saveMessage(
+        currentChatId,
+        messageContent,
+        user.id,
+        user.email || ''
+      );
 
-      if (error) {
-        console.error("❌ Error processing message:", {
-          error,
-          timestamp: new Date().toISOString()
-        });
+      if (!result) {
         toast({
           title: "Error",
           description: "Failed to send message. Please try again.",
           variant: "destructive",
         });
-        // Remove the optimistic message on error
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
 
-      console.log("✅ Message processed successfully:", {
-        response,
+      console.log("✅ Message saved successfully:", {
+        messageId: result.id,
         timestamp: new Date().toISOString()
       });
 
-      // We don't need to manually update messages here since we're using
-      // real-time subscriptions that will update the UI automatically
-
-    } catch (error) {
-      console.error("❌ Unexpected error:", error);
+    } catch (error: any) {
+      console.error("❌ Error in handleSend:", {
+        error,
+        errorMessage: error.message,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error.message || "Failed to send message. Please try again.",
         variant: "destructive",
       });
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
     }
   };
 
