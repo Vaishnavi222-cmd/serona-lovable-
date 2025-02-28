@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -74,7 +75,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     });
 
     // First, save the user's message
-    const { data: savedUserMessage, error: userMessageError } = await supabase
+    const { data: userMessage, error: userMessageError } = await supabase
       .from('messages')
       .insert({
         chat_session_id: chatId,
@@ -96,7 +97,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     }
 
     console.log("[saveMessage] User message saved successfully:", {
-      savedMessageId: savedUserMessage?.id,
+      savedMessageId: userMessage?.id,
       timestamp: new Date().toISOString()
     });
 
@@ -120,14 +121,16 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     // Save the AI response as a new message
     if (aiResponse?.content) {
       console.log("[saveMessage] Saving AI response");
-      const { error: aiMessageError } = await supabase
+      const { data: aiMessage, error: aiMessageError } = await supabase
         .from('messages')
         .insert({
           chat_session_id: chatId,
           content: aiResponse.content,
           user_id: userId,
           sender: 'ai'
-        });
+        })
+        .select()
+        .maybeSingle();
 
       if (aiMessageError) {
         console.error("[saveMessage] AI message insert error:", {
@@ -137,11 +140,14 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         throw aiMessageError;
       }
 
-      console.log("[saveMessage] AI response saved successfully");
+      console.log("[saveMessage] AI response saved successfully:", {
+        savedAiMessageId: aiMessage?.id,
+        timestamp: new Date().toISOString()
+      });
     }
 
-    return savedUserMessage;
-  } catch (error) {
+    return userMessage;
+  } catch (error: any) {
     console.error("[saveMessage] Caught error:", {
       error,
       errorMessage: error.message,
