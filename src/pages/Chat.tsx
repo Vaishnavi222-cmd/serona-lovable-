@@ -167,52 +167,38 @@ const Chat = () => {
     };
 
     try {
-      // Optimistically add user message to UI
+      // Clear input and show optimistic update immediately
+      setMessage('');
       setMessages(prev => [...prev, tempUserMessage]);
-      setMessage(''); // Clear input immediately for better UX
 
-      console.log("🚀 Starting message save process:", {
+      console.log("🚀 Sending message:", {
         chatId: currentChatId,
         userId: user.id,
-        messageLength: messageContent.length,
-        timestamp: new Date().toISOString()
+        messageLength: messageContent.length
       });
 
-      // Save the message to the database
-      const result = await saveMessage(
+      const savedMessage = await saveMessage(
         currentChatId,
         messageContent,
         user.id,
         user.email || ''
       );
 
-      if (!result) {
-        console.error("Failed to save message to database");
-        // Remove optimistic message if save failed
+      if (!savedMessage) {
+        console.error("Failed to save message");
+        // Remove optimistic message on failure
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         toast({
           title: "Error",
           description: "Failed to send message. Please try again.",
           variant: "destructive",
         });
-        return;
       }
 
-      console.log("✅ Message saved successfully:", {
-        messageId: result.id,
-        timestamp: new Date().toISOString()
-      });
-
     } catch (error: any) {
-      console.error("❌ Error in handleSend:", {
-        error,
-        errorMessage: error.message,
-        timestamp: new Date().toISOString()
-      });
-      
+      console.error("Error sending message:", error);
       // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      
       toast({
         title: "Error",
         description: error.message || "Failed to send message. Please try again.",
