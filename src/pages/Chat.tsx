@@ -238,7 +238,7 @@ const Chat = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
-        await loadChats();
+        await initializeChat(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setChats([]);
@@ -248,11 +248,47 @@ const Chat = () => {
     });
 
     // Initial session check
+    const initializeChat = async (currentUser: User) => {
+      try {
+        const fetchedChats = await fetchChats(currentUser.id);
+        
+        // Always create a new chat if none exists
+        let activeChat;
+        if (fetchedChats.length === 0) {
+          const { data: newChat, error } = await createChat();
+          if (error) {
+            console.error("Error creating new chat:", error);
+            return;
+          }
+          if (newChat) {
+            activeChat = newChat;
+            fetchedChats.unshift(newChat); // Add new chat to beginning of array
+          }
+        } else {
+          activeChat = fetchedChats[0]; // Use the most recent chat
+        }
+
+        const formattedChats = fetchedChats.map(chat => ({
+          id: chat.id,
+          title: chat.title,
+          active: chat.id === activeChat.id,
+          chat_session_id: chat.id
+        }));
+        
+        setChats(formattedChats);
+        setCurrentChatId(activeChat.id);
+        await loadChatMessages(activeChat.id);
+      } catch (error) {
+        console.error('Error initializing chat:', error);
+      }
+    };
+
+    // Check initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        await loadChats();
+        await initializeChat(session.user);
       }
     };
 
