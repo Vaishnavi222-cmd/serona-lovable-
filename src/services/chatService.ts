@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -106,8 +105,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
         content: message,
-        chat_session_id: chatId,
-        user_message_id: savedUserMessage?.id
+        chat_session_id: chatId
       }
     });
 
