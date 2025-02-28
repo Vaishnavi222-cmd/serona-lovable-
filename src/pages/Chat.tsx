@@ -145,6 +145,7 @@ const Chat = () => {
     }
   };
 
+  // Modified handleSend to update chat title on first message
   const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
@@ -177,12 +178,37 @@ const Chat = () => {
         messageLength: messageContent.length
       });
 
+      // Save the message
       const savedMessage = await saveMessage(
         currentChatId,
         messageContent,
         user.id,
         user.email || ''
       );
+
+      // Update chat title if this is the first message
+      const currentChat = chats.find(chat => chat.id === currentChatId);
+      if (currentChat && currentChat.title === 'New Chat') {
+        // Create a title from the first message (max 50 chars)
+        const newTitle = messageContent.length > 50 
+          ? `${messageContent.substring(0, 47)}...`
+          : messageContent;
+
+        const { error: updateError } = await supabase
+          .from('chats')
+          .update({ title: newTitle })
+          .eq('id', currentChatId);
+
+        if (!updateError) {
+          setChats(prevChats => 
+            prevChats.map(chat => 
+              chat.id === currentChatId 
+                ? { ...chat, title: newTitle }
+                : chat
+            )
+          );
+        }
+      }
 
       if (!savedMessage) {
         console.error("Failed to save message");
@@ -622,18 +648,8 @@ const Chat = () => {
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
                 value={message}
-                onChange={(e) => {
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
-                  setMessage(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                  if (e.key === 'Enter' && !e.shiftKey && !isMobileDevice) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
+                onChange={adjustTextareaHeight}
+                onKeyDown={handleKeyDown}
                 placeholder="Message Serona AI..."
                 className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                          bg-white border border-gray-200 shadow-sm resize-none text-gray-800
