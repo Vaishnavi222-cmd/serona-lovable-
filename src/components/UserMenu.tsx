@@ -133,17 +133,9 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
       console.log('Starting payment flow for plan:', planType);
 
-      // Ensure Razorpay is loaded before proceeding
-      if (!isRazorpayLoaded) {
-        console.log('Loading Razorpay script...');
+      // Make sure Razorpay is loaded
+      if (!(window as any).Razorpay) {
         await loadRazorpayScript();
-        // Small delay to ensure script is fully initialized
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Double check Razorpay is available
-      if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
 
       console.log('Creating payment order...');
@@ -158,8 +150,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
       console.log('Payment order created:', data.orderId);
 
-      // Initialize Razorpay options
-      const razorpayOptions = {
+      // Initialize and open Razorpay immediately after user action
+      const razorpay = new (window as any).Razorpay({
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
@@ -242,14 +234,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             });
           }
         },
-      };
+      });
 
-      // Create and open Razorpay with a small delay to ensure proper initialization
-      console.log('Opening Razorpay modal...');
-      setTimeout(() => {
-        const razorpay = new (window as any).Razorpay(razorpayOptions);
-        razorpay.open();
-      }, 100);
+      // Open Razorpay modal immediately
+      razorpay.open();
 
     } catch (error: any) {
       console.error('Payment setup error:', error);
