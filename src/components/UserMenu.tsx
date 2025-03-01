@@ -104,7 +104,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSignOut = async () => {
     try {
-      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -128,8 +127,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     setShowUpgradeDialog(false);
 
     try {
-      setIsLoading(true);
-
       const session = await verifySession();
       if (!session?.user?.id) {
         throw new Error('Session verification failed. Please sign in again.');
@@ -196,15 +193,20 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               }
             });
 
-            if (verifyResponse.error || !verifyResponse.data) {
+            if (verifyResponse.error) {
               console.error('Verification error:', verifyResponse.error);
-              throw new Error(verifyResponse.error || 'Payment verification failed');
+              toast({
+                title: "Payment verification failed",
+                description: verifyResponse.error?.message || "Please contact support if this persists",
+                variant: "destructive",
+              });
+              return;
             }
 
             console.log('Verification successful:', verifyResponse);
 
             // Poll for plan update with increased timeout
-            const planUpdated = await pollForPlanUpdate(user.id, 15); // 15 attempts with 2 second delay
+            const planUpdated = await pollForPlanUpdate(user.id, 15); 
             
             if (!planUpdated) {
               console.error('Plan update verification failed');
