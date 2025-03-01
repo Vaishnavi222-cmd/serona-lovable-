@@ -205,7 +205,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      handle_plan_update: {
+        Args: {
+          p_user_id: string
+          p_plan_type: Database["public"]["Enums"]["plan_type"]
+          p_order_id: string
+          p_payment_id: string
+          p_amount: number
+        }
+        Returns: {
+          amount_paid: number
+          created_at: string
+          end_time: string
+          id: string
+          order_id: string | null
+          payment_id: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          remaining_input_tokens: number
+          remaining_output_tokens: number
+          start_time: string
+          status: string
+          user_id: string
+        }
+      }
     }
     Enums: {
       plan_type: "hourly" | "daily" | "monthly"
