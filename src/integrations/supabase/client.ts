@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -11,14 +10,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     storage: localStorage,
     detectSessionInUrl: true,
-    storageKey: 'sb-session', // Explicit storage key
-    flowType: 'pkce', // More secure authentication flow
+    storageKey: 'sb-session',
+    flowType: 'pkce',
     debug: true
   }
 });
 
 // Enhanced debug listener for auth state changes with more detailed session info
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange(async (event, session) => {
   console.log("🔄 DEBUG - Auth state changed:", {
     event,
     timestamp: new Date().toISOString(),
@@ -33,12 +32,58 @@ supabase.auth.onAuthStateChange((event, session) => {
         hasUserMetadata: session.user.user_metadata ? true : false,
         metadata: session.user.user_metadata,
         authProvider: session.user.app_metadata?.provider,
-        rawUserObject: session.user // Added full user object for debugging
+        rawUserObject: session.user
       } : null,
       expiresAt: session?.expires_at,
-      rawSession: session // Added full session object for debugging
+      rawSession: session
     }
   });
+
+  // Create or update daily usage record when user signs in
+  if (event === 'SIGNED_IN' && session?.user) {
+    try {
+      console.log("📊 Creating/updating daily usage record for user:", session.user.id);
+      
+      const { data: existingUsage, error: checkError } = await supabase
+        .from('user_daily_usage')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('date', new Date().toISOString().split('T')[0])
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("❌ Error checking existing usage:", checkError);
+        return;
+      }
+
+      if (!existingUsage) {
+        const { data: newUsage, error: insertError } = await supabase
+          .from('user_daily_usage')
+          .insert([
+            {
+              user_id: session.user.id,
+              date: new Date().toISOString().split('T')[0],
+              responses_count: 0,
+              output_tokens_used: 0,
+              input_tokens_used: 0,
+              last_usage_time: new Date().toISOString()
+            }
+          ])
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("❌ Error creating daily usage record:", insertError);
+        } else {
+          console.log("✅ Created new daily usage record:", newUsage);
+        }
+      } else {
+        console.log("ℹ️ Daily usage record already exists:", existingUsage);
+      }
+    } catch (error) {
+      console.error("❌ Unexpected error in daily usage tracking:", error);
+    }
+  }
 });
 
 // Enhanced helper function to get current user with more detailed logging
@@ -117,4 +162,3 @@ export const getCurrentUser = async () => {
 
   return { user: session.user, error: null };
 };
-
