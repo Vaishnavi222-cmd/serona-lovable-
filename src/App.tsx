@@ -37,32 +37,25 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Get current session synchronously first
+        const { data: { session } } = await supabase.auth.getSession();
         
-        // Handle OAuth callback immediately without any delays
+        // Immediately handle OAuth callback if present
         if (location.search.includes('code=')) {
           navigate('/', { replace: true });
-          return; // Exit early after redirect
-        }
-        
-        if (error) {
-          console.error('Error checking session:', error);
+          return;
         }
       } catch (error) {
         console.error('Error during session check:', error);
       } finally {
-        // Always set loading to false, regardless of outcome
         setIsLoading(false);
       }
     };
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session ? 'Has session' : 'No session');
-      
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
-        // Clear OAuth code from URL if present
         if (location.search.includes('code=')) {
           navigate('/', { replace: true });
         }
@@ -76,7 +69,6 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [navigate, location]);
 
-  // Show loading state instead of null
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
