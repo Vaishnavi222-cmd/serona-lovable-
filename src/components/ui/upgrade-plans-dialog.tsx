@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Clock, Calendar, CalendarDays, CheckCircle2, X } from "lucide-react";
 
-// Memoize the plans array since it never changes
+// Remove the readonly modifier from the plans array
 const plans = [
   {
     type: 'hourly',
@@ -51,7 +51,7 @@ const plans = [
     ],
     icon: <CalendarDays className="w-5 h-5" />,
   },
-] as const;
+];
 
 interface Plan {
   type: 'hourly' | 'daily' | 'monthly';
