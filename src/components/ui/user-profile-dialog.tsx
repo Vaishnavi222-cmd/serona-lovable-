@@ -36,8 +36,9 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         return;
       }
 
-      // First update expired plans
       const now = new Date().toISOString();
+
+      // First update expired plans
       await supabase
         .from('user_plans')
         .update({ status: 'expired' })
@@ -45,37 +46,37 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         .eq('status', 'active')
         .lt('end_time', now);
 
-      // Then get active plan with retries
-      let retries = 3;
-      let planData = null;
-      
-      while (retries > 0 && !planData) {
-        const { data: currentPlan, error: planError } = await supabase
-          .from('user_plans')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .gt('end_time', now)
-          .order('created_at', { ascending: false })
-          .maybeSingle();
+      // Enhanced active plan fetch with retries and better error handling
+      const fetchActivePlan = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          const { data: currentPlan, error: planError } = await supabase
+            .from('user_plans')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .gt('end_time', now)
+            .order('created_at', { ascending: false })
+            .maybeSingle();
 
-        if (planError) {
-          console.error('Error fetching active plan:', planError);
-        } else if (currentPlan) {
-          planData = currentPlan;
-          break;
+          if (planError) {
+            console.error(`Attempt ${i + 1}: Error fetching active plan:`, planError);
+            if (i === retries - 1) throw planError;
+          } else if (currentPlan) {
+            console.log('Active plan found:', currentPlan);
+            return currentPlan;
+          }
+
+          if (i < retries - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
+        return null;
+      };
 
-        retries--;
-        if (retries > 0 && !planData) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+      const activePlanData = await fetchActivePlan();
+      setActivePlan(activePlanData);
 
-      console.log('Active plan data:', planData);
-      setActivePlan(planData);
-
-      // Get all plans for history
+      // Get purchase history with enhanced error handling
       const { data: historyData, error: historyError } = await supabase
         .from('user_plans')
         .select('*')
@@ -83,25 +84,33 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
         .order('created_at', { ascending: false });
 
       if (historyError) {
-        console.error('Error fetching history:', historyError);
-      } else {
-        console.log('Purchase history:', historyData);
-        setPurchaseHistory(historyData || []);
+        console.error('Error fetching purchase history:', historyError);
+        throw historyError;
       }
+
+      console.log('Purchase history:', historyData);
+      setPurchaseHistory(historyData || []);
     } catch (error) {
       console.error('Error in fetchUserData:', error);
+      toast({
+        title: "Error loading profile data",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Set up real-time subscription for plan updates
+  // Enhanced real-time subscription setup
   useEffect(() => {
     if (!open) return;
 
     const setupSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      console.log('Setting up real-time subscription for user:', user.id);
 
       const channel = supabase
         .channel('user-plans-changes')
@@ -118,28 +127,29 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
             fetchUserData();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Subscription status:', status);
+        });
 
       return () => {
+        console.log('Cleaning up subscription');
         supabase.removeChannel(channel);
       };
     };
 
-    setupSubscription();
+    const subscription = setupSubscription();
+    return () => {
+      subscription.then(cleanup => cleanup && cleanup());
+    };
   }, [open]);
 
-  // Fetch data when dialog opens
-  useEffect(() => {
-    if (open) {
-      fetchUserData();
-    }
-  }, [open]);
-
-  // Shorter polling interval right after opening the dialog
+  // Initial data fetch and periodic refresh
   useEffect(() => {
     if (!open) return;
 
-    // Initial rapid polling
+    fetchUserData();
+
+    // Immediate polling for the first 30 seconds
     const rapidInterval = setInterval(fetchUserData, 2000);
     
     // Switch to slower polling after 30 seconds
@@ -222,6 +232,10 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
                   <p className="text-sm">
                     <span className="font-medium">Active Period:</span>{' '}
                     {formatTimeRange(activePlan.start_time, activePlan.end_time)}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Amount Paid:</span>{' '}
+                    ₹{activePlan.amount_paid}
                   </p>
                   <p className="text-sm">
                     <span className="font-medium">Remaining Tokens:</span>{' '}
