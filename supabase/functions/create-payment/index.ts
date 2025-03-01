@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import Razorpay from "https://esm.sh/razorpay@2.9.2"
@@ -15,14 +16,15 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    // Get the API keys from environment variables
+    const key_id = Deno.env.get('RAZORPAY_KEY_ID')
+    const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET')
+
+    if (!key_id || !key_secret) {
+      throw new Error('Missing Razorpay credentials')
+    }
 
     const { planType } = await req.json()
-
-    console.log("plantype", planType)
 
     if (!planType) {
       throw new Error('Missing plan type')
@@ -30,22 +32,31 @@ serve(async (req) => {
 
     const price = planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
 
+    console.log('Creating payment order with Razorpay...', {
+      keyId: key_id,
+      price,
+      planType
+    })
+
     const razorpay = new Razorpay({
-      key_id: Deno.env.get('RAZORPAY_KEY_ID'),
-      key_secret: Deno.env.get('RAZORPAY_KEY_SECRET'),
+      key_id: key_id,
+      key_secret: key_secret
     });
 
     const order = await razorpay.orders.create({
       amount: price,
       currency: 'INR',
       receipt: `receipt_${Math.random().toString(36).substring(2, 15)}`,
+      payment_capture: 1, // Auto capture payment
     });
+
+    console.log('Razorpay order created:', order)
 
     const response = {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: Deno.env.get('RAZORPAY_KEY_ID')
+      keyId: key_id
     }
 
     return new Response(
@@ -59,6 +70,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Payment creation error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
@@ -71,3 +83,4 @@ serve(async (req) => {
     )
   }
 })
+

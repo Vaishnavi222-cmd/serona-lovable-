@@ -130,21 +130,31 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         await loadRazorpayScript();
       }
 
-      // Create payment order immediately
-      const response = supabase.functions.invoke('create-payment', {
+      setIsLoading(true);
+
+      // Create payment order
+      const response = await supabase.functions.invoke('create-payment', {
         body: { planType },
       });
 
-      // Get session in parallel with payment order creation
-      const sessionPromise = verifySession();
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create payment order');
+      }
 
-      // Initialize Razorpay immediately with loading state
-      const razorpayOptions = {
-        key: process.env.RAZORPAY_KEY_ID || 'rzp_test_sGbQQKPhR5GwO8',
-        amount: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
-        currency: 'INR',
+      const { data } = response;
+      
+      if (!data?.orderId || !data?.keyId) {
+        throw new Error('Invalid payment response received');
+      }
+
+      // Initialize Razorpay with order details
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
         name: "Serona AI",
         description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan`,
+        order_id: data.orderId,
         prefill: {
           email: userEmail,
         },
@@ -156,27 +166,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           ondismiss: function() {
             console.log('Payment modal dismissed');
             setShowUpgradeDialog(false);
+            setIsLoading(false);
           },
           escape: true,
           animation: true,
           backdropClose: false
         },
-      };
-
-      // Create and open Razorpay immediately
-      const razorpay = new (window as any).Razorpay(razorpayOptions);
-      razorpay.open();
-
-      // Wait for payment order and session in parallel
-      const [{ data }, session] = await Promise.all([response, sessionPromise]);
-
-      if (!session?.user?.id || !data?.orderId) {
-        throw new Error('Session or order creation failed');
-      }
-
-      // Update Razorpay instance with actual order ID
-      razorpay.updateOrder({
-        order_id: data.orderId,
         handler: async function(response: any) {
           try {
             if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
@@ -191,21 +186,15 @@ export function UserMenu({ userEmail }: UserMenuProps) {
                 paymentId: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
                 planType,
-                userId: session.user.id
+                userId: (await verifySession()).user.id
               }
             });
 
             if (verifyResponse.error) {
-              console.error('Verification error:', verifyResponse.error);
-              toast({
-                title: "Payment verification failed",
-                description: verifyResponse.error?.message || "Please contact support if this persists",
-                variant: "destructive",
-              });
-              return;
+              throw verifyResponse.error;
             }
 
-            const planUpdated = await pollForPlanUpdate(session.user.id);
+            const planUpdated = await pollForPlanUpdate((await verifySession()).user.id);
             
             if (planUpdated) {
               toast({
@@ -233,9 +222,14 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               description: error.message || "An unexpected error occurred",
               variant: "destructive",
             });
+          } finally {
+            setIsLoading(false);
           }
-        },
-      });
+        }
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
 
     } catch (error: any) {
       console.error('Payment setup error:', error);
@@ -245,6 +239,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         variant: "destructive",
       });
       setShowUpgradeDialog(false);
+      setIsLoading(false);
     }
   }, [loadRazorpayScript, userEmail, showProfileDialog, setShowUpgradeDialog, supabase, toast, verifySession, pollForPlanUpdate]);
 
