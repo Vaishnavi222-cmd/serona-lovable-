@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
@@ -30,20 +30,30 @@ const queryClient = new QueryClient({
   },
 });
 
-// SessionProvider component to handle session persistence
+// Enhanced SessionProvider component to handle OAuth redirects
 const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check initial session
+    // Handle OAuth redirect and initial session check
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // If we're on the OAuth callback URL (has ?code= parameter)
+        if (location.search.includes('code=')) {
+          // Wait a moment for the session to be fully established
+          await new Promise(resolve => setTimeout(resolve, 100));
+          // Then redirect to home, clearing the OAuth code from URL
+          navigate('/', { replace: true });
+        }
+        
         if (error) {
           console.error('Error checking session:', error);
         }
-        console.log('Initial session check:', session ? 'Logged in' : 'No session');
+        
         setIsLoading(false);
       } catch (error) {
         console.error('Error during session check:', error);
@@ -60,6 +70,10 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
       if (event === 'SIGNED_IN') {
         // Force a session refresh when signed in
         await supabase.auth.getSession();
+        // Clear any OAuth codes from URL
+        if (location.search.includes('code=')) {
+          navigate('/', { replace: true });
+        }
       } else if (event === 'SIGNED_OUT') {
         navigate('/');
       }
@@ -69,10 +83,10 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location]);
 
   if (isLoading) {
-    return null; // or a loading spinner if you prefer
+    return null;
   }
 
   return <>{children}</>;
