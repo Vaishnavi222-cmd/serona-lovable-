@@ -26,21 +26,25 @@ serve(async (req) => {
     }
 
     console.log('Using Razorpay key ID:', key_id)
-
+    
+    // Parse request body
     const { planType } = await req.json()
 
     if (!planType) {
       throw new Error('Missing plan type')
     }
 
+    // Calculate price based on plan type (in paise)
     const price = planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
 
-    const razorpay = new Razorpay({
-      key_id: key_id,
-      key_secret: key_secret
-    });
-
     try {
+      // Initialize Razorpay
+      const razorpay = new Razorpay({
+        key_id: key_id,
+        key_secret: key_secret
+      });
+
+      // Create order
       const order = await razorpay.orders.create({
         amount: price,
         currency: 'INR',
@@ -69,7 +73,7 @@ serve(async (req) => {
       )
     } catch (razorpayError) {
       console.error('Razorpay API Error:', razorpayError)
-      throw new Error('Failed to create payment order: ' + razorpayError.message)
+      throw new Error(`Failed to create payment order: ${razorpayError.message}`)
     }
   } catch (error) {
     console.error('Payment creation error:', error)

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -21,38 +22,33 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const { toast } = useToast();
 
-  const loadRazorpayScript = useCallback(() => {
+  const loadRazorpayScript = () => {
     return new Promise<void>((resolve, reject) => {
       if (typeof (window as any).Razorpay !== 'undefined') {
         console.log('Razorpay already loaded');
-        setIsRazorpayLoaded(true);
         resolve();
         return;
       }
 
       const script = document.createElement('script');
-      script.id = 'razorpay-script';
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
-      script.crossOrigin = 'anonymous';
-
+      
       script.onload = () => {
         console.log('Razorpay script loaded successfully');
-        setIsRazorpayLoaded(true);
         resolve();
       };
 
-      script.onerror = (error) => {
-        console.error('Failed to load Razorpay script:', error);
+      script.onerror = () => {
+        console.error('Failed to load Razorpay script');
         reject(new Error('Failed to load payment system'));
       };
 
       document.body.appendChild(script);
     });
-  }, []);
+  };
 
   // Enhanced session verification
   const verifySession = async () => {
@@ -65,7 +61,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   // Poll for plan update
   const pollForPlanUpdate = async (userId: string, maxAttempts = 15): Promise<boolean> => {
-    const delay = 2000; // 2 second delay between attempts
+    const delay = 2000;
     for (let i = 0; i < maxAttempts; i++) {
       const { data, error } = await supabase
         .from('user_plans')
@@ -84,6 +80,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     return false;
   };
 
+  // Load Razorpay script when component mounts
   useEffect(() => {
     loadRazorpayScript().catch(error => {
       console.error('Error loading Razorpay:', error);
@@ -93,17 +90,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         variant: "destructive",
       });
     });
-
-    return () => {
-      const script = document.getElementById('razorpay-script');
-      if (script) {
-        script.remove();
-      }
-    };
-  }, [loadRazorpayScript, toast]);
+  }, [toast]);
 
   const handleSignOut = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -123,16 +114,22 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     }
   };
 
-  const handleSelectPlan = useCallback(async (planType: 'hourly' | 'daily' | 'monthly') => {
+  const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
+    if (isLoading) return;
+
     try {
       setIsLoading(true);
+      console.log('Starting payment process for plan:', planType);
+
+      // Ensure Razorpay is loaded
+      await loadRazorpayScript();
       
-      // Pre-load Razorpay if not already loaded
       if (!(window as any).Razorpay) {
-        await loadRazorpayScript();
+        throw new Error('Razorpay failed to initialize');
       }
 
       // Create payment order
+      console.log('Creating payment order...');
       const response = await supabase.functions.invoke('create-payment', {
         body: { planType },
       });
@@ -162,17 +159,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         theme: {
           color: "#1EAEDB",
-        },
-        modal: {
-          confirm_close: true,
-          ondismiss: function() {
-            console.log('Payment modal dismissed');
-            setShowUpgradeDialog(false);
-            setIsLoading(false);
-          },
-          escape: true,
-          animation: true,
-          backdropClose: false
         },
         handler: async function(response: any) {
           try {
@@ -225,6 +211,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         }
       };
 
+      console.log('Initializing Razorpay...');
       const razorpay = new (window as any).Razorpay(options);
       razorpay.open();
 
@@ -235,10 +222,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         description: error.message || "Please try again later",
         variant: "destructive",
       });
-      setShowUpgradeDialog(false);
-      setIsLoading(false);
+    } finally {
+      if (!document.querySelector('.razorpay-container')) {
+        setIsLoading(false);
+      }
     }
-  }, [loadRazorpayScript, userEmail, showProfileDialog, setShowUpgradeDialog, supabase, toast, verifySession, pollForPlanUpdate]);
+  };
 
   return (
     <>
