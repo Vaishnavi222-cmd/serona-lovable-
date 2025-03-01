@@ -24,10 +24,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const { toast } = useToast();
 
-  // Enhanced Razorpay script loading with better error handling
   const loadRazorpayScript = useCallback(() => {
     return new Promise<void>((resolve, reject) => {
       if (typeof (window as any).Razorpay !== 'undefined') {
+        console.log('Razorpay already loaded');
         setIsRazorpayLoaded(true);
         resolve();
         return;
@@ -37,6 +37,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       script.id = 'razorpay-script';
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
+      script.crossOrigin = 'anonymous';
 
       script.onload = () => {
         console.log('Razorpay script loaded successfully');
@@ -136,11 +137,13 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       if (!isRazorpayLoaded) {
         console.log('Loading Razorpay script...');
         await loadRazorpayScript();
+        // Small delay to ensure script is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Double check Razorpay is available
       if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Payment system failed to initialize. Please try again.');
+        throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
 
       console.log('Creating payment order...');
@@ -155,6 +158,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
       console.log('Payment order created:', data.orderId);
 
+      // Initialize Razorpay options
       const razorpayOptions = {
         key: data.keyId,
         amount: data.amount,
@@ -175,7 +179,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             setShowUpgradeDialog(false);
           },
           escape: true,
-          animation: true
+          animation: true,
+          backdropClose: false
         },
         handler: async function (response: any) {
           try {
@@ -239,10 +244,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
       };
 
-      // Create and open Razorpay
+      // Create and open Razorpay with a small delay to ensure proper initialization
       console.log('Opening Razorpay modal...');
-      const razorpay = new (window as any).Razorpay(razorpayOptions);
-      razorpay.open();
+      setTimeout(() => {
+        const razorpay = new (window as any).Razorpay(razorpayOptions);
+        razorpay.open();
+      }, 100);
 
     } catch (error: any) {
       console.error('Payment setup error:', error);

@@ -72,9 +72,9 @@ export function UpgradePlansDialog({
     },
   ];
 
-  const handleSelectPlan = (planType: 'hourly' | 'daily' | 'monthly') => {
-    // Remove immediate dialog close to prevent race conditions
-    // This will now be handled by the payment flow
+  const handleSelectPlan = (e: React.MouseEvent, planType: 'hourly' | 'daily' | 'monthly') => {
+    e.preventDefault(); // Prevent any default form submission
+    e.stopPropagation(); // Stop event bubbling
     onSelectPlan(planType);
   };
 
@@ -122,7 +122,8 @@ export function UpgradePlansDialog({
                   ))}
                 </ul>
                 <Button
-                  onClick={() => handleSelectPlan(plan.type)}
+                  type="button"
+                  onClick={(e) => handleSelectPlan(e, plan.type)}
                   className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
                 >
                   Get Started
