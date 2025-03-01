@@ -29,7 +29,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Enhanced SessionProvider component to handle OAuth redirects
 const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,20 +39,19 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Handle OAuth callback
+        // Handle OAuth callback immediately without any delays
         if (location.search.includes('code=')) {
-          // Clear the OAuth code from URL immediately
           navigate('/', { replace: true });
-          // No need for artificial delay
+          return; // Exit early after redirect
         }
         
         if (error) {
           console.error('Error checking session:', error);
         }
-        
-        setIsLoading(false);
       } catch (error) {
         console.error('Error during session check:', error);
+      } finally {
+        // Always set loading to false, regardless of outcome
         setIsLoading(false);
       }
     };
@@ -64,7 +62,7 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Auth state changed:', event, session ? 'Has session' : 'No session');
       
       if (event === 'SIGNED_IN') {
-        await supabase.auth.getSession();
+        // Clear OAuth code from URL if present
         if (location.search.includes('code=')) {
           navigate('/', { replace: true });
         }
@@ -78,8 +76,13 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [navigate, location]);
 
+  // Show loading state instead of null
   if (isLoading) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return <>{children}</>;
