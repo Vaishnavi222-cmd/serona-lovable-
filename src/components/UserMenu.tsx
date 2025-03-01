@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -133,15 +132,18 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       }
       const user = session.user;
 
-      console.log('Creating payment for user:', user.id);
-
+      // Ensure Razorpay is loaded before proceeding
       if (!isRazorpayLoaded) {
         console.log('Loading Razorpay script...');
-        await loadRazorpayScript();
+        await loadRazorpayScript().catch(error => {
+          console.error('Failed to load Razorpay:', error);
+          throw new Error('Payment system failed to initialize. Please try again.');
+        });
       }
 
+      // Double check Razorpay is available
       if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Payment system failed to initialize. Please refresh the page.');
+        throw new Error('Unable to initialize payment system. Please try on a different browser.');
       }
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -153,9 +155,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         throw new Error('Could not create payment order. Please try again.');
       }
 
-      console.log('Payment order created:', data);
-
-      const options = {
+      const razorpayOptions = {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
@@ -169,11 +169,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           color: "#1EAEDB",
         },
         modal: {
+          confirm_close: true,
           ondismiss: () => {
             console.log('Payment modal dismissed');
-            setIsLoading(false);
           },
-          escape: true,
+          escape: false,
+          animation: false // Disable animations for better mobile compatibility
         },
         handler: async function (response: any) {
           try {
@@ -181,8 +182,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               throw new Error('Invalid payment response received');
             }
 
-            console.log('Payment successful, verifying...', response);
-            
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId: response.razorpay_order_id,
@@ -203,50 +202,44 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               return;
             }
 
-            console.log('Verification successful:', verifyResponse);
-
-            // Poll for plan update with increased timeout
-            const planUpdated = await pollForPlanUpdate(user.id, 15); 
+            // Poll for plan update
+            const planUpdated = await pollForPlanUpdate(user.id); 
             
-            if (!planUpdated) {
-              console.error('Plan update verification failed');
-              toast({
-                title: "Payment processed",
-                description: "Your payment was successful but plan activation is taking longer than expected. Please refresh the page in a few moments.",
-                duration: 10000,
-              });
-            } else {
+            if (planUpdated) {
               toast({
                 title: "Payment successful",
                 description: `Your ${planType} plan is now active`,
               });
               
-              // Refresh the profile dialog data if it's open
+              // Refresh profile dialog if open
               if (showProfileDialog) {
                 setShowProfileDialog(false);
                 setTimeout(() => setShowProfileDialog(true), 100);
               }
+            } else {
+              toast({
+                title: "Payment processed",
+                description: "Your payment was successful but plan activation is taking longer than expected. Please refresh the page in a few moments.",
+                duration: 10000,
+              });
             }
-
           } catch (error: any) {
-            console.error('Verification error:', error);
+            console.error('Payment verification error:', error);
             toast({
-              title: "Error activating plan",
+              title: "Error processing payment",
               description: error.message || "An unexpected error occurred",
               variant: "destructive",
             });
-          } finally {
-            setIsLoading(false);
           }
         },
       };
 
-      const razorpay = new (window as any).Razorpay(options);
+      // Create and open Razorpay immediately on click
+      const razorpay = new (window as any).Razorpay(razorpayOptions);
       razorpay.open();
 
     } catch (error: any) {
       console.error('Payment setup error:', error);
-      setIsLoading(false);
       toast({
         title: "Error setting up payment",
         description: error.message || "Please try again later",
