@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -25,45 +24,62 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       console.log('Fetching user data...');
       
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError) {
+        console.error('Error fetching user:', userError);
+        throw userError;
+      }
 
       console.log('Current user:', user);
 
+      if (!user?.id) {
+        console.error('No user ID found');
+        return;
+      }
+
       // First update expired plans
       const now = new Date().toISOString();
-      const { error: updateError } = await supabase
+      await supabase
         .from('user_plans')
         .update({ status: 'expired' })
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('status', 'active')
         .lt('end_time', now);
 
-      if (updateError) {
-        console.error('Error updating expired plans:', updateError);
+      // Then get active plan with retries
+      let retries = 3;
+      let planData = null;
+      
+      while (retries > 0 && !planData) {
+        const { data: currentPlan, error: planError } = await supabase
+          .from('user_plans')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .gt('end_time', now)
+          .order('created_at', { ascending: false })
+          .maybeSingle();
+
+        if (planError) {
+          console.error('Error fetching active plan:', planError);
+        } else if (currentPlan) {
+          planData = currentPlan;
+          break;
+        }
+
+        retries--;
+        if (retries > 0 && !planData) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
 
-      // Then get active plan
-      const { data: planData, error: planError } = await supabase
-        .from('user_plans')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .gt('end_time', now)
-        .order('created_at', { ascending: false })
-        .maybeSingle();
-
-      if (planError) {
-        console.error('Error fetching active plan:', planError);
-      } else {
-        console.log('Active plan data:', planData);
-        setActivePlan(planData);
-      }
+      console.log('Active plan data:', planData);
+      setActivePlan(planData);
 
       // Get all plans for history
       const { data: historyData, error: historyError } = await supabase
         .from('user_plans')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (historyError) {
@@ -119,12 +135,24 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     }
   }, [open]);
 
-  // Fetch data every 5 seconds when dialog is open
+  // Shorter polling interval right after opening the dialog
   useEffect(() => {
     if (!open) return;
 
-    const interval = setInterval(fetchUserData, 5000);
-    return () => clearInterval(interval);
+    // Initial rapid polling
+    const rapidInterval = setInterval(fetchUserData, 2000);
+    
+    // Switch to slower polling after 30 seconds
+    const timeoutId = setTimeout(() => {
+      clearInterval(rapidInterval);
+      const slowInterval = setInterval(fetchUserData, 10000);
+      return () => clearInterval(slowInterval);
+    }, 30000);
+
+    return () => {
+      clearInterval(rapidInterval);
+      clearTimeout(timeoutId);
+    };
   }, [open]);
 
   const formatTimeRange = (start: string, end: string) => {
@@ -273,4 +301,3 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     </Dialog>
   );
 }
-
