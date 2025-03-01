@@ -125,12 +125,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSelectPlan = useCallback(async (planType: 'hourly' | 'daily' | 'monthly') => {
     try {
+      setIsLoading(true);
+      
       // Pre-load Razorpay if not already loaded
       if (!(window as any).Razorpay) {
         await loadRazorpayScript();
       }
-
-      setIsLoading(true);
 
       // Create payment order
       const response = await supabase.functions.invoke('create-payment', {
@@ -146,6 +146,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       if (!data?.orderId || !data?.keyId) {
         throw new Error('Invalid payment response received');
       }
+
+      console.log('Payment order created:', data);
 
       // Initialize Razorpay with order details
       const options = {
@@ -203,11 +205,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               });
               
               setShowUpgradeDialog(false);
-
-              if (showProfileDialog) {
-                setShowProfileDialog(false);
-                setTimeout(() => setShowProfileDialog(true), 100);
-              }
             } else {
               toast({
                 title: "Payment processed",
