@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,17 +36,15 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Handle OAuth redirect and initial session check
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        // If we're on the OAuth callback URL (has ?code= parameter)
+        // Handle OAuth callback
         if (location.search.includes('code=')) {
-          // Wait a moment for the session to be fully established
-          await new Promise(resolve => setTimeout(resolve, 100));
-          // Then redirect to home, clearing the OAuth code from URL
+          // Clear the OAuth code from URL immediately
           navigate('/', { replace: true });
+          // No need for artificial delay
         }
         
         if (error) {
@@ -63,14 +60,11 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeAuth();
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session ? 'Has session' : 'No session');
       
       if (event === 'SIGNED_IN') {
-        // Force a session refresh when signed in
         await supabase.auth.getSession();
-        // Clear any OAuth codes from URL
         if (location.search.includes('code=')) {
           navigate('/', { replace: true });
         }
@@ -79,7 +73,6 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };
