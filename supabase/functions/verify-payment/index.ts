@@ -64,7 +64,6 @@ async function verifyRazorpayPayment(orderId: string, keyId: string, keySecret: 
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -79,7 +78,6 @@ serve(async (req) => {
       throw new Error('Missing environment variables');
     }
 
-    // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     const { orderId, paymentId, signature, planType, userId } = await req.json();
@@ -88,10 +86,9 @@ serve(async (req) => {
       paymentId, 
       planType, 
       userId,
-      signature: signature?.substring(0, 10) + '...' // Log partial signature for security
+      signature: signature?.substring(0, 10) + '...'
     });
 
-    // Enhanced validation
     if (!orderId || !paymentId || !signature || !planType || !userId) {
       throw new Error('Missing required payment information');
     }
@@ -112,54 +109,24 @@ serve(async (req) => {
       throw new Error('Payment verification failed with Razorpay API');
     }
 
-    // Step 3: Verify user exists
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
+    // Step 3: Begin database transaction
+    const { data, error: transactionError } = await supabase.rpc('handle_plan_update', {
+      p_user_id: userId,
+      p_plan_type: planType,
+      p_order_id: orderId,
+      p_payment_id: paymentId,
+      p_amount: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
+    });
 
-    if (userError || !user) {
-      console.error('User verification failed:', userError);
-      throw new Error('Invalid user');
+    if (transactionError) {
+      console.error('Database transaction error:', transactionError);
+      throw new Error('Failed to update plan in database');
     }
 
-    // Step 4: Mark existing active plans as expired
-    const { error: updateError } = await supabase
-      .from('user_plans')
-      .update({ status: 'expired' })
-      .eq('user_id', userId)
-      .eq('status', 'active');
-
-    if (updateError) {
-      console.error('Error updating existing plans:', updateError);
-      throw updateError;
-    }
-
-    // Step 5: Create new plan
-    const { data: planData, error: insertError } = await supabase
-      .from('user_plans')
-      .insert([{
-        user_id: userId,
-        plan_type: planType,
-        status: 'active',
-        start_time: new Date().toISOString(),
-        order_id: orderId,
-        payment_id: paymentId,
-        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
-      }])
-      .select()
-      .single();
-
-    if (insertError || !planData) {
-      console.error('Error creating new plan:', insertError);
-      throw insertError;
-    }
-
-    console.log('Plan created successfully:', planData);
+    console.log('Plan created successfully:', data);
 
     return new Response(
-      JSON.stringify({ success: true, data: planData }),
+      JSON.stringify({ success: true, data }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -178,4 +145,3 @@ serve(async (req) => {
     );
   }
 });
-
