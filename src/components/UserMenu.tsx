@@ -105,6 +105,20 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
+      
+      // First verify we have a session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // If no session, just clear any stale state and redirect
+        await supabase.auth.signOut();
+        toast({
+          title: "Already signed out",
+          description: "You have been redirected to the home page",
+        });
+        return;
+      }
+
+      // Proceed with sign out if we have a session
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
