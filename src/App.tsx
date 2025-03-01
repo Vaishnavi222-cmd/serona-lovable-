@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Contact from "./pages/Contact";
@@ -33,21 +33,34 @@ const queryClient = new QueryClient({
 // SessionProvider component to handle session persistence
 const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Error checking session:', error);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error checking session:', error);
+        }
+        console.log('Initial session check:', session ? 'Logged in' : 'No session');
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error during session check:', error);
+        setIsLoading(false);
       }
-      console.log('Initial session check:', session ? 'Logged in' : 'No session');
-    });
+    };
+
+    initializeAuth();
 
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session ? 'Has session' : 'No session');
       
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN') {
+        // Force a session refresh when signed in
+        await supabase.auth.getSession();
+      } else if (event === 'SIGNED_OUT') {
         navigate('/');
       }
     });
@@ -57,6 +70,10 @@ const SessionProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, [navigate]);
+
+  if (isLoading) {
+    return null; // or a loading spinner if you prefer
+  }
 
   return <>{children}</>;
 };
