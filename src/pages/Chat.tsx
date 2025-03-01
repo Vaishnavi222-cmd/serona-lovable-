@@ -45,13 +45,8 @@ const Chat = () => {
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Load chats and create a new chat if none exists
+  // Modified loadChats to create a new chat if none exists
   const loadChats = async () => {
     if (!user) return;
     
@@ -495,10 +490,6 @@ const Chat = () => {
     };
   }, [isMobile, showHeaderMenu, isSidebarOpen]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       <AuthDialog 
@@ -684,7 +675,6 @@ const Chat = () => {
                       </div>
                     </div>
                   ))}
-                  <div ref={messagesEndRef} /> {/* Add this invisible div as scroll anchor */}
                 </div>
               )}
             </div>

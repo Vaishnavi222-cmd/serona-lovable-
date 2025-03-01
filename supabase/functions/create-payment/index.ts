@@ -1,7 +1,6 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-import Razorpay from "https://esm.sh/razorpay@2.9.2"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,77 +8,82 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    console.log('Create payment function started')
+    const { planType } = await req.json()
     
-    const key_id = Deno.env.get('RAZORPAY_KEY_ID')
-    const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET')
+    if (!planType) {
+      throw new Error('Plan type is required')
+    }
 
-    if (!key_id || !key_secret) {
+    // Get plan amount in paise
+    const planAmounts = {
+      hourly: 2500,    // ₹25.00
+      daily: 15000,    // ₹150.00
+      monthly: 299900  // ₹2,999.00
+    }
+
+    const amount = planAmounts[planType]
+    if (!amount) {
+      throw new Error('Invalid plan type')
+    }
+
+    const keyId = Deno.env.get('RAZORPAY_KEY_ID')
+    const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
+
+    if (!keyId || !keySecret) {
       throw new Error('Missing Razorpay credentials')
     }
 
-    console.log('Razorpay credentials found')
-    
-    const { planType } = await req.json()
-    console.log('Creating order for plan type:', planType)
-
-    if (!planType) {
-      throw new Error('Missing plan type')
-    }
-
-    // Calculate price based on plan type (in paise)
-    const price = planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
-
-    try {
-      const razorpay = new Razorpay({
-        key_id: key_id,
-        key_secret: key_secret
-      })
-
-      console.log('Creating Razorpay order with config:', {
-        amount: price,
-        currency: 'INR'
-      })
-
-      const order = await razorpay.orders.create({
-        amount: price,
+    // Create order
+    const response = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + btoa(keyId + ':' + keySecret),
+      },
+      body: JSON.stringify({
+        amount: amount,
         currency: 'INR',
-        receipt: `receipt_${Date.now()}`,
-        payment_capture: 1
-      })
+      }),
+    })
 
-      console.log('Razorpay order created successfully:', order.id)
+    const data = await response.json()
 
-      return new Response(
-        JSON.stringify({
-          orderId: order.id,
-          amount: order.amount,
-          currency: order.currency,
-          keyId: key_id
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      )
-    } catch (error) {
-      console.error('Razorpay API Error:', error)
-      throw new Error(`Razorpay order creation failed: ${error.message}`)
+    if (!data.id) {
+      console.error('Razorpay error:', data)
+      throw new Error('Failed to create payment order')
     }
+
+    console.log('Order created successfully:', { 
+      orderId: data.id, 
+      amount: amount,
+      planType 
+    })
+
+    return new Response(
+      JSON.stringify({
+        orderId: data.id,
+        keyId: keyId,
+        amount: amount,
+        currency: 'INR',
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
+
   } catch (error) {
-    console.error('Payment creation error:', error)
+    console.error('Create payment error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
-      }
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      },
     )
   }
 })

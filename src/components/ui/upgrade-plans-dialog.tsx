@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import {
   Dialog,
@@ -9,49 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Clock, Calendar, CalendarDays, CheckCircle2, X } from "lucide-react";
-
-// Remove the readonly modifier from the plans array
-const plans: Plan[] = [
-  {
-    type: 'hourly' as const,
-    title: 'Hourly Access',
-    price: 25,
-    duration: '1 hour',
-    features: [
-      'Full access for 1 hour',
-      'Detailed responses',
-      'Instant activation',
-      'One-time payment/no recurring charges'
-    ],
-    icon: <Clock className="w-5 h-5" />,
-  },
-  {
-    type: 'daily' as const,
-    title: 'Daily Access',
-    price: 150,
-    duration: '12 hours',
-    features: [
-      'Extended 12-hour access',
-      'Comprehensive responses',
-      'Higher usage limits',
-      'One-time payment/no recurring charges'
-    ],
-    icon: <Calendar className="w-5 h-5" />,
-  },
-  {
-    type: 'monthly' as const,
-    title: 'Monthly Access',
-    price: 2999,
-    duration: '30 days',
-    features: [
-      'Full month access',
-      'Unlimited detailed responses',
-      'Priority processing',
-      'One-time payment/no recurring charges'
-    ],
-    icon: <CalendarDays className="w-5 h-5" />,
-  },
-];
 
 interface Plan {
   type: 'hourly' | 'daily' | 'monthly';
@@ -68,61 +26,61 @@ interface UpgradePlansDialogProps {
   onSelectPlan: (planType: 'hourly' | 'daily' | 'monthly') => void;
 }
 
-// Memoize the plan card component to prevent unnecessary re-renders
-const PlanCard = React.memo(({ 
-  plan, 
-  onSelect 
-}: { 
-  plan: Plan; 
-  onSelect: (e: React.MouseEvent, type: 'hourly' | 'daily' | 'monthly') => void;
-}) => (
-  <div className="relative p-4 sm:p-6 rounded-xl bg-white border border-gray-200 hover:border-[#1EAEDB] hover:shadow-md transition-all">
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-[#1EAEDB]">
-          {plan.icon}
-          <h3 className="text-lg font-semibold">{plan.title}</h3>
-        </div>
-        <p className="text-sm text-gray-600">{plan.duration}</p>
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold">₹{plan.price}</span>
-          <span className="text-gray-500 text-sm">
-            {plan.type === 'monthly' ? '/mo' : ''}
-          </span>
-        </div>
-      </div>
-      <ul className="space-y-3">
-        {plan.features.map((feature, index) => (
-          <li key={index} className="flex items-start gap-2 text-sm">
-            <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-      <Button
-        type="button"
-        onClick={(e) => onSelect(e, plan.type)}
-        className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
-      >
-        Get Started
-      </Button>
-    </div>
-  </div>
-));
-
-PlanCard.displayName = 'PlanCard';
-
 export function UpgradePlansDialog({
   open,
   onOpenChange,
   onSelectPlan,
 }: UpgradePlansDialogProps) {
-  // Memoize the handleSelectPlan callback
-  const handleSelectPlan = React.useCallback((e: React.MouseEvent, planType: 'hourly' | 'daily' | 'monthly') => {
-    e.preventDefault();
-    e.stopPropagation();
-    onSelectPlan(planType);
-  }, [onSelectPlan]);
+  const plans: Plan[] = [
+    {
+      type: 'hourly',
+      title: 'Hourly Access',
+      price: 25,
+      duration: '1 hour',
+      features: [
+        'Full access for 1 hour',
+        'Detailed responses',
+        'Instant activation',
+        'One-time payment/no recurring charges'
+      ],
+      icon: <Clock className="w-5 h-5" />,
+    },
+    {
+      type: 'daily',
+      title: 'Daily Access',
+      price: 150,
+      duration: '12 hours',
+      features: [
+        'Extended 12-hour access',
+        'Comprehensive responses',
+        'Higher usage limits',
+        'One-time payment/no recurring charges'
+      ],
+      icon: <Calendar className="w-5 h-5" />,
+    },
+    {
+      type: 'monthly',
+      title: 'Monthly Access',
+      price: 2999,
+      duration: '30 days',
+      features: [
+        'Full month access',
+        'Unlimited detailed responses',
+        'Priority processing',
+        'One-time payment/no recurring charges'
+      ],
+      icon: <CalendarDays className="w-5 h-5" />,
+    },
+  ];
+
+  const handleSelectPlan = (planType: 'hourly' | 'daily' | 'monthly') => {
+    // Close the dialog immediately before opening Razorpay
+    onOpenChange(false);
+    // Small delay to ensure dialog is closed
+    setTimeout(() => {
+      onSelectPlan(planType);
+    }, 100);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,11 +99,40 @@ export function UpgradePlansDialog({
         </DialogHeader>
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 sm:p-6 bg-gray-50/50">
           {plans.map((plan) => (
-            <PlanCard 
-              key={plan.type} 
-              plan={plan} 
-              onSelect={handleSelectPlan}
-            />
+            <div
+              key={plan.type}
+              className="relative p-4 sm:p-6 rounded-xl bg-white border border-gray-200 hover:border-[#1EAEDB] hover:shadow-md transition-all"
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-[#1EAEDB]">
+                    {plan.icon}
+                    <h3 className="text-lg font-semibold">{plan.title}</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">{plan.duration}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold">₹{plan.price}</span>
+                    <span className="text-gray-500 text-sm">
+                      {plan.type === 'monthly' ? '/mo' : ''}
+                    </span>
+                  </div>
+                </div>
+                <ul className="space-y-3">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => handleSelectPlan(plan.type)}
+                  className="w-full bg-[#1EAEDB] hover:bg-[#1EAEDB]/90"
+                >
+                  Get Started
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
       </DialogContent>
