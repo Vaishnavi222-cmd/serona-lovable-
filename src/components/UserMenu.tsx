@@ -123,8 +123,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   };
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
-    setShowUpgradeDialog(false);
-
     try {
       const session = await verifySession();
       if (!session?.user?.id) {
@@ -132,20 +130,20 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       }
       const user = session.user;
 
+      console.log('Starting payment flow for plan:', planType);
+
       // Ensure Razorpay is loaded before proceeding
       if (!isRazorpayLoaded) {
         console.log('Loading Razorpay script...');
-        await loadRazorpayScript().catch(error => {
-          console.error('Failed to load Razorpay:', error);
-          throw new Error('Payment system failed to initialize. Please try again.');
-        });
+        await loadRazorpayScript();
       }
 
       // Double check Razorpay is available
       if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Unable to initialize payment system. Please try on a different browser.');
+        throw new Error('Payment system failed to initialize. Please try again.');
       }
 
+      console.log('Creating payment order...');
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { planType },
       });
@@ -154,6 +152,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         console.error('Create payment error:', error);
         throw new Error('Could not create payment order. Please try again.');
       }
+
+      console.log('Payment order created:', data.orderId);
 
       const razorpayOptions = {
         key: data.keyId,
@@ -170,17 +170,20 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         modal: {
           confirm_close: true,
-          ondismiss: () => {
+          ondismiss: function() {
             console.log('Payment modal dismissed');
+            setShowUpgradeDialog(false);
           },
-          escape: false,
-          animation: false // Disable animations for better mobile compatibility
+          escape: true,
+          animation: true
         },
         handler: async function (response: any) {
           try {
             if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
               throw new Error('Invalid payment response received');
             }
+
+            console.log('Payment successful, verifying...', response);
 
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
@@ -203,7 +206,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
             }
 
             // Poll for plan update
-            const planUpdated = await pollForPlanUpdate(user.id); 
+            const planUpdated = await pollForPlanUpdate(user.id);
             
             if (planUpdated) {
               toast({
@@ -211,6 +214,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
                 description: `Your ${planType} plan is now active`,
               });
               
+              setShowUpgradeDialog(false);
+
               // Refresh profile dialog if open
               if (showProfileDialog) {
                 setShowProfileDialog(false);
@@ -234,7 +239,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
       };
 
-      // Create and open Razorpay immediately on click
+      // Create and open Razorpay
+      console.log('Opening Razorpay modal...');
       const razorpay = new (window as any).Razorpay(razorpayOptions);
       razorpay.open();
 
@@ -245,6 +251,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         description: error.message || "Please try again later",
         variant: "destructive",
       });
+      setShowUpgradeDialog(false);
     }
   };
 

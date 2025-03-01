@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import {
   Dialog,
@@ -74,12 +73,9 @@ export function UpgradePlansDialog({
   ];
 
   const handleSelectPlan = (planType: 'hourly' | 'daily' | 'monthly') => {
-    // Close the dialog immediately before opening Razorpay
-    onOpenChange(false);
-    // Small delay to ensure dialog is closed
-    setTimeout(() => {
-      onSelectPlan(planType);
-    }, 100);
+    // Remove immediate dialog close to prevent race conditions
+    // This will now be handled by the payment flow
+    onSelectPlan(planType);
   };
 
   return (
