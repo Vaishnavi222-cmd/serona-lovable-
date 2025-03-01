@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Clock, Calendar, CalendarDays, CheckCircle2, X } from "lucide-react";
 
 // Remove the readonly modifier from the plans array
-const plans = [
+const plans: Plan[] = [
   {
-    type: 'hourly',
+    type: 'hourly' as const,
     title: 'Hourly Access',
     price: 25,
     duration: '1 hour',
@@ -26,7 +26,7 @@ const plans = [
     icon: <Clock className="w-5 h-5" />,
   },
   {
-    type: 'daily',
+    type: 'daily' as const,
     title: 'Daily Access',
     price: 150,
     duration: '12 hours',
@@ -39,7 +39,7 @@ const plans = [
     icon: <Calendar className="w-5 h-5" />,
   },
   {
-    type: 'monthly',
+    type: 'monthly' as const,
     title: 'Monthly Access',
     price: 2999,
     duration: '30 days',
