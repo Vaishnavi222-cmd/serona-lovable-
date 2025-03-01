@@ -16,16 +16,18 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Create payment function started');
+    
     // Get the API keys from environment variables
     const key_id = Deno.env.get('RAZORPAY_KEY_ID')
     const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
     if (!key_id || !key_secret) {
-      console.error('Missing Razorpay credentials')
-      throw new Error('Payment system configuration error')
+      console.error('Missing Razorpay credentials');
+      throw new Error('Payment system configuration error');
     }
 
-    console.log('Using Razorpay key ID:', key_id)
+    console.log('Razorpay credentials found');
     
     // Parse request body
     const { planType } = await req.json()
@@ -33,6 +35,8 @@ serve(async (req) => {
     if (!planType) {
       throw new Error('Missing plan type')
     }
+
+    console.log('Creating order for plan type:', planType);
 
     // Calculate price based on plan type (in paise)
     const price = planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
@@ -44,6 +48,8 @@ serve(async (req) => {
         key_secret: key_secret
       });
 
+      console.log('Creating Razorpay order...');
+
       // Create order
       const order = await razorpay.orders.create({
         amount: price,
@@ -52,7 +58,7 @@ serve(async (req) => {
         payment_capture: 1,
       });
 
-      console.log('Razorpay order created successfully:', order.id)
+      console.log('Razorpay order created successfully:', order.id);
 
       const response = {
         orderId: order.id,
@@ -72,11 +78,11 @@ serve(async (req) => {
         }
       )
     } catch (razorpayError) {
-      console.error('Razorpay API Error:', razorpayError)
-      throw new Error(`Failed to create payment order: ${razorpayError.message}`)
+      console.error('Razorpay API Error:', razorpayError);
+      throw new Error(`Failed to create payment order: ${razorpayError.message}`);
     }
   } catch (error) {
-    console.error('Payment creation error:', error)
+    console.error('Payment creation error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
