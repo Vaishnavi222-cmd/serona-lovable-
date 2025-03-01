@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -24,29 +23,50 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       setIsLoading(true);
       console.log('Fetching user data...');
       
+      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError) {
+        console.error('Error getting user:', userError);
+        throw userError;
+      }
+
+      if (!user) {
+        console.error('No user found');
+        throw new Error('No user found');
+      }
 
       console.log('Current user:', user);
 
-      // First update expired plans
+      // Get current timestamp for comparison
       const now = new Date().toISOString();
-      const { error: updateError } = await supabase
-        .from('user_plans')
-        .update({ status: 'expired' })
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .lt('end_time', now);
 
-      if (updateError) {
-        console.error('Error updating expired plans:', updateError);
+      // First update expired plans - only if there are any active plans
+      const { data: activePlans, error: activePlansError } = await supabase
+        .from('user_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      if (!activePlansError && activePlans && activePlans.length > 0) {
+        console.log('Found active plans, checking for expired ones...');
+        const { error: updateError } = await supabase
+          .from('user_plans')
+          .update({ status: 'expired' })
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .lt('end_time', now);
+
+        if (updateError) {
+          console.error('Error updating expired plans:', updateError);
+        }
       }
 
       // Then get active plan
+      console.log('Fetching current active plan...');
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('status', 'active')
         .gt('end_time', now)
         .order('created_at', { ascending: false })
@@ -60,10 +80,11 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       }
 
       // Get all plans for history
+      console.log('Fetching purchase history...');
       const { data: historyData, error: historyError } = await supabase
         .from('user_plans')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (historyError) {
@@ -74,6 +95,11 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
+      toast({
+        title: "Error loading profile data",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -273,4 +299,3 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     </Dialog>
   );
 }
-
