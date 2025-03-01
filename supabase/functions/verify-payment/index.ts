@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Helper function to verify Razorpay signature
 async function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string, secret: string): Promise<boolean> {
   try {
     const encoder = new TextEncoder();
@@ -41,7 +40,6 @@ async function verifyRazorpaySignature(orderId: string, paymentId: string, signa
   }
 }
 
-// Helper function to verify payment with Razorpay API
 async function verifyRazorpayPayment(orderId: string, keyId: string, keySecret: string): Promise<boolean> {
   try {
     const auth = btoa(`${keyId}:${keySecret}`);
@@ -66,6 +64,7 @@ async function verifyRazorpayPayment(orderId: string, keyId: string, keySecret: 
 }
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -80,25 +79,24 @@ serve(async (req) => {
       throw new Error('Missing environment variables');
     }
 
+    // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Log incoming request data
     const { orderId, paymentId, signature, planType, userId } = await req.json();
     console.log('Received payment verification request:', { 
       orderId, 
       paymentId, 
-      signature: signature?.substring(0, 10) + '...', // Log partial signature for security
       planType, 
-      userId 
+      userId,
+      signature: signature?.substring(0, 10) + '...' // Log partial signature for security
     });
 
     // Enhanced validation
     if (!orderId || !paymentId || !signature || !planType || !userId) {
-      console.error('Missing payment information:', { orderId, paymentId, planType, userId });
       throw new Error('Missing required payment information');
     }
 
-    // Step 1: Verify Razorpay signature
+    // Step 1: Verify signature
     const isSignatureValid = await verifyRazorpaySignature(orderId, paymentId, signature, razorpaySecret);
     console.log('Signature verification result:', isSignatureValid);
     
@@ -138,48 +136,30 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Step 5: Create new plan with retry mechanism
-    let planData = null;
-    let insertError = null;
-    const maxRetries = 3;
+    // Step 5: Create new plan
+    const { data: planData, error: insertError } = await supabase
+      .from('user_plans')
+      .insert([{
+        user_id: userId,
+        plan_type: planType,
+        status: 'active',
+        start_time: new Date().toISOString(),
+        order_id: orderId,
+        payment_id: paymentId,
+        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
+      }])
+      .select()
+      .single();
 
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const { data, error } = await supabase
-          .from('user_plans')
-          .insert([{
-            user_id: userId,
-            plan_type: planType,
-            status: 'active',
-            start_time: new Date().toISOString(),
-            end_time: new Date(Date.now() + (planType === 'hourly' ? 3600000 : planType === 'daily' ? 43200000 : 2592000000)).toISOString(),
-            remaining_output_tokens: planType === 'hourly' ? 9000 : planType === 'daily' ? 108000 : 3240000,
-            remaining_input_tokens: planType === 'hourly' ? 5000 : planType === 'daily' ? 60000 : 1800000,
-            amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
-            order_id: orderId,
-            payment_id: paymentId
-          }])
-          .select();
-
-        if (error) throw error;
-        planData = data;
-        break; // Success, exit retry loop
-      } catch (error) {
-        console.error(`Insert attempt ${i + 1} failed:`, error);
-        insertError = error;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
-      }
+    if (insertError || !planData) {
+      console.error('Error creating new plan:', insertError);
+      throw insertError;
     }
 
-    if (!planData || planData.length === 0) {
-      console.error('Failed to create plan after retries:', insertError);
-      throw new Error('Failed to create plan after multiple attempts');
-    }
-
-    console.log('Plan created successfully:', planData[0]);
+    console.log('Plan created successfully:', planData);
 
     return new Response(
-      JSON.stringify({ success: true, data: planData[0] }),
+      JSON.stringify({ success: true, data: planData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -198,3 +178,4 @@ serve(async (req) => {
     );
   }
 });
+
