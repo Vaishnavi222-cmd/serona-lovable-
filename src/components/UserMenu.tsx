@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -21,61 +22,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const { toast } = useToast();
-
-  const loadRazorpayScript = useCallback(() => {
-    return new Promise<void>((resolve, reject) => {
-      // If already loaded, resolve immediately
-      if (typeof (window as any).Razorpay !== 'undefined') {
-        console.log('Razorpay already loaded');
-        setRazorpayLoaded(true);
-        resolve();
-        return;
-      }
-
-      console.log('Loading Razorpay script...');
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      
-      script.onload = () => {
-        console.log('Razorpay script loaded successfully');
-        setRazorpayLoaded(true);
-        resolve();
-      };
-
-      script.onerror = () => {
-        const error = new Error('Failed to load Razorpay script');
-        console.error(error);
-        setRazorpayLoaded(false);
-        reject(error);
-      };
-
-      document.body.appendChild(script);
-    });
-  }, []);
-
-  // Enhanced session verification
-  const verifySession = async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session) {
-      throw new Error('No active session found. Please sign in again.');
-    }
-    return session;
-  };
-
-  // Load Razorpay script when component mounts
-  useEffect(() => {
-    loadRazorpayScript().catch(error => {
-      console.error('Error loading Razorpay:', error);
-      toast({
-        title: "Payment system error",
-        description: "Failed to initialize payment system. Please refresh the page.",
-        variant: "destructive",
-      });
-    });
-  }, [loadRazorpayScript, toast]);
 
   const handleSignOut = async () => {
     try {
@@ -100,28 +47,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   };
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
-    console.log('Handle select plan started for:', planType);
-    
-    if (isLoading) {
-      console.log('Already processing a request, aborting');
-      return;
-    }
+    if (isLoading) return;
 
     try {
       setIsLoading(true);
-      
-      // Ensure Razorpay is loaded
-      if (!razorpayLoaded) {
-        console.log('Razorpay not loaded, attempting to load...');
-        await loadRazorpayScript();
-      }
+      console.log('Creating payment order for plan:', planType);
 
-      if (!(window as any).Razorpay) {
-        throw new Error('Razorpay failed to initialize');
-      }
-
-      // Create payment order
-      console.log('Creating payment order...');
       const response = await supabase.functions.invoke('create-payment', {
         body: { planType }
       });
@@ -139,7 +70,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         throw new Error('Invalid payment response received');
       }
 
-      console.log('Initializing Razorpay payment...');
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -154,62 +84,68 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           color: "#1EAEDB",
         },
         handler: async function(response: any) {
-          console.log('Payment successful, received response:', response);
-          try {
-            const session = await verifySession();
-            
-            const verifyResponse = await supabase.functions.invoke('verify-payment', {
-              body: {
-                orderId: response.razorpay_order_id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-                planType,
-                userId: session.user.id
-              }
-            });
-
-            if (verifyResponse.error) {
-              throw verifyResponse.error;
-            }
-
-            toast({
-              title: "Payment successful",
-              description: `Your ${planType} plan is now active`,
-            });
-            
-            setShowUpgradeDialog(false);
-            
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            toast({
-              title: "Error processing payment",
-              description: error.message || "Please contact support if the issue persists",
-              variant: "destructive",
-            });
-          } finally {
-            setIsLoading(false);
+          console.log('Payment successful:', response);
+          
+          const session = await supabase.auth.getSession();
+          if (!session.data.session) {
+            throw new Error('No active session');
           }
+
+          const verifyResponse = await supabase.functions.invoke('verify-payment', {
+            body: {
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              planType,
+              userId: session.data.session.user.id
+            }
+          });
+
+          if (verifyResponse.error) {
+            throw verifyResponse.error;
+          }
+
+          toast({
+            title: "Payment successful",
+            description: `Your ${planType} plan is now active`,
+          });
+          
+          setShowUpgradeDialog(false);
         },
         modal: {
           ondismiss: function() {
-            console.log('Razorpay modal dismissed');
             setIsLoading(false);
           }
         }
       };
 
-      console.log('Opening Razorpay modal with options:', { ...options, key: '[REDACTED]' });
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      
+      script.onload = () => {
+        const razorpay = new (window as any).Razorpay(options);
+        razorpay.open();
+      };
+
+      script.onerror = () => {
+        toast({
+          title: "Error loading payment system",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      };
+
+      document.body.appendChild(script);
 
     } catch (error: any) {
       console.error('Payment setup error:', error);
-      setIsLoading(false);
       toast({
         title: "Error setting up payment",
         description: error.message || "Please try again later",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
   };
 

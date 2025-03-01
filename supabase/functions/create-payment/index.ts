@@ -6,90 +6,78 @@ import Razorpay from "https://esm.sh/razorpay@2.9.2"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    console.log('Create payment function started');
+    console.log('Create payment function started')
     
-    // Get the API keys from environment variables
     const key_id = Deno.env.get('RAZORPAY_KEY_ID')
     const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
     if (!key_id || !key_secret) {
-      console.error('Missing Razorpay credentials');
-      throw new Error('Payment system configuration error');
+      throw new Error('Missing Razorpay credentials')
     }
 
-    console.log('Razorpay credentials found');
+    console.log('Razorpay credentials found')
     
-    // Parse request body
     const { planType } = await req.json()
+    console.log('Creating order for plan type:', planType)
 
     if (!planType) {
       throw new Error('Missing plan type')
     }
 
-    console.log('Creating order for plan type:', planType);
-
     // Calculate price based on plan type (in paise)
     const price = planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900
 
     try {
-      // Initialize Razorpay
       const razorpay = new Razorpay({
         key_id: key_id,
         key_secret: key_secret
-      });
+      })
 
-      console.log('Creating Razorpay order...');
+      console.log('Creating Razorpay order with config:', {
+        amount: price,
+        currency: 'INR'
+      })
 
-      // Create order
       const order = await razorpay.orders.create({
         amount: price,
         currency: 'INR',
-        receipt: `receipt_${Math.random().toString(36).substring(2, 15)}`,
-        payment_capture: 1,
-      });
+        receipt: `receipt_${Date.now()}`,
+        payment_capture: 1
+      })
 
-      console.log('Razorpay order created successfully:', order.id);
-
-      const response = {
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        keyId: key_id
-      }
+      console.log('Razorpay order created successfully:', order.id)
 
       return new Response(
-        JSON.stringify(response),
+        JSON.stringify({
+          orderId: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          keyId: key_id
+        }),
         { 
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
         }
       )
-    } catch (razorpayError) {
-      console.error('Razorpay API Error:', razorpayError);
-      throw new Error(`Failed to create payment order: ${razorpayError.message}`);
+    } catch (error) {
+      console.error('Razorpay API Error:', error)
+      throw new Error(`Razorpay order creation failed: ${error.message}`)
     }
   } catch (error) {
-    console.error('Payment creation error:', error);
+    console.error('Payment creation error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
       }
     )
