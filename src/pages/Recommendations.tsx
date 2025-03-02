@@ -40,7 +40,7 @@ const recommendations = [
 
 const Recommendations = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [downloadInfo, setDownloadInfo<{ url: string; expiresAt: string } | null>](null);
+  const [downloadInfo, setDownloadInfo] = useState<{ url: string; expiresAt: string } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
