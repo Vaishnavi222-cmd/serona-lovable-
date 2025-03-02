@@ -121,31 +121,25 @@ const Recommendations = () => {
 
             console.log('Verification successful:', verifyData);
 
-            // Store download info in state before navigation
-            setDownloadInfo({
-              url: verifyData.downloadUrl,
-              expiresAt: verifyData.expiresAt
-            });
-            
-            // Make sure we have the download URL before navigating
-            if (verifyData.downloadUrl) {
-              navigate('/download-success', {
-                state: {
-                  downloadInfo: {
-                    url: verifyData.downloadUrl,
-                    expiresAt: verifyData.expiresAt
-                  }
-                },
-                replace: true // This prevents going back to the payment page
-              });
-
-              toast({
-                title: "Payment successful!",
-                description: "Redirecting to download page...",
-              });
-            } else {
+            if (!verifyData.downloadUrl) {
               throw new Error('Download URL not received');
             }
+
+            // Store download info and navigate
+            navigate('/download-success', {
+              state: {
+                downloadInfo: {
+                  url: verifyData.downloadUrl,
+                  expiresAt: verifyData.expiresAt
+                }
+              },
+              replace: true
+            });
+
+            toast({
+              title: "Payment successful!",
+              description: "Redirecting to download page...",
+            });
 
           } catch (error: any) {
             console.error('Payment verification error:', error);
@@ -154,6 +148,7 @@ const Recommendations = () => {
               description: error.message || "Please contact support if the issue persists",
               variant: "destructive",
             });
+          } finally {
             setIsLoading(false);
           }
         },
