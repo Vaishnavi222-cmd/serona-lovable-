@@ -103,7 +103,7 @@ serve(async (req) => {
       )
     }
 
-    // Update purchase record with payment verification and download URL
+    // Update purchase record with ALL relevant fields
     const { error: updateError } = await supabase
       .from('ebook_purchases')
       .update({
