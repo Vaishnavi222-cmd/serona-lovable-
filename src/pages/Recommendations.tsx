@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -98,19 +97,18 @@ const Recommendations = () => {
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="w-full md:w-1/3">
               <img
-                src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
-                alt="Comprehensive Self-Development Guide"
+                src="/lovable-uploads/5d7f5f88-15b9-40b3-a0d9-e00f63709081.png"
+                alt="The Art of Smart Decisions Book Cover"
                 className="rounded-lg shadow-md w-full h-[300px] object-cover"
                 loading="lazy"
               />
             </div>
             <div className="w-full md:w-2/3 space-y-4">
               <h3 className="text-2xl font-semibold text-serona-dark">
-                The Complete Guide to Personal Growth and Success
+                The Art of Smart Decisions: A Practical Guide to Confident Choices
               </h3>
               <p className="text-gray-600 text-lg">
-                Transform your life with our comprehensive guide to personal development,
-                career growth, and emotional intelligence.
+                This eBook offers clear, practical strategies to improve decision-making in all aspects of life. With insightful content and actionable advice, it helps you make confident, well-informed choices.
               </p>
               <div className="flex items-center gap-4">
                 <span className="text-2xl font-bold text-serona-dark">₹100</span>
