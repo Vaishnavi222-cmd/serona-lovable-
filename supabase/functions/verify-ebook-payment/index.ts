@@ -97,16 +97,16 @@ serve(async (req) => {
 
     console.log('📚 Found purchase record:', purchase);
 
-    // Generate signed URL - now using the correct bucket and file path
+    // Generate signed URL using the correct bucket and file
     const expiryTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     console.log('⏰ Generating signed URL with expiry:', expiryTime.toISOString());
 
     const { data: signedUrl, error: signedUrlError } = await supabase
       .storage
-      .from('ebook_storage')
-      .createSignedUrl('ebook_decision_making.pdf', 300); // 5 minutes in seconds
+      .from('ebook_storage') // Use the correct bucket name
+      .createSignedUrl('ebook_decision_making.pdf', 300); // Use the correct file name, 300 seconds = 5 minutes
 
-    if (signedUrlError) {
+    if (signedUrlError || !signedUrl?.signedUrl) {
       console.error('❌ Signed URL generation error:', signedUrlError);
       throw new Error('Failed to generate download URL');
     }
