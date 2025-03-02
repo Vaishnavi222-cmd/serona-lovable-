@@ -1,8 +1,11 @@
+
 import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { BookOpen } from "lucide-react";
 
 const recommendations = [
   {
@@ -87,7 +90,49 @@ const Recommendations = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-24">
-        <h1 className="text-4xl font-bold text-serona-dark mb-12 text-center">Recommended Resources</h1>
+        {/* Ebook Section */}
+        <div className="mb-16 bg-gradient-to-r from-serona-light to-white rounded-xl shadow-lg p-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-serona-dark mb-8 text-center">
+            Download Our Comprehensive Guide
+          </h2>
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="w-full md:w-1/3">
+              <img
+                src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+                alt="Comprehensive Self-Development Guide"
+                className="rounded-lg shadow-md w-full h-[300px] object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div className="w-full md:w-2/3 space-y-4">
+              <h3 className="text-2xl font-semibold text-serona-dark">
+                The Complete Guide to Personal Growth and Success
+              </h3>
+              <p className="text-gray-600 text-lg">
+                Transform your life with our comprehensive guide to personal development,
+                career growth, and emotional intelligence.
+              </p>
+              <div className="flex items-center gap-4">
+                <span className="text-2xl font-bold text-serona-dark">₹100</span>
+                <Button
+                  className="bg-serona-primary hover:bg-serona-accent text-serona-dark"
+                  onClick={() => {
+                    // Payment logic will be implemented later
+                    console.log("Buy now clicked");
+                  }}
+                >
+                  <BookOpen className="mr-2" />
+                  Buy Now
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Previous Recommendations Section */}
+        <h2 className="text-4xl font-bold text-serona-dark mb-12 text-center">
+          Recommended Resources
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {recommendations.map((item) => (
             <div 
@@ -97,7 +142,7 @@ const Recommendations = () => {
             >
               <img
                 src={item.image}
-                alt={item.name}
+                alt={item.alt}
                 className="w-full h-48 object-cover"
                 loading="lazy"
               />
