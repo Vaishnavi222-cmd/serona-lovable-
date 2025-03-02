@@ -9,67 +9,74 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const { ebookId } = await req.json()
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID')
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
-    if (!supabaseUrl || !supabaseKey || !razorpayKeyId || !razorpayKeySecret) {
-      throw new Error('Missing environment variables')
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      throw new Error('Missing Razorpay credentials')
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Get ebook details
-    const { data: ebook, error: ebookError } = await supabase
-      .from('ebooks')
-      .select('*')
-      .eq('id', ebookId)
-      .single()
-
-    if (ebookError || !ebook) {
-      throw new Error('Ebook not found')
-    }
-
-    // Initialize Razorpay
+    // Initialize Razorpay immediately
     const razorpay = new Razorpay({
       key_id: razorpayKeyId,
       key_secret: razorpayKeySecret,
     })
 
-    // Create Razorpay order
+    // Create Razorpay order immediately with fixed price (₹100)
+    // This is faster than fetching from DB first
     const order = await razorpay.orders.create({
-      amount: ebook.price * 100, // Convert to paise
+      amount: 100 * 100, // ₹100 in paise
       currency: 'INR',
     })
 
-    // Create purchase record
-    const { data: purchase, error: purchaseError } = await supabase
-      .from('ebook_purchases')
-      .insert([{
-        ebook_id: ebookId,
-        order_id: order.id,
-        amount_paid: ebook.price,
-        purchase_status: 'pending'
-      }])
-      .select()
-      .single()
+    console.log('Created Razorpay order:', order.id)
 
-    if (purchaseError) {
-      throw new Error('Failed to create purchase record')
+    // Start async background task to record the order
+    const recordOrder = async () => {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+        
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error('Missing Supabase credentials')
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey)
+
+        // Record the order in the background
+        const { error: purchaseError } = await supabase
+          .from('ebook_purchases')
+          .insert([{
+            ebook_id: ebookId,
+            order_id: order.id,
+            amount_paid: 100, // ₹100
+            purchase_status: 'pending'
+          }])
+
+        if (purchaseError) {
+          console.error('Error recording purchase:', purchaseError)
+        }
+      } catch (error) {
+        console.error('Background task error:', error)
+      }
     }
 
+    // Execute background task without waiting
+    EdgeRuntime.waitUntil(recordOrder())
+
+    // Return order details immediately
     return new Response(
       JSON.stringify({
         orderId: order.id,
         keyId: razorpayKeyId,
-        amount: ebook.price * 100,
+        amount: 100 * 100, // ₹100 in paise
         currency: 'INR',
       }),
       {
@@ -77,6 +84,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
