@@ -1,7 +1,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-import { crypto } from "https://deno.land/std@0.182.0/crypto/mod.ts";
+import { create } from "https://deno.land/x/djwt@v2.8/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,45 +9,66 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const { orderId, paymentId, signature } = await req.json()
+    console.log('Received payment verification request:', { orderId, paymentId, signature })
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
     if (!supabaseUrl || !supabaseKey || !razorpayKeySecret) {
-      throw new Error('Missing environment variables')
+      console.error('Missing environment variables')
+      throw new Error('Configuration error')
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Verify payment signature
-    const message = orderId + "|" + paymentId;
-    const key = new TextEncoder().encode(razorpayKeySecret);
-    const messageUint8 = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.importKey(
+    // Generate the expected signature
+    const message = orderId + "|" + paymentId
+    const key = new TextEncoder().encode(razorpayKeySecret)
+    const data = new TextEncoder().encode(message)
+    
+    // Create HMAC signature using SHA-256
+    const hmacKey = await crypto.subtle.importKey(
       "raw",
       key,
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign"]
-    );
-    const sig = await crypto.subtle.sign(
+    )
+    
+    const signatureBuffer = await crypto.subtle.sign(
       "HMAC",
-      hashBuffer,
-      messageUint8
-    );
-    const generatedSignature = Array.from(new Uint8Array(sig))
+      hmacKey,
+      data
+    )
+    
+    const generatedSignature = Array.from(new Uint8Array(signatureBuffer))
       .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+      .join('')
 
+    console.log('Generated signature:', generatedSignature)
+    console.log('Received signature:', signature)
+
+    // Verify signature
     if (generatedSignature !== signature) {
-      throw new Error('Invalid payment signature')
+      console.error('Signature verification failed')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid payment signature' 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
 
     // Get purchase record
@@ -58,6 +79,7 @@ serve(async (req) => {
       .single()
 
     if (purchaseError || !purchase) {
+      console.error('Purchase record error:', purchaseError)
       throw new Error('Purchase record not found')
     }
 
@@ -68,6 +90,7 @@ serve(async (req) => {
       .createSignedUrl(purchase.ebooks.file_path, 300)
 
     if (signedUrlError) {
+      console.error('Signed URL generation error:', signedUrlError)
       throw new Error('Failed to generate download URL')
     }
 
@@ -84,22 +107,29 @@ serve(async (req) => {
       .eq('order_id', orderId)
 
     if (updateError) {
+      console.error('Purchase record update error:', updateError)
       throw new Error('Failed to update purchase record')
     }
 
+    console.log('Payment verification successful')
     return new Response(
       JSON.stringify({
+        success: true,
         downloadUrl: signedUrl.signedUrl,
         expiresAt: expiryTime.toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
       }
     )
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('Verification error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Verification failed' 
+      }),
       {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
