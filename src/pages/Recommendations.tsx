@@ -111,14 +111,19 @@ const Recommendations = () => {
 
             if (verifyError) throw verifyError;
 
-            setDownloadInfo({
-              url: verifyData.downloadUrl,
-              expiresAt: verifyData.expiresAt
+            // Navigate to success page with download info
+            navigate('/download-success', {
+              state: {
+                downloadInfo: {
+                  url: verifyData.downloadUrl,
+                  expiresAt: verifyData.expiresAt
+                }
+              }
             });
 
             toast({
               title: "Payment successful!",
-              description: "Your download will be available for 5 minutes.",
+              description: "Redirecting to download page...",
             });
           } catch (error: any) {
             console.error('Payment verification error:', error);
