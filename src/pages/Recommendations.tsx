@@ -193,11 +193,11 @@ const Recommendations = () => {
             Download Our Comprehensive Guide
           </h2>
           <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-full md:w-1/3">
+            <div className="w-full md:w-1/3 md:max-h-[400px] flex items-center justify-center">
               <img
                 src="/lovable-uploads/5d7f5f88-15b9-40b3-a0d9-e00f63709081.png"
                 alt="The Art of Smart Decisions Book Cover"
-                className="rounded-lg shadow-md w-full h-[300px] object-cover"
+                className="rounded-lg shadow-md w-full h-auto object-contain max-h-[400px]"
                 loading="lazy"
               />
             </div>
