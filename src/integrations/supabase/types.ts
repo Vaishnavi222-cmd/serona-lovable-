@@ -66,6 +66,84 @@ export type Database = {
         }
         Relationships: []
       }
+      ebook_purchases: {
+        Row: {
+          amount_paid: number
+          created_at: string | null
+          download_url: string | null
+          ebook_id: string | null
+          id: string
+          order_id: string | null
+          payment_id: string | null
+          purchase_status: Database["public"]["Enums"]["purchase_status"] | null
+          updated_at: string | null
+          url_expires_at: string | null
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string | null
+          download_url?: string | null
+          ebook_id?: string | null
+          id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          purchase_status?:
+            | Database["public"]["Enums"]["purchase_status"]
+            | null
+          updated_at?: string | null
+          url_expires_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string | null
+          download_url?: string | null
+          ebook_id?: string | null
+          id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          purchase_status?:
+            | Database["public"]["Enums"]["purchase_status"]
+            | null
+          updated_at?: string | null
+          url_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ebook_purchases_ebook_id_fkey"
+            columns: ["ebook_id"]
+            isOneToOne: false
+            referencedRelation: "ebooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ebooks: {
+        Row: {
+          created_at: string | null
+          description: string
+          file_path: string
+          id: string
+          price: number
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          file_path: string
+          id?: string
+          price: number
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          file_path?: string
+          id?: string
+          price?: number
+          title?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           chat_session_id: string
@@ -231,6 +309,7 @@ export type Database = {
     }
     Enums: {
       plan_type: "hourly" | "daily" | "monthly"
+      purchase_status: "pending" | "completed" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
