@@ -1,6 +1,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { timingSafeEqual } from 'https://deno.land/std@0.168.0/crypto/timing_safe_equal.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,26 +15,43 @@ serve(async (req) => {
   }
 
   try {
-    const { orderId, paymentId, signature } = await req.json()
-    console.log('Received payment verification request:', { orderId, paymentId, signature })
+    // Safely parse JSON request body
+    let orderId, paymentId, signature;
+    try {
+      const body = await req.json()
+      ;({ orderId, paymentId, signature } = body)
+      
+      if (!orderId?.trim() || !paymentId?.trim() || !signature?.trim()) {
+        throw new Error('Missing required fields')
+      }
+    } catch (error) {
+      console.error('Request parsing error:', error)
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid request format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
+    // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
-    if (!supabaseUrl || !supabaseKey || !razorpayKeySecret) {
-      console.error('Missing environment variables')
-      throw new Error('Configuration error')
+    if (!supabaseUrl?.trim() || !supabaseKey?.trim() || !razorpayKeySecret?.trim()) {
+      console.error('Missing or invalid environment variables')
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Verify Razorpay signature using crypto
+    // Generate HMAC signature
     const message = orderId + "|" + paymentId
     const key = new TextEncoder().encode(razorpayKeySecret)
     const data = new TextEncoder().encode(message)
     
-    // Create HMAC signature using SHA-256
     const hmacKey = await crypto.subtle.importKey(
       "raw",
       key,
@@ -52,11 +70,15 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')
 
-    console.log('Generated signature:', generatedSignature)
-    console.log('Received signature:', signature)
+    console.log('Verifying signatures...')
+    
+    // Secure signature comparison using timing-safe equals
+    const isValidSignature = timingSafeEqual(
+      new TextEncoder().encode(generatedSignature.toLowerCase()),
+      new TextEncoder().encode(signature.toLowerCase())
+    )
 
-    // Verify signature
-    if (generatedSignature !== signature) {
+    if (!isValidSignature) {
       console.error('Signature verification failed')
       return new Response(
         JSON.stringify({ 
@@ -79,7 +101,16 @@ serve(async (req) => {
 
     if (purchaseError || !purchase) {
       console.error('Purchase record error:', purchaseError)
-      throw new Error('Purchase record not found')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Purchase record not found' 
+        }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
 
     // Generate signed URL valid for 5 minutes
@@ -90,11 +121,20 @@ serve(async (req) => {
 
     if (signedUrlError) {
       console.error('Signed URL generation error:', signedUrlError)
-      throw new Error('Failed to generate download URL')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to generate download URL' 
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
 
     // Update purchase record
-    const expiryTime = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
+    const expiryTime = new Date(Date.now() + 5 * 60 * 1000)
     const { error: updateError } = await supabase
       .from('ebook_purchases')
       .update({
@@ -107,7 +147,16 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Purchase record update error:', updateError)
-      throw new Error('Failed to update purchase record')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to update purchase record' 
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
 
     console.log('Payment verification successful')
@@ -115,8 +164,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         downloadUrl: signedUrl.signedUrl,
-        expiresAt: expiryTime.toISOString(),
-        redirectUrl: `/download-success`
+        expiresAt: expiryTime.toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -124,17 +172,16 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Verification error:', error)
+    console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Verification failed' 
+        error: 'Internal server error' 
       }),
       {
-        status: 400,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
   }
 })
-
