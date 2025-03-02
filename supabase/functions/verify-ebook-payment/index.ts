@@ -1,7 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-import { create } from "https://deno.land/x/djwt@v2.8/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,7 +28,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Generate the expected signature
+    // Verify Razorpay signature using crypto
     const message = orderId + "|" + paymentId
     const key = new TextEncoder().encode(razorpayKeySecret)
     const data = new TextEncoder().encode(message)
@@ -138,3 +137,4 @@ serve(async (req) => {
     )
   }
 })
+

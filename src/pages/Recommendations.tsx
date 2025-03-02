@@ -101,6 +101,10 @@ const Recommendations = () => {
         order_id: data.orderId,
         handler: async function (response: any) {
           try {
+            if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
+              throw new Error('Invalid payment response');
+            }
+
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-ebook-payment', {
               body: {
                 orderId: response.razorpay_order_id,
@@ -109,30 +113,29 @@ const Recommendations = () => {
               }
             });
 
-            if (verifyError) throw verifyError;
-          
-            if (verifyData.success) {
-              navigate('/download-success', {
-                state: {
-                  downloadInfo: {
-                    url: verifyData.downloadUrl,
-                    expiresAt: verifyData.expiresAt
-                  }
-                }
-              });
-
-              toast({
-                title: "Payment successful!",
-                description: "Redirecting to download page...",
-              });
-            } else {
-              throw new Error(verifyData.error || 'Payment verification failed');
+            if (verifyError || !verifyData.success) {
+              throw new Error(verifyError?.message || verifyData?.error || 'Payment verification failed');
             }
+            
+            navigate('/download-success', {
+              state: {
+                downloadInfo: {
+                  url: verifyData.downloadUrl,
+                  expiresAt: verifyData.expiresAt
+                }
+              }
+            });
+
+            toast({
+              title: "Payment successful!",
+              description: "Redirecting to download page...",
+            });
+
           } catch (error: any) {
             console.error('Payment verification error:', error);
             toast({
               title: "Payment verification failed",
-              description: error.message || "Please try again",
+              description: "Please contact support if the issue persists",
               variant: "destructive",
             });
             setIsLoading(false);
