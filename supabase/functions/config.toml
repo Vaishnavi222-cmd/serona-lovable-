@@ -1,0 +1,10 @@
+
+project_id = "ptpxhzfjfssaxilyuwzd"
+
+[[functions]]
+name = "create-ebook-payment"
+verify_jwt = false
+
+[[functions]]
+name = "verify-ebook-payment"
+verify_jwt = false

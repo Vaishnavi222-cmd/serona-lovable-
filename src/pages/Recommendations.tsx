@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const recommendations = [
   {
@@ -38,6 +39,10 @@ const recommendations = [
 ];
 
 const Recommendations = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [downloadInfo, setDownloadInfo<{ url: string; expiresAt: string } | null>](null);
+  const { toast } = useToast();
+
   useEffect(() => {
     // Update meta tags for Recommendations page
     document.title = "Serona AI - AI Chat bot for carrier guidance & decision making";
@@ -63,6 +68,90 @@ const Recommendations = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isDetailsPage = location.pathname.includes('/details');
+
+  const handlePayment = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get ebook ID
+      const { data: ebooks } = await supabase
+        .from('ebooks')
+        .select('id')
+        .eq('title', 'The Art of Smart Decisions: A Practical Guide to Confident Choices')
+        .limit(1)
+        .single();
+
+      if (!ebooks?.id) {
+        throw new Error('Ebook not found');
+      }
+
+      // Create payment order
+      const { data, error } = await supabase.functions.invoke('create-ebook-payment', {
+        body: { ebookId: ebooks.id }
+      });
+
+      if (error) throw error;
+
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "Serona AI",
+        description: "The Art of Smart Decisions Ebook",
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          try {
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-ebook-payment', {
+              body: {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature
+              }
+            });
+
+            if (verifyError) throw verifyError;
+
+            setDownloadInfo({
+              url: verifyData.downloadUrl,
+              expiresAt: verifyData.expiresAt
+            });
+
+            toast({
+              title: "Payment successful!",
+              description: "Your download will be available for 5 minutes.",
+            });
+          } catch (error: any) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "Payment verification failed",
+              description: error.message || "Please try again",
+              variant: "destructive",
+            });
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setIsLoading(false);
+          }
+        },
+        theme: {
+          color: "#1EAEDB"
+        }
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+
+    } catch (error: any) {
+      console.error('Payment setup error:', error);
+      toast({
+        title: "Error setting up payment",
+        description: error.message || "Please try again later",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
 
   if (isDetailsPage) {
     return (
@@ -110,18 +199,35 @@ const Recommendations = () => {
               <p className="text-gray-600 text-lg">
                 This eBook offers clear, practical strategies to improve decision-making in all aspects of life. With insightful content and actionable advice, it helps you make confident, well-informed choices.
               </p>
-              <div className="flex items-center gap-4">
-                <span className="text-2xl font-bold text-serona-dark">₹100</span>
-                <Button
-                  className="bg-serona-primary hover:bg-serona-accent text-serona-dark"
-                  onClick={() => {
-                    // Payment logic will be implemented later
-                    console.log("Buy now clicked");
-                  }}
-                >
-                  <BookOpen className="mr-2" />
-                  Buy Now
-                </Button>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl font-bold text-serona-dark">₹100</span>
+                  {downloadInfo ? (
+                    <a
+                      href={downloadInfo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg flex items-center gap-2"
+                    >
+                      <BookOpen className="w-5 h-5" />
+                      Download Now
+                    </a>
+                  ) : (
+                    <Button
+                      className="bg-serona-primary hover:bg-serona-accent text-serona-dark"
+                      onClick={handlePayment}
+                      disabled={isLoading}
+                    >
+                      <BookOpen className="mr-2" />
+                      {isLoading ? "Processing..." : "Buy Now"}
+                    </Button>
+                  )}
+                </div>
+                {downloadInfo && (
+                  <p className="text-sm text-orange-600">
+                    Download link expires in 5 minutes (at {new Date(downloadInfo.expiresAt).toLocaleTimeString()})
+                  </p>
+                )}
               </div>
             </div>
           </div>
