@@ -85,11 +85,11 @@ serve(async (req) => {
     // Fetch current purchase record
     const { data: purchase, error: purchaseError } = await supabase
       .from('ebook_purchases')
-      .select('*, ebooks(file_path)')
+      .select('*')
       .eq('order_id', orderId)
       .single();
 
-    if (purchaseError || !purchase?.ebooks?.file_path) {
+    if (purchaseError || !purchase) {
       console.error('❌ Purchase record error:', purchaseError);
       console.log('Purchase data:', purchase);
       throw new Error('Purchase record not found');
@@ -97,14 +97,14 @@ serve(async (req) => {
 
     console.log('📚 Found purchase record:', purchase);
 
-    // Generate signed URL
-    const expiryTime = new Date(Date.now() + 5 * 60 * 1000);
+    // Generate signed URL - now using the correct bucket and file path
+    const expiryTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     console.log('⏰ Generating signed URL with expiry:', expiryTime.toISOString());
 
     const { data: signedUrl, error: signedUrlError } = await supabase
       .storage
-      .from('ebooks')
-      .createSignedUrl(purchase.ebooks.file_path, 300);
+      .from('ebook_storage')
+      .createSignedUrl('ebook_decision_making.pdf', 300); // 5 minutes in seconds
 
     if (signedUrlError) {
       console.error('❌ Signed URL generation error:', signedUrlError);
@@ -113,7 +113,7 @@ serve(async (req) => {
 
     console.log('🔗 Generated signed URL successfully');
 
-    // Update purchase record with ALL fields
+    // Update purchase record
     const updateData = {
       payment_id: paymentId,
       purchase_status: 'completed',
