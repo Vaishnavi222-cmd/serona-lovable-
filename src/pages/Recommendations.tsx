@@ -110,21 +110,24 @@ const Recommendations = () => {
             });
 
             if (verifyError) throw verifyError;
-
-            // Navigate to success page with download info
-            navigate('/download-success', {
-              state: {
-                downloadInfo: {
-                  url: verifyData.downloadUrl,
-                  expiresAt: verifyData.expiresAt
+          
+            if (verifyData.success) {
+              navigate('/download-success', {
+                state: {
+                  downloadInfo: {
+                    url: verifyData.downloadUrl,
+                    expiresAt: verifyData.expiresAt
+                  }
                 }
-              }
-            });
+              });
 
-            toast({
-              title: "Payment successful!",
-              description: "Redirecting to download page...",
-            });
+              toast({
+                title: "Payment successful!",
+                description: "Redirecting to download page...",
+              });
+            } else {
+              throw new Error(verifyData.error || 'Payment verification failed');
+            }
           } catch (error: any) {
             console.error('Payment verification error:', error);
             toast({
@@ -132,6 +135,7 @@ const Recommendations = () => {
               description: error.message || "Please try again",
               variant: "destructive",
             });
+            setIsLoading(false);
           }
         },
         modal: {

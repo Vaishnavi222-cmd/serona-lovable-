@@ -116,7 +116,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         downloadUrl: signedUrl.signedUrl,
-        expiresAt: expiryTime.toISOString()
+        expiresAt: expiryTime.toISOString(),
+        redirectUrl: `/download-success`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
