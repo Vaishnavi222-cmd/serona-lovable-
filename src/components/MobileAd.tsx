@@ -34,8 +34,8 @@ const MobileAd = () => {
   if (!isMobile) return null;
 
   return (
-    <div className="w-full bg-serona-dark/80 p-4 rounded-lg">
-      <div id="mobile-ad-container" className="w-full h-[300px]" />
+    <div className="w-full bg-serona-dark/80 p-4 rounded-lg mb-8">
+      <div id="mobile-ad-container" className="w-full h-[600px]" />
     </div>
   );
 };

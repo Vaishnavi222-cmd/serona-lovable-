@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import MobileAd from './MobileAd';
 
@@ -13,10 +14,11 @@ const Footer = () => {
             </p>
           </div>
           
-          <div className="relative">
-            <div className="md:hidden absolute -top-4 left-0 w-full">
-              <MobileAd />
-            </div>
+          <div className="md:hidden">
+            <MobileAd />
+          </div>
+
+          <div>
             <h4 className="text-lg font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
               <li>
