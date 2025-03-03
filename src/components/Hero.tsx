@@ -56,9 +56,10 @@ const Hero = () => {
       
       <div className="container mx-auto relative z-10">
         <div className="text-center" ref={contentRef}>
-          <div className="mb-4 md:mb-10">
-            <Brain className="w-14 h-14 md:w-20 md:h-20 mx-auto text-serona-primary animate-pulse" 
-                  aria-label="AI chatbot online for making decisions and self development" 
+          <div className="mb-4 md:mb-10 pt-2">
+            <Brain 
+              className="w-14 h-14 md:w-20 md:h-20 mx-auto text-serona-primary animate-pulse" 
+              aria-label="AI chatbot online for making decisions and self development" 
             />
           </div>
           
