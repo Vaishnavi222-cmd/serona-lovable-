@@ -24,7 +24,6 @@ const MobileAd = () => {
 
     document.body.appendChild(script);
 
-    // Create a container div if it doesn't exist
     let container = document.getElementById('mobile-ad-container');
     if (!container) {
       container = document.createElement('div');
@@ -41,8 +40,8 @@ const MobileAd = () => {
   if (!isMobile) return null;
 
   return (
-    <div className="my-4 mx-auto w-full max-w-[300px] min-h-[100px] flex items-center justify-center bg-serona-light/50 rounded">
-      <div id="mobile-ad-container" className="w-full h-full" />
+    <div className="h-full flex items-center justify-center">
+      <div id="mobile-ad-container" className="w-full min-h-[300px]" />
     </div>
   );
 };
