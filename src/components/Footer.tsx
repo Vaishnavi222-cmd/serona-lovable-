@@ -1,12 +1,11 @@
 
 import { Link } from 'react-router-dom';
-import MobileAd from './MobileAd';
 
 const Footer = () => {
   return (
     <footer className="bg-serona-dark/95 backdrop-blur-md text-serona-secondary">
       <div className="container mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <span className="text-xl font-bold text-serona-primary">Serona AI</span>
             <p className="text-serona-secondary/70">
@@ -14,10 +13,6 @@ const Footer = () => {
             </p>
           </div>
           
-          <div className="md:hidden">
-            <MobileAd />
-          </div>
-
           <div>
             <h4 className="text-lg font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
