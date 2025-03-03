@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import MobileAd from './MobileAd';
 
@@ -50,7 +49,7 @@ const Footer = () => {
             </ul>
           </div>
           
-          <div className="md:col-span-1">
+          <div className="w-full h-full">
             <MobileAd />
           </div>
           
