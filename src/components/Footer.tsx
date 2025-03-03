@@ -1,5 +1,5 @@
-
 import { Link } from 'react-router-dom';
+import MobileAd from './MobileAd';
 
 const Footer = () => {
   return (
@@ -44,6 +44,7 @@ const Footer = () => {
             <ul className="space-y-2">
               <li><span className="text-serona-secondary/70">Personality Insights</span></li>
               <li><span className="text-serona-secondary/70">Career Guidance</span></li>
+              <MobileAd />
               <li><span className="text-serona-secondary/70">Decision Making</span></li>
               <li><span className="text-serona-secondary/70">Self Improvement Help</span></li>
             </ul>
