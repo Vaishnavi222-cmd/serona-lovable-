@@ -13,7 +13,10 @@ const Footer = () => {
             </p>
           </div>
           
-          <div>
+          <div className="relative">
+            <div className="md:hidden absolute -top-4 left-0 w-full">
+              <MobileAd />
+            </div>
             <h4 className="text-lg font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
               <li>
@@ -47,10 +50,6 @@ const Footer = () => {
               <li><span className="text-serona-secondary/70">Decision Making</span></li>
               <li><span className="text-serona-secondary/70">Self Improvement Help</span></li>
             </ul>
-          </div>
-          
-          <div className="w-full h-full">
-            <MobileAd />
           </div>
           
           <div>

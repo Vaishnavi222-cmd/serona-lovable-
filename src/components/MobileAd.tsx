@@ -6,20 +6,11 @@ const MobileAd = () => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Only proceed if we're on mobile
     if (!isMobile) return;
 
-    // Create ad container first
-    let container = document.getElementById('mobile-ad-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'mobile-ad-container';
-      container.style.minHeight = '300px';
-      container.style.width = '100%';
-      document.body.appendChild(container);
-    }
+    const container = document.getElementById('mobile-ad-container');
+    if (!container) return;
 
-    // Then create and append the script
     const script = document.createElement('script');
     script.innerHTML = `
       (function(zvl){
@@ -37,14 +28,13 @@ const MobileAd = () => {
 
     return () => {
       document.body.removeChild(script);
-      container?.remove();
     };
   }, [isMobile]);
 
   if (!isMobile) return null;
 
   return (
-    <div className="w-full h-full flex items-center justify-center">
+    <div className="w-full bg-serona-dark/80 p-4 rounded-lg">
       <div id="mobile-ad-container" className="w-full h-[300px]" />
     </div>
   );
