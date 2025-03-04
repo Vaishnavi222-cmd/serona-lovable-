@@ -45,6 +45,18 @@ const Chat = () => {
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  
+  // Add new ref for message container
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Add effect to scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Modified loadChats to create a new chat if none exists
   const loadChats = async () => {
@@ -675,6 +687,7 @@ const Chat = () => {
                       </div>
                     </div>
                   ))}
+                  <div ref={messagesEndRef} /> {/* Add scroll anchor */}
                 </div>
               )}
             </div>
