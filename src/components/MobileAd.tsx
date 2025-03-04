@@ -8,7 +8,6 @@ const MobileAd = () => {
   const scriptLoadedRef = useRef(false);
   
   useEffect(() => {
-    // Only proceed if mobile and script hasn't been loaded yet
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
       const script = document.createElement('script');
@@ -24,7 +23,7 @@ const MobileAd = () => {
           l.parentNode.insertBefore(s, l);
         })({})
       `;
-      adContainerRef.current.insertBefore(script, adContainerRef.current.firstChild);
+      adContainerRef.current.appendChild(script);
     }
     
     return () => {

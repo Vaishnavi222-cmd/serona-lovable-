@@ -1,12 +1,13 @@
-
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain } from 'lucide-react';
+import { useIsMobile } from '../hooks/use-mobile';
 
 const Hero = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const adScriptRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -22,8 +23,8 @@ const Hero = () => {
       observer.observe(contentRef.current);
     }
 
-    // Add ad script for mobile only
-    if (adScriptRef.current && window.innerWidth < 768 && !scriptLoadedRef.current) {
+    // Load ad script for mobile only
+    if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       const script = document.createElement('script');
       script.innerHTML = `
@@ -38,7 +39,7 @@ const Hero = () => {
           l.parentNode.insertBefore(s, l);
         })({})
       `;
-      adScriptRef.current.insertBefore(script, adScriptRef.current.firstChild);
+      adScriptRef.current.appendChild(script);
     }
 
     return () => {
@@ -48,7 +49,7 @@ const Hero = () => {
         scriptLoadedRef.current = false;
       }
     };
-  }, []);
+  }, [isMobile]);
 
   return (
     <section className="min-h-[85vh] md:min-h-[70vh] flex items-center justify-center relative overflow-hidden bg-serona-dark px-4 md:px-6 py-4 md:py-16">
