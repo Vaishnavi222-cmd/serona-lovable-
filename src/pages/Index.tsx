@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Features from "../components/Features";
 import Footer from "../components/Footer";
+import MobileAd from "../components/MobileAd";
 
 const Index = () => {
   useEffect(() => {
@@ -32,6 +33,7 @@ const Index = () => {
     <main className="min-h-screen bg-white overflow-y-auto overflow-x-hidden">
       <Navbar />
       <Hero />
+      <MobileAd />
       <Features />
       <Footer />
     </main>
