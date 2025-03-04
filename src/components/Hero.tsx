@@ -6,6 +6,7 @@ import { Brain } from 'lucide-react';
 const Hero = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const adScriptRef = useRef<HTMLDivElement>(null);
+  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -22,7 +23,8 @@ const Hero = () => {
     }
 
     // Add ad script for mobile only
-    if (adScriptRef.current && window.innerWidth < 768) {
+    if (adScriptRef.current && window.innerWidth < 768 && !scriptLoadedRef.current) {
+      scriptLoadedRef.current = true;
       const script = document.createElement('script');
       script.innerHTML = `
         (function(bgcf){
@@ -31,18 +33,19 @@ const Hero = () => {
               l = d.scripts[d.scripts.length - 1];
           s.settings = bgcf || {};
           s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
-          s.async = true;
+          s.async = false;
           s.referrerPolicy = 'no-referrer-when-downgrade';
           l.parentNode.insertBefore(s, l);
         })({})
       `;
-      adScriptRef.current.appendChild(script);
+      adScriptRef.current.insertBefore(script, adScriptRef.current.firstChild);
     }
 
     return () => {
       observer.disconnect();
       if (adScriptRef.current) {
         adScriptRef.current.innerHTML = '';
+        scriptLoadedRef.current = false;
       }
     };
   }, []);

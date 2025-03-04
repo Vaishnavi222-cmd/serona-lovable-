@@ -19,12 +19,11 @@ const MobileAd = () => {
               l = d.scripts[d.scripts.length - 1];
           s.settings = qjbmx || {};
           s.src = "//villainous-appointment.com/b.XSVZs/dJGmld0gYSWcd/i-YaWs5/uDZRXeIh/oeSmr9eulZ/U/lOk/P/TtYGx/NwDNMlzVMMDfYat-NBjdEZ0QMmzNMxwLNAwu";
-          s.async = false; // Changed to false for faster loading
+          s.async = false;
           s.referrerPolicy = 'no-referrer-when-downgrade';
           l.parentNode.insertBefore(s, l);
         })({})
       `;
-      // Insert script at the beginning of the container for faster initialization
       adContainerRef.current.insertBefore(script, adContainerRef.current.firstChild);
     }
     
