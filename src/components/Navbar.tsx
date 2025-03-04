@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MessageSquare, Mail, ShoppingCart, Menu as MenuIcon, X, LogOut } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +10,7 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,6 +52,10 @@ const Navbar = () => {
     }
   };
 
+  const handleGetStarted = () => {
+    navigate('/chat');
+  };
+
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       isScrolled ? 'bg-serona-dark/90 backdrop-blur-lg shadow-lg' : 'bg-serona-dark/80 backdrop-blur-md'
@@ -77,7 +81,10 @@ const Navbar = () => {
               Recommendations
             </NavLink>
             {!isAuthenticated ? (
-              <button className="px-6 py-2 bg-serona-primary text-serona-dark rounded-full hover:bg-serona-accent transition-colors duration-300">
+              <button 
+                onClick={handleGetStarted}
+                className="px-6 py-2 bg-serona-primary text-serona-dark rounded-full hover:bg-serona-accent transition-colors duration-300"
+              >
                 Get Started
               </button>
             ) : (
@@ -122,7 +129,10 @@ const Navbar = () => {
                 Recommendations
               </NavLink>
               {!isAuthenticated ? (
-                <button className="px-6 py-2 bg-serona-primary text-serona-dark rounded-full hover:bg-serona-accent transition-colors duration-300 w-full">
+                <button 
+                  onClick={handleGetStarted}
+                  className="px-6 py-2 bg-serona-primary text-serona-dark rounded-full hover:bg-serona-accent transition-colors duration-300 w-full"
+                >
                   Get Started
                 </button>
               ) : (
