@@ -17,7 +17,7 @@ const MobileAd = () => {
               s = d.createElement('script'),
               l = d.scripts[d.scripts.length - 1];
           s.settings = qjbmx || {};
-          s.id = "ad-script-2"; // Add unique ID
+          s.id = "ad-script-2";
           s.src = "//villainous-appointment.com/b.XSVZs/dJGmld0gYSWcd/i-YaWs5/uDZRXeIh/oeSmr9eulZ/U/lOk/P/TtYGx/NwDNMlzVMMDfYat-NBjdEZ0QMmzNMxwLNAwu";
           s.async = true;
           s.referrerPolicy = 'no-referrer-when-downgrade';
@@ -27,6 +27,19 @@ const MobileAd = () => {
         })({})
       `;
       adContainerRef.current.appendChild(script);
+
+      // Prevent click propagation
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+      };
+      
+      adContainerRef.current.addEventListener('click', stopPropagation);
+      
+      return () => {
+        if (adContainerRef.current) {
+          adContainerRef.current.removeEventListener('click', stopPropagation);
+        }
+      };
     }
     
     return () => {
@@ -48,6 +61,7 @@ const MobileAd = () => {
         minHeight: '100px',
         background: 'transparent'
       }}
+      onClick={(e) => e.stopPropagation()}
     />
   );
 };

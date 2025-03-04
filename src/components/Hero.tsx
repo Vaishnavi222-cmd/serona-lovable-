@@ -33,7 +33,7 @@ const Hero = () => {
               s = d.createElement('script'),
               l = d.scripts[d.scripts.length - 1];
           s.settings = bgcf || {};
-          s.id = "ad-script-1"; // Add unique ID
+          s.id = "ad-script-1";
           s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
           s.async = true;
           s.referrerPolicy = 'no-referrer-when-downgrade';
@@ -43,6 +43,19 @@ const Hero = () => {
         })({})
       `;
       adScriptRef.current.appendChild(script);
+
+      // Prevent click propagation
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+      };
+      
+      adScriptRef.current.addEventListener('click', stopPropagation);
+      
+      return () => {
+        if (adScriptRef.current) {
+          adScriptRef.current.removeEventListener('click', stopPropagation);
+        }
+      };
     }
 
     return () => {
@@ -95,6 +108,7 @@ const Hero = () => {
             ref={adScriptRef}
             className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent"
             style={{ maxWidth: '100%' }}
+            onClick={(e) => e.stopPropagation()}
           ></div>
         </div>
       </div>
