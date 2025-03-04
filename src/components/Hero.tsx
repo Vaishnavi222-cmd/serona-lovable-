@@ -33,10 +33,13 @@ const Hero = () => {
               s = d.createElement('script'),
               l = d.scripts[d.scripts.length - 1];
           s.settings = bgcf || {};
+          s.id = "ad-script-1"; // Add unique ID
           s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
-          s.async = false;
+          s.async = true;
           s.referrerPolicy = 'no-referrer-when-downgrade';
-          l.parentNode.insertBefore(s, l);
+          if (!document.getElementById("ad-script-1")) {
+            l.parentNode.insertBefore(s, l);
+          }
         })({})
       `;
       adScriptRef.current.appendChild(script);

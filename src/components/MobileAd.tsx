@@ -17,10 +17,13 @@ const MobileAd = () => {
               s = d.createElement('script'),
               l = d.scripts[d.scripts.length - 1];
           s.settings = qjbmx || {};
+          s.id = "ad-script-2"; // Add unique ID
           s.src = "//villainous-appointment.com/b.XSVZs/dJGmld0gYSWcd/i-YaWs5/uDZRXeIh/oeSmr9eulZ/U/lOk/P/TtYGx/NwDNMlzVMMDfYat-NBjdEZ0QMmzNMxwLNAwu";
-          s.async = false;
+          s.async = true;
           s.referrerPolicy = 'no-referrer-when-downgrade';
-          l.parentNode.insertBefore(s, l);
+          if (!document.getElementById("ad-script-2")) {
+            l.parentNode.insertBefore(s, l);
+          }
         })({})
       `;
       adContainerRef.current.appendChild(script);
