@@ -27,11 +27,15 @@ const Hero = () => {
     if (isMobile && iframeRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      
       const iframeContent = `
         <!DOCTYPE html>
         <html>
           <head>
             <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
               body { margin: 0; padding: 0; overflow: hidden; }
               .ad-container { position: relative; width: 100%; height: 100%; }
@@ -46,9 +50,10 @@ const Hero = () => {
                       l = d.scripts[d.scripts.length - 1];
                   s.settings = bgcf || {};
                   s.id = "ad-script-1";
-                  s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
+                  s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL?" + ${timestamp};
                   s.async = true;
                   s.referrerPolicy = 'no-referrer-when-downgrade';
+                  s.setAttribute('crossorigin', 'anonymous');
                   if (!document.getElementById("ad-script-1")) {
                     l.parentNode.insertBefore(s, l);
                   }
