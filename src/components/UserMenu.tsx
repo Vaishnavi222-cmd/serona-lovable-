@@ -19,7 +19,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ userEmail }: UserMenuProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
@@ -118,12 +118,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
   const handleSignOut = async () => {
     try {
-      setIsLoading(true);
+      setIsSigningOut(true);
       
       // First verify we have a session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // If no session, just clear any stale state and redirect
+        setIsSigningOut(false); // Reset loading state if no session
         await supabase.auth.signOut();
         toast({
           title: "Already signed out",
@@ -148,7 +148,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSigningOut(false);
     }
   };
 
@@ -300,11 +300,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={handleSignOut}
-            disabled={isLoading}
+            disabled={isVerifying} // Don't allow sign out during payment verification
             className="text-red-600 cursor-pointer"
           >
             <LogOut className="mr-2 h-4 w-4" />
-            {isLoading ? "Signing out..." : "Sign out"}
+            {isSigningOut && !isVerifying ? "Signing out..." : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
