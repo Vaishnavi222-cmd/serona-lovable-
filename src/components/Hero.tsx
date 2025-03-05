@@ -25,6 +25,11 @@ const Hero = () => {
 
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
+      const adDiv = document.createElement('div');
+      adDiv.style.pointerEvents = 'auto';
+      adDiv.style.position = 'relative';
+      adDiv.style.zIndex = '1';
+      
       const script = document.createElement('script');
       script.innerHTML = `
         (function(bgcf){
@@ -41,7 +46,8 @@ const Hero = () => {
           }
         })({})
       `;
-      adScriptRef.current.appendChild(script);
+      adDiv.appendChild(script);
+      adScriptRef.current.appendChild(adDiv);
     }
 
     return () => {
@@ -92,17 +98,8 @@ const Hero = () => {
           {/* Ad Container - Mobile Only */}
           <div 
             ref={adScriptRef}
-            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent pointer-events-auto"
-            style={{ 
-              maxWidth: '100%',
-              isolation: 'isolate',
-              position: 'relative',
-              zIndex: 1
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.nativeEvent.stopImmediatePropagation();
-            }}
+            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent pointer-events-none"
+            style={{ maxWidth: '100%' }}
           ></div>
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
 
@@ -10,6 +9,11 @@ const MobileAd = () => {
   useEffect(() => {
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
+      const adDiv = document.createElement('div');
+      adDiv.style.pointerEvents = 'auto';
+      adDiv.style.position = 'relative';
+      adDiv.style.zIndex = '1';
+      
       const script = document.createElement('script');
       script.innerHTML = `
         (function(qjbmx){
@@ -26,7 +30,8 @@ const MobileAd = () => {
           }
         })({})
       `;
-      adContainerRef.current.appendChild(script);
+      adDiv.appendChild(script);
+      adContainerRef.current.appendChild(adDiv);
     }
     
     return () => {
@@ -42,18 +47,11 @@ const MobileAd = () => {
   return (
     <div 
       ref={adContainerRef}
-      className="mx-auto my-4 flex justify-center items-center pointer-events-auto"
+      className="mx-auto my-4 flex justify-center items-center pointer-events-none"
       style={{ 
         maxWidth: '100%',
         minHeight: '100px',
-        background: 'transparent',
-        isolation: 'isolate',
-        position: 'relative',
-        zIndex: 1
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-        e.nativeEvent.stopImmediatePropagation();
+        background: 'transparent'
       }}
     />
   );
