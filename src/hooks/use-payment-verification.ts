@@ -18,6 +18,50 @@ export const usePaymentVerification = () => {
   const isMobile = useIsMobile();
   const mobileSession = useMobilePaymentSession();
 
+  // Enhanced plan update checking with background sync for mobile
+  const checkPlanUpdate = async (userId: string): Promise<boolean> => {
+    const maxAttempts = 30; // Increased for mobile
+    let attempt = 0;
+    const baseDelay = 3000;
+
+    while (attempt < maxAttempts) {
+      try {
+        // Check connection
+        if (!navigator.onLine) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+
+        // Refresh session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Session expired');
+        }
+
+        const { data, error } = await supabase
+          .from('user_plans')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) return true;
+
+        const delay = baseDelay * Math.pow(1.5, attempt);
+        console.log(`Plan check attempt ${attempt + 1}/${maxAttempts}: Waiting ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        attempt++;
+      } catch (error) {
+        console.error('Plan check error:', error);
+        attempt++;
+      }
+    }
+    return false;
+  };
+
   const verifyPayment = async ({
     userId,
     planType,
@@ -94,6 +138,14 @@ export const usePaymentVerification = () => {
           throw new Error('Invalid mobile payment session');
         }
 
+        // First, explicitly mark any existing active plan as expired for mobile flow
+        await supabase
+          .from('user_plans')
+          .update({ status: 'expired' })
+          .eq('user_id', userId)
+          .eq('status', 'active');
+
+        // Now verify the payment with the Edge Function
         const verifyResponse = await supabase.functions.invoke('verify-payment', {
           body: {
             orderId,
@@ -128,50 +180,6 @@ export const usePaymentVerification = () => {
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
       }
     }
-  };
-
-  // Enhanced plan update checking with background sync for mobile
-  const checkPlanUpdate = async (userId: string): Promise<boolean> => {
-    const maxAttempts = 30; // Increased for mobile
-    let attempt = 0;
-    const baseDelay = 3000;
-
-    while (attempt < maxAttempts) {
-      try {
-        // Check connection
-        if (!navigator.onLine) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-
-        // Refresh session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error('Session expired');
-        }
-
-        const { data, error } = await supabase
-          .from('user_plans')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error) throw error;
-        if (data) return true;
-
-        const delay = baseDelay * Math.pow(1.5, attempt);
-        console.log(`Plan check attempt ${attempt + 1}/${maxAttempts}: Waiting ${delay}ms`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        attempt++;
-      } catch (error) {
-        console.error('Plan check error:', error);
-        attempt++;
-      }
-    }
-    return false;
   };
 
   return {
