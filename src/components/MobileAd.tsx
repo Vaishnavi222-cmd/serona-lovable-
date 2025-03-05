@@ -8,13 +8,27 @@ const MobileAd = () => {
   const scriptLoadedRef = useRef(false);
   
   useEffect(() => {
+    const cleanup = () => {
+      const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
+      adScripts.forEach(script => {
+        script.remove();
+        // Remove any event listeners that might have been attached to window/document
+        window.removeEventListener('click', script as any);
+        document.removeEventListener('click', script as any);
+      });
+    };
+
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
+      // Clean up any existing ad scripts first
+      cleanup();
+      
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
-      // Explicitly set pointer events only for the ad container
-      adDiv.style.pointerEvents = 'auto';
+      adDiv.style.pointerEvents = 'all';
+      // Create a shadow root to isolate the ad content
+      const shadow = adDiv.attachShadow({ mode: 'closed' });
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -32,23 +46,17 @@ const MobileAd = () => {
           }
         })({})
       `;
-      adDiv.appendChild(script);
+      shadow.appendChild(script);
       adContainerRef.current.appendChild(adDiv);
-
-      // Clean up any potential rogue event listeners
-      const cleanup = () => {
-        const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
-        adScripts.forEach(script => script.remove());
-      };
-
-      return () => {
-        if (adContainerRef.current) {
-          cleanup();
-          adContainerRef.current.innerHTML = '';
-          scriptLoadedRef.current = false;
-        }
-      };
     }
+
+    return () => {
+      if (adContainerRef.current) {
+        cleanup();
+        adContainerRef.current.innerHTML = '';
+        scriptLoadedRef.current = false;
+      }
+    };
   }, [isMobile]);
 
   if (!isMobile) return null;
@@ -62,7 +70,7 @@ const MobileAd = () => {
         minHeight: '100px',
         background: 'transparent',
         isolation: 'isolate',
-        pointerEvents: 'none', // Disable pointer events on the container
+        pointerEvents: 'none',
         position: 'relative',
         zIndex: 1
       }}

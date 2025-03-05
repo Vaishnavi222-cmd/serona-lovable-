@@ -23,13 +23,27 @@ const Hero = () => {
       observer.observe(contentRef.current);
     }
 
+    const cleanup = () => {
+      const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
+      adScripts.forEach(script => {
+        script.remove();
+        // Remove any event listeners that might have been attached to window/document
+        window.removeEventListener('click', script as any);
+        document.removeEventListener('click', script as any);
+      });
+    };
+
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
+      // Clean up any existing ad scripts first
+      cleanup();
+      
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
-      // Explicitly set pointer events only for the ad container
-      adDiv.style.pointerEvents = 'auto';
+      adDiv.style.pointerEvents = 'all';
+      // Create a shadow root to isolate the ad content
+      const shadow = adDiv.attachShadow({ mode: 'closed' });
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -47,27 +61,14 @@ const Hero = () => {
           }
         })({})
       `;
-      adDiv.appendChild(script);
+      shadow.appendChild(script);
       adScriptRef.current.appendChild(adDiv);
-
-      // Clean up any potential rogue event listeners
-      const cleanup = () => {
-        const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
-        adScripts.forEach(script => script.remove());
-      };
-
-      return () => {
-        if (adScriptRef.current) {
-          cleanup();
-          adScriptRef.current.innerHTML = '';
-          scriptLoadedRef.current = false;
-        }
-      };
     }
 
     return () => {
       observer.disconnect();
       if (adScriptRef.current) {
+        cleanup();
         adScriptRef.current.innerHTML = '';
         scriptLoadedRef.current = false;
       }
