@@ -6,7 +6,7 @@ import { useIsMobile } from '../hooks/use-mobile';
 
 const Hero = () => {
   const contentRef = useRef<HTMLDivElement>(null);
-  const adScriptRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const scriptLoadedRef = useRef(false);
   const isMobile = useIsMobile();
 
@@ -24,51 +24,48 @@ const Hero = () => {
       observer.observe(contentRef.current);
     }
 
-    if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
+    if (isMobile && iframeRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       
-      // Create shadow root for isolation
-      const shadowRoot = adScriptRef.current.attachShadow({ mode: 'closed' });
-      
-      const adDiv = document.createElement('div');
-      adDiv.style.position = 'relative';
-      adDiv.style.zIndex = '1';
-      
-      const script = document.createElement('script');
-      script.innerHTML = `
-        (function(bgcf){
-          var d = document,
-              s = d.createElement('script'),
-              l = d.scripts[d.scripts.length - 1];
-          s.settings = bgcf || {};
-          s.id = "ad-script-1";
-          s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
-          s.async = true;
-          s.referrerPolicy = 'no-referrer-when-downgrade';
-          if (!document.getElementById("ad-script-1")) {
-            l.parentNode.insertBefore(s, l);
-          }
-        })({})
+      const iframeContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              body { margin: 0; padding: 0; overflow: hidden; }
+              .ad-container { position: relative; width: 100%; height: 100%; }
+            </style>
+          </head>
+          <body>
+            <div class="ad-container">
+              <script>
+                (function(bgcf){
+                  var d = document,
+                      s = d.createElement('script'),
+                      l = d.scripts[d.scripts.length - 1];
+                  s.settings = bgcf || {};
+                  s.id = "ad-script-1";
+                  s.src = "//villainous-appointment.com/bGXSVVsbd.GElW0DYEWSdyiVYZWp5VuIZ/XrIw/ZelmN9Su_ZlU-l-kdPOTEYIxjN/DdAByuMuDkUhtWN/jbEd0xMqDmIGw/NUgL";
+                  s.async = true;
+                  s.referrerPolicy = 'no-referrer-when-downgrade';
+                  if (!document.getElementById("ad-script-1")) {
+                    l.parentNode.insertBefore(s, l);
+                  }
+                })({})
+              </script>
+            </div>
+          </body>
+        </html>
       `;
       
-      adDiv.appendChild(script);
-      shadowRoot.appendChild(adDiv);
-
-      // Event isolation
-      const stopPropagation = (e: Event) => {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      };
-
-      shadowRoot.addEventListener('click', stopPropagation, true);
-      shadowRoot.addEventListener('mousedown', stopPropagation, true);
-      shadowRoot.addEventListener('mouseup', stopPropagation, true);
+      iframeRef.current.srcdoc = iframeContent;
     }
 
     return () => {
       observer.disconnect();
-      if (adScriptRef.current) {
-        adScriptRef.current.innerHTML = '';
+      if (iframeRef.current) {
+        iframeRef.current.srcdoc = '';
         scriptLoadedRef.current = false;
       }
     };
@@ -111,14 +108,21 @@ const Hero = () => {
           </div>
           
           {/* Ad Container - Mobile Only */}
-          <div 
-            ref={adScriptRef}
-            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
-            style={{ 
-              maxWidth: '100%',
-              isolation: 'isolate' // Creates a new stacking context
-            }}
-          ></div>
+          {isMobile && (
+            <iframe 
+              ref={iframeRef}
+              className="mx-auto my-4 block"
+              style={{ 
+                width: '300px',
+                height: '100px',
+                border: 'none',
+                background: 'transparent',
+                overflow: 'hidden'
+              }}
+              sandbox="allow-scripts"
+              loading="lazy"
+            />
+          )}
         </div>
       </div>
     </section>
