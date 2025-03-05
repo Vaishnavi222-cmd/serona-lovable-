@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain } from 'lucide-react';
@@ -25,8 +26,11 @@ const Hero = () => {
 
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
+      
+      // Create shadow root
+      const shadowRoot = adScriptRef.current.attachShadow({ mode: 'closed' });
+      
       const adDiv = document.createElement('div');
-      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
       
@@ -47,7 +51,7 @@ const Hero = () => {
         })({})
       `;
       adDiv.appendChild(script);
-      adScriptRef.current.appendChild(adDiv);
+      shadowRoot.appendChild(adDiv);
     }
 
     return () => {
