@@ -27,7 +27,7 @@ const Hero = () => {
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       
-      // Create shadow root
+      // Create shadow root for isolation
       const shadowRoot = adScriptRef.current.attachShadow({ mode: 'closed' });
       
       const adDiv = document.createElement('div');
@@ -50,8 +50,19 @@ const Hero = () => {
           }
         })({})
       `;
+      
       adDiv.appendChild(script);
       shadowRoot.appendChild(adDiv);
+
+      // Event isolation
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      };
+
+      shadowRoot.addEventListener('click', stopPropagation, true);
+      shadowRoot.addEventListener('mousedown', stopPropagation, true);
+      shadowRoot.addEventListener('mouseup', stopPropagation, true);
     }
 
     return () => {

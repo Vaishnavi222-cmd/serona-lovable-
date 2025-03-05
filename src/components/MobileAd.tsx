@@ -11,7 +11,7 @@ const MobileAd = () => {
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
       
-      // Create shadow root
+      // Create shadow root for isolation
       const shadowRoot = adContainerRef.current.attachShadow({ mode: 'closed' });
       
       const adDiv = document.createElement('div');
@@ -36,6 +36,16 @@ const MobileAd = () => {
       `;
       adDiv.appendChild(script);
       shadowRoot.appendChild(adDiv);
+
+      // Event isolation
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      };
+
+      shadowRoot.addEventListener('click', stopPropagation, true);
+      shadowRoot.addEventListener('mousedown', stopPropagation, true);
+      shadowRoot.addEventListener('mouseup', stopPropagation, true);
     }
     
     return () => {
