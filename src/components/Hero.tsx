@@ -1,3 +1,4 @@
+<lov-codelov-code>
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain } from 'lucide-react';
@@ -29,13 +30,6 @@ const Hero = () => {
       // Create a shadow root for isolation
       const shadowRoot = adScriptRef.current.attachShadow({ mode: 'closed' });
       
-      // Create container div inside shadow root
-      const adContainer = document.createElement('div');
-      adContainer.style.width = '100%';
-      adContainer.style.height = '100%';
-      adContainer.style.position = 'relative';
-      adContainer.style.zIndex = '1';
-
       const script = document.createElement('script');
       script.innerHTML = `
         (function(bgcf){
@@ -53,8 +47,7 @@ const Hero = () => {
         })({})
       `;
       
-      adContainer.appendChild(script);
-      shadowRoot.appendChild(adContainer);
+      shadowRoot.appendChild(script);
 
       // Event isolation
       const stopPropagation = (e: Event) => {
@@ -62,9 +55,9 @@ const Hero = () => {
         e.stopImmediatePropagation();
       };
 
-      adContainer.addEventListener('click', stopPropagation, true);
-      adContainer.addEventListener('mousedown', stopPropagation, true);
-      adContainer.addEventListener('mouseup', stopPropagation, true);
+      shadowRoot.addEventListener('click', stopPropagation, true);
+      shadowRoot.addEventListener('mousedown', stopPropagation, true);
+      shadowRoot.addEventListener('mouseup', stopPropagation, true);
     }
 
     return () => {
@@ -118,16 +111,9 @@ const Hero = () => {
             className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
             style={{ 
               maxWidth: '100%',
-              isolation: 'isolate',
-              pointerEvents: 'none' // Make container non-interactive by default
+              isolation: 'isolate'
             }}
-          >
-            <div style={{ 
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'auto' // Enable interactions only for the ad content
-            }} />
-          </div>
+          />
         </div>
       </div>
     </section>
@@ -135,3 +121,4 @@ const Hero = () => {
 };
 
 export default Hero;
+</lov-code>
