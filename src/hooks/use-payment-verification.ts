@@ -126,68 +126,84 @@ export const usePaymentVerification = () => {
       }
     }
 
-    // Mobile-specific verification with improved delay handling
-    if (!await mobileSession.createPaymentSession()) {
-      setIsVerifying(false);
-      throw new Error('Failed to create mobile payment session');
-    }
-
-    while (retryCount < maxRetries) {
-      try {
-        if (!mobileSession.validatePaymentSession()) {
-          throw new Error('Invalid mobile payment session');
-        }
-
-        // First, explicitly mark any existing active plan as expired for mobile flow
-        await supabase
-          .from('user_plans')
-          .update({ status: 'expired' })
-          .eq('user_id', userId)
-          .eq('status', 'active');
-
-        // Add a delay before verification to ensure database sync
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Now verify the payment with the Edge Function
-        const verifyResponse = await supabase.functions.invoke('verify-payment', {
-          body: {
-            orderId,
-            paymentId,
-            signature,
-            planType,
-            userId
-          }
-        });
-
-        if (verifyResponse.error) {
-          throw verifyResponse.error;
-        }
-
-        // Wait longer for mobile plan update to complete
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const isUpdated = await checkPlanUpdate(userId);
-        if (!isUpdated) {
-          throw new Error('Plan update verification failed');
-        }
-
-        // Success! Important: Don't trigger any page reloads here for mobile
+    // Mobile-specific verification with session handling improvements
+    try {
+      // Get and verify session immediately before starting verification
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
         setIsVerifying(false);
-        return true;
-
-      } catch (error: any) {
-        console.error(`Mobile verification attempt ${retryCount + 1} failed:`, error);
-        retryCount++;
-        
-        if (retryCount === maxRetries) {
-          setIsVerifying(false);
-          throw error;
-        }
-
-        // Add delay between retries for mobile
-        const delayMs = Math.min(1000 * Math.pow(2, retryCount), 5000);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        throw new Error('No valid session found');
       }
+
+      if (!await mobileSession.createPaymentSession()) {
+        setIsVerifying(false);
+        throw new Error('Failed to create mobile payment session');
+      }
+
+      while (retryCount < maxRetries) {
+        try {
+          if (!mobileSession.validatePaymentSession()) {
+            throw new Error('Invalid mobile payment session');
+          }
+
+          // Store user ID from the validated session
+          const currentUserId = session.user.id;
+
+          // First, explicitly mark any existing active plan as expired
+          await supabase
+            .from('user_plans')
+            .update({ status: 'expired' })
+            .eq('user_id', currentUserId)
+            .eq('status', 'active');
+
+          // Add a delay before verification to ensure database sync
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Verify payment using stored user ID
+          const verifyResponse = await supabase.functions.invoke('verify-payment', {
+            body: {
+              orderId,
+              paymentId,
+              signature,
+              planType,
+              userId: currentUserId // Use stored ID instead of potentially stale session
+            }
+          });
+
+          if (verifyResponse.error) {
+            throw verifyResponse.error;
+          }
+
+          // Wait longer for mobile plan update to complete
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
+          // Use stored user ID for plan update check
+          const isUpdated = await checkPlanUpdate(currentUserId);
+          if (!isUpdated) {
+            throw new Error('Plan update verification failed');
+          }
+
+          // Success! No page reloads for mobile
+          setIsVerifying(false);
+          return true;
+
+        } catch (error: any) {
+          console.error(`Mobile verification attempt ${retryCount + 1} failed:`, error);
+          retryCount++;
+          
+          if (retryCount === maxRetries) {
+            setIsVerifying(false);
+            throw error;
+          }
+
+          // Add delay between retries for mobile
+          const delayMs = Math.min(1000 * Math.pow(2, retryCount), 5000);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    } catch (error: any) {
+      setIsVerifying(false);
+      throw error;
     }
   };
 
