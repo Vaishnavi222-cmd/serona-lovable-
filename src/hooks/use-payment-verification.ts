@@ -126,13 +126,29 @@ export const usePaymentVerification = () => {
       }
     }
 
-    // Mobile-specific verification with session handling improvements
+    // Mobile-specific verification with enhanced session handling
     try {
-      // Get and verify session immediately before starting verification
-      const { data: { session } } = await supabase.auth.getSession();
+      // Enhanced session retrieval with retries
+      let session = null;
+      let sessionRetries = 0;
+      const maxSessionRetries = 3;
+      
+      while (!session?.user?.id && sessionRetries < maxSessionRetries) {
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+        
+        if (!session?.user?.id) {
+          sessionRetries++;
+          console.log(`Session retry attempt ${sessionRetries}`);
+          if (sessionRetries < maxSessionRetries) {
+            await new Promise(resolve => setTimeout(resolve, sessionRetries * 100));
+          }
+        }
+      }
+
       if (!session?.user?.id) {
         setIsVerifying(false);
-        throw new Error('No valid session found');
+        throw new Error('Could not retrieve valid session after multiple attempts');
       }
 
       if (!await mobileSession.createPaymentSession()) {
@@ -146,7 +162,7 @@ export const usePaymentVerification = () => {
             throw new Error('Invalid mobile payment session');
           }
 
-          // Store user ID from the validated session
+          // Store user ID from the validated session for all subsequent operations
           const currentUserId = session.user.id;
 
           // First, explicitly mark any existing active plan as expired
@@ -166,7 +182,7 @@ export const usePaymentVerification = () => {
               paymentId,
               signature,
               planType,
-              userId: currentUserId // Use stored ID instead of potentially stale session
+              userId: currentUserId
             }
           });
 
@@ -183,7 +199,6 @@ export const usePaymentVerification = () => {
             throw new Error('Plan update verification failed');
           }
 
-          // Success! No page reloads for mobile
           setIsVerifying(false);
           return true;
 
@@ -196,7 +211,6 @@ export const usePaymentVerification = () => {
             throw error;
           }
 
-          // Add delay between retries for mobile
           const delayMs = Math.min(1000 * Math.pow(2, retryCount), 5000);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
