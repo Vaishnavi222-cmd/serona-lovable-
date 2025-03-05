@@ -12,20 +12,20 @@ export const useMobilePaymentSession = () => {
     
     const token = `${session.user.id}_${Date.now()}`;
     sessionRef.current = token;
-    localStorage.setItem(sessionKey, token);
+    sessionStorage.setItem(sessionKey, token);
     return token;
   };
 
   const validatePaymentSession = () => {
-    const storedToken = localStorage.getItem(sessionKey);
+    const storedToken = sessionStorage.getItem(sessionKey);
     const isValid = storedToken === sessionRef.current;
-    localStorage.removeItem(sessionKey); // Clean up after validation
+    sessionStorage.removeItem(sessionKey); // Clean up after validation
     return isValid;
   };
 
   useEffect(() => {
     return () => {
-      localStorage.removeItem(sessionKey); // Cleanup on unmount
+      sessionStorage.removeItem(sessionKey); // Cleanup on unmount
     };
   }, []);
 

@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useMobilePaymentSession } from './use-mobile-payment-session';
 
 interface PaymentVerificationProps {
   userId: string;
@@ -16,6 +16,7 @@ export const usePaymentVerification = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const mobileSession = useMobilePaymentSession();
 
   const verifyPayment = async ({
     userId,
@@ -28,7 +29,7 @@ export const usePaymentVerification = () => {
     let retryCount = 0;
     const maxRetries = 3;
 
-    // For desktop, keep existing flow
+    // For desktop, keep existing flow completely untouched
     if (!isMobile) {
       while (retryCount < maxRetries) {
         try {
@@ -81,17 +82,16 @@ export const usePaymentVerification = () => {
       }
     }
 
-    // Mobile-specific verification with enhanced session handling
+    // Mobile-specific verification with sessionStorage
+    if (!await mobileSession.createPaymentSession()) {
+      setIsVerifying(false);
+      throw new Error('Failed to create mobile payment session');
+    }
+
     while (retryCount < maxRetries) {
       try {
-        // Ensure we have a fresh session for mobile
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          // Try to refresh the session
-          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-          if (!refreshedSession) {
-            throw new Error('Session expired');
-          }
+        if (!mobileSession.validatePaymentSession()) {
+          throw new Error('Invalid mobile payment session');
         }
 
         const verifyResponse = await supabase.functions.invoke('verify-payment', {
@@ -108,7 +108,6 @@ export const usePaymentVerification = () => {
           throw verifyResponse.error;
         }
 
-        // Enhanced plan update check for mobile
         const isUpdated = await checkPlanUpdate(userId);
         if (!isUpdated) {
           throw new Error('Plan update verification failed');
@@ -116,6 +115,7 @@ export const usePaymentVerification = () => {
 
         setIsVerifying(false);
         return true;
+
       } catch (error: any) {
         console.error(`Mobile verification attempt ${retryCount + 1} failed:`, error);
         retryCount++;
