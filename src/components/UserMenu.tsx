@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -63,23 +62,36 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     return session;
   };
 
-  // Poll for plan update
-  const pollForPlanUpdate = async (userId: string, maxAttempts = 15): Promise<boolean> => {
-    const delay = 2000; // 2 second delay between attempts
-    for (let i = 0; i < maxAttempts; i++) {
-      const { data, error } = await supabase
-        .from('user_plans')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+  // Enhanced polling with exponential backoff
+  const pollForPlanUpdate = async (userId: string, maxAttempts = 20): Promise<boolean> => {
+    let attempt = 0;
+    const baseDelay = 3000; // Increased base delay for mobile
+    
+    while (attempt < maxAttempts) {
+      try {
+        const { data, error } = await supabase
+          .from('user_plans')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-      if (data) {
-        return true;
+        if (data) {
+          console.log('Plan update confirmed:', data);
+          return true;
+        }
+
+        // Exponential backoff
+        const delay = baseDelay * Math.pow(1.5, attempt);
+        console.log(`Attempt ${attempt + 1}/${maxAttempts}: Waiting ${delay}ms before next check`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        attempt++;
+      } catch (error) {
+        console.error('Error polling for plan update:', error);
+        attempt++;
       }
-      await new Promise(resolve => setTimeout(resolve, delay));
     }
     return false;
   };
@@ -172,6 +184,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
       console.log('Payment order created:', data);
 
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -184,13 +197,22 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         theme: {
           color: "#1EAEDB",
+          backdrop_color: "rgba(0,0,0,0.8)" // Better mobile modal handling
         },
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 900, // 15 minutes timeout
         modal: {
+          confirm_close: true, // Prevent accidental closes
           ondismiss: () => {
             console.log('Payment modal dismissed');
             setIsLoading(false);
           },
-          escape: true,
+          escape: false, // Prevent escape key from closing
+          animation: true, // Smoother transitions
+          handleback: true, // Handle back button on mobile
         },
         handler: async function (response: any) {
           try {
@@ -200,6 +222,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
             console.log('Payment successful, verifying...', response);
             
+            // Add connection check before verification
+            if (!navigator.onLine) {
+              throw new Error('No internet connection. Please check your connection and try again.');
+            }
+
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId: response.razorpay_order_id,
@@ -217,8 +244,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
 
             console.log('Verification successful:', verifyResponse);
 
-            // Poll for plan update with increased timeout
-            const planUpdated = await pollForPlanUpdate(user.id, 15); // 15 attempts with 2 second delay
+            // Enhanced polling with more attempts and longer delays for mobile
+            const planUpdated = await pollForPlanUpdate(user.id, isMobile ? 20 : 15);
             
             if (!planUpdated) {
               console.error('Plan update verification failed');
@@ -233,7 +260,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
                 description: `Your ${planType} plan is now active`,
               });
               
-              // Refresh the profile dialog data if it's open
               if (showProfileDialog) {
                 setShowProfileDialog(false);
                 setTimeout(() => setShowProfileDialog(true), 100);
@@ -254,6 +280,18 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       };
 
       const razorpay = new (window as any).Razorpay(options);
+      
+      // Add error event handler for better mobile error handling
+      razorpay.on('payment.error', function(resp: any) {
+        console.error('Payment error:', resp);
+        toast({
+          title: "Payment failed",
+          description: "There was an error processing your payment. Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      });
+
       razorpay.open();
 
     } catch (error: any) {
