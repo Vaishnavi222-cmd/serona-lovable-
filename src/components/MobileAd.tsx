@@ -8,27 +8,12 @@ const MobileAd = () => {
   const scriptLoadedRef = useRef(false);
   
   useEffect(() => {
-    const cleanup = () => {
-      const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
-      adScripts.forEach(script => {
-        script.remove();
-        // Remove any event listeners that might have been attached to window/document
-        window.removeEventListener('click', script as any);
-        document.removeEventListener('click', script as any);
-      });
-    };
-
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
-      // Clean up any existing ad scripts first
-      cleanup();
-      
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
+      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
-      adDiv.style.pointerEvents = 'all';
-      // Create a shadow root to isolate the ad content
-      const shadow = adDiv.attachShadow({ mode: 'closed' });
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -46,13 +31,12 @@ const MobileAd = () => {
           }
         })({})
       `;
-      shadow.appendChild(script);
+      adDiv.appendChild(script);
       adContainerRef.current.appendChild(adDiv);
     }
-
+    
     return () => {
       if (adContainerRef.current) {
-        cleanup();
         adContainerRef.current.innerHTML = '';
         scriptLoadedRef.current = false;
       }
@@ -64,15 +48,12 @@ const MobileAd = () => {
   return (
     <div 
       ref={adContainerRef}
-      className="mx-auto my-4 flex justify-center items-center"
+      className="mx-auto my-4 flex justify-center items-center relative"
       style={{ 
         maxWidth: '100%',
         minHeight: '100px',
         background: 'transparent',
-        isolation: 'isolate',
-        pointerEvents: 'none',
-        position: 'relative',
-        zIndex: 1
+        isolation: 'isolate', // This creates a new stacking context
       }}
     />
   );

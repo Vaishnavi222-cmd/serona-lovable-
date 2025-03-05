@@ -23,27 +23,12 @@ const Hero = () => {
       observer.observe(contentRef.current);
     }
 
-    const cleanup = () => {
-      const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
-      adScripts.forEach(script => {
-        script.remove();
-        // Remove any event listeners that might have been attached to window/document
-        window.removeEventListener('click', script as any);
-        document.removeEventListener('click', script as any);
-      });
-    };
-
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
-      // Clean up any existing ad scripts first
-      cleanup();
-      
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
+      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
-      adDiv.style.pointerEvents = 'all';
-      // Create a shadow root to isolate the ad content
-      const shadow = adDiv.attachShadow({ mode: 'closed' });
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -61,14 +46,13 @@ const Hero = () => {
           }
         })({})
       `;
-      shadow.appendChild(script);
+      adDiv.appendChild(script);
       adScriptRef.current.appendChild(adDiv);
     }
 
     return () => {
       observer.disconnect();
       if (adScriptRef.current) {
-        cleanup();
         adScriptRef.current.innerHTML = '';
         scriptLoadedRef.current = false;
       }
@@ -114,15 +98,12 @@ const Hero = () => {
           {/* Ad Container - Mobile Only */}
           <div 
             ref={adScriptRef}
-            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent"
+            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
             style={{ 
               maxWidth: '100%',
-              isolation: 'isolate',
-              pointerEvents: 'none', // Disable pointer events on the container
-              position: 'relative',
-              zIndex: 1
+              isolation: 'isolate' // Creates a new stacking context
             }}
-          />
+          ></div>
         </div>
       </div>
     </section>
