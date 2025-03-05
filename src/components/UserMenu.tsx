@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 import { UserProfileDialog } from "@/components/ui/user-profile-dialog";
+import { usePaymentVerification } from "@/hooks/use-payment-verification";
 
 interface UserMenuProps {
   userEmail: string | undefined;
@@ -23,6 +24,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const { toast } = useToast();
+  const { verifyPayment, isVerifying } = usePaymentVerification();
 
   // Enhanced Razorpay script loading with better error handling
   const loadRazorpayScript = useCallback(() => {
@@ -162,10 +164,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       }
       const user = session.user;
 
-      console.log('Creating payment for user:', user.id);
-
       if (!isRazorpayLoaded) {
-        console.log('Loading Razorpay script...');
         await loadRazorpayScript();
       }
 
@@ -178,11 +177,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       });
 
       if (error || !data?.orderId) {
-        console.error('Create payment error:', error);
         throw new Error('Could not create payment order. Please try again.');
       }
-
-      console.log('Payment order created:', data);
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const options = {
@@ -197,22 +193,21 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         },
         theme: {
           color: "#1EAEDB",
-          backdrop_color: "rgba(0,0,0,0.8)" // Better mobile modal handling
+          backdrop_color: "rgba(0,0,0,0.8)"
         },
         retry: {
           enabled: true,
           max_count: 3
         },
-        timeout: 900, // 15 minutes timeout
+        timeout: 900,
         modal: {
-          confirm_close: true, // Prevent accidental closes
+          confirm_close: true,
           ondismiss: () => {
-            console.log('Payment modal dismissed');
             setIsLoading(false);
           },
-          escape: false, // Prevent escape key from closing
-          animation: true, // Smoother transitions
-          handleback: true, // Handle back button on mobile
+          escape: false,
+          animation: true,
+          handleback: true,
         },
         handler: async function (response: any) {
           try {
@@ -220,58 +215,31 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               throw new Error('Invalid payment response received');
             }
 
-            console.log('Payment successful, verifying...', response);
-            
-            // Add connection check before verification
-            if (!navigator.onLine) {
-              throw new Error('No internet connection. Please check your connection and try again.');
-            }
-
-            const verifyResponse = await supabase.functions.invoke('verify-payment', {
-              body: {
-                orderId: response.razorpay_order_id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-                planType,
-                userId: user.id
-              }
+            await verifyPayment({
+              userId: user.id,
+              planType,
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature
             });
 
-            if (verifyResponse.error || !verifyResponse.data) {
-              console.error('Verification error:', verifyResponse.error);
-              throw new Error(verifyResponse.error || 'Payment verification failed');
-            }
+            toast({
+              title: "Payment successful",
+              description: `Your ${planType} plan is now active`,
+            });
 
-            console.log('Verification successful:', verifyResponse);
-
-            // Enhanced polling with more attempts and longer delays for mobile
-            const planUpdated = await pollForPlanUpdate(user.id, isMobile ? 20 : 15);
-            
-            if (!planUpdated) {
-              console.error('Plan update verification failed');
-              toast({
-                title: "Payment processed",
-                description: "Your payment was successful but plan activation is taking longer than expected. Please refresh the page in a few moments.",
-                duration: 10000,
-              });
-            } else {
-              toast({
-                title: "Payment successful",
-                description: `Your ${planType} plan is now active`,
-              });
-              
-              if (showProfileDialog) {
-                setShowProfileDialog(false);
-                setTimeout(() => setShowProfileDialog(true), 100);
-              }
+            if (showProfileDialog) {
+              setShowProfileDialog(false);
+              setTimeout(() => setShowProfileDialog(true), 100);
             }
 
           } catch (error: any) {
-            console.error('Verification error:', error);
+            console.error('Payment verification error:', error);
             toast({
               title: "Error activating plan",
-              description: error.message || "An unexpected error occurred",
+              description: error.message || "Please try refreshing the page",
               variant: "destructive",
+              duration: 10000,
             });
           } finally {
             setIsLoading(false);
@@ -280,8 +248,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       };
 
       const razorpay = new (window as any).Razorpay(options);
-      
-      // Add error event handler for better mobile error handling
+
       razorpay.on('payment.error', function(resp: any) {
         console.error('Payment error:', resp);
         toast({
