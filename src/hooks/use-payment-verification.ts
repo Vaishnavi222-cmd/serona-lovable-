@@ -126,7 +126,7 @@ export const usePaymentVerification = () => {
       }
     }
 
-    // Mobile-specific verification with improved retry delays
+    // Mobile-specific verification with improved delay handling
     if (!await mobileSession.createPaymentSession()) {
       setIsVerifying(false);
       throw new Error('Failed to create mobile payment session');
@@ -145,12 +145,8 @@ export const usePaymentVerification = () => {
           .eq('user_id', userId)
           .eq('status', 'active');
 
-        // Add a delay before the verification attempt (only for retries)
-        if (retryCount > 0) {
-          const delayMs = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff with 5s max
-          console.log(`Mobile payment retry ${retryCount + 1}: Waiting ${delayMs}ms before attempt`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
+        // Add a delay before verification to ensure database sync
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Now verify the payment with the Edge Function
         const verifyResponse = await supabase.functions.invoke('verify-payment', {
@@ -167,15 +163,15 @@ export const usePaymentVerification = () => {
           throw verifyResponse.error;
         }
 
-        // Add a delay before checking plan update to allow for database propagation
-        const delayBeforeCheck = 2000; // 2 seconds
-        await new Promise(resolve => setTimeout(resolve, delayBeforeCheck));
+        // Wait longer for mobile plan update to complete
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         const isUpdated = await checkPlanUpdate(userId);
         if (!isUpdated) {
           throw new Error('Plan update verification failed');
         }
 
+        // Success! Important: Don't trigger any page reloads here for mobile
         setIsVerifying(false);
         return true;
 
@@ -187,6 +183,10 @@ export const usePaymentVerification = () => {
           setIsVerifying(false);
           throw error;
         }
+
+        // Add delay between retries for mobile
+        const delayMs = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
   };
