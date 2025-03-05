@@ -10,9 +10,10 @@ const MobileAd = () => {
   useEffect(() => {
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
-      
-      // Create a shadow root for isolation
-      const shadowRoot = adContainerRef.current.attachShadow({ mode: 'closed' });
+      const adDiv = document.createElement('div');
+      // Remove pointer-events from the div itself
+      adDiv.style.position = 'relative';
+      adDiv.style.zIndex = '1';
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -30,18 +31,8 @@ const MobileAd = () => {
           }
         })({})
       `;
-      
-      shadowRoot.appendChild(script);
-
-      // Event isolation
-      const stopPropagation = (e: Event) => {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      };
-
-      shadowRoot.addEventListener('click', stopPropagation, true);
-      shadowRoot.addEventListener('mousedown', stopPropagation, true);
-      shadowRoot.addEventListener('mouseup', stopPropagation, true);
+      adDiv.appendChild(script);
+      adContainerRef.current.appendChild(adDiv);
     }
     
     return () => {
@@ -62,7 +53,7 @@ const MobileAd = () => {
         maxWidth: '100%',
         minHeight: '100px',
         background: 'transparent',
-        isolation: 'isolate'
+        isolation: 'isolate', // This creates a new stacking context
       }}
     />
   );

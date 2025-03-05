@@ -1,4 +1,3 @@
-<lov-codelov-code>
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain } from 'lucide-react';
@@ -26,9 +25,10 @@ const Hero = () => {
 
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
-
-      // Create a shadow root for isolation
-      const shadowRoot = adScriptRef.current.attachShadow({ mode: 'closed' });
+      const adDiv = document.createElement('div');
+      // Remove pointer-events from the div itself
+      adDiv.style.position = 'relative';
+      adDiv.style.zIndex = '1';
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -46,18 +46,8 @@ const Hero = () => {
           }
         })({})
       `;
-      
-      shadowRoot.appendChild(script);
-
-      // Event isolation
-      const stopPropagation = (e: Event) => {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      };
-
-      shadowRoot.addEventListener('click', stopPropagation, true);
-      shadowRoot.addEventListener('mousedown', stopPropagation, true);
-      shadowRoot.addEventListener('mouseup', stopPropagation, true);
+      adDiv.appendChild(script);
+      adScriptRef.current.appendChild(adDiv);
     }
 
     return () => {
@@ -111,9 +101,9 @@ const Hero = () => {
             className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
             style={{ 
               maxWidth: '100%',
-              isolation: 'isolate'
+              isolation: 'isolate' // Creates a new stacking context
             }}
-          />
+          ></div>
         </div>
       </div>
     </section>
@@ -121,4 +111,3 @@ const Hero = () => {
 };
 
 export default Hero;
-</lov-code>
