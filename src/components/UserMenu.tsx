@@ -123,7 +123,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       // First verify we have a session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setIsSigningOut(false); // Reset loading state if no session
+        setIsSigningOut(false);
         await supabase.auth.signOut();
         toast({
           title: "Already signed out",
@@ -153,10 +153,8 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   };
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
-    setShowUpgradeDialog(false);
-
     try {
-      setIsLoading(true);
+      setShowUpgradeDialog(false);
 
       const session = await verifySession();
       if (!session?.user?.id) {
@@ -202,8 +200,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         timeout: 900,
         modal: {
           confirm_close: true,
-          ondismiss: () => {
-            setIsLoading(false);
+          ondismiss: async function() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              // Only reset if we still have a valid session
+              setShowUpgradeDialog(false);
+            }
           },
           escape: false,
           animation: true,
@@ -241,8 +243,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               variant: "destructive",
               duration: 10000,
             });
-          } finally {
-            setIsLoading(false);
           }
         },
       };
@@ -256,14 +256,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           description: "There was an error processing your payment. Please try again.",
           variant: "destructive",
         });
-        setIsLoading(false);
       });
 
       razorpay.open();
 
     } catch (error: any) {
       console.error('Payment setup error:', error);
-      setIsLoading(false);
       toast({
         title: "Error setting up payment",
         description: error.message || "Please try again later",
