@@ -26,7 +26,7 @@ const Hero = () => {
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
-      adDiv.style.pointerEvents = 'auto';
+      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
       
@@ -98,8 +98,11 @@ const Hero = () => {
           {/* Ad Container - Mobile Only */}
           <div 
             ref={adScriptRef}
-            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent pointer-events-none"
-            style={{ maxWidth: '100%' }}
+            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
+            style={{ 
+              maxWidth: '100%',
+              isolation: 'isolate' // Creates a new stacking context
+            }}
           ></div>
         </div>
       </div>

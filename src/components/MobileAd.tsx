@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
 
@@ -10,7 +11,7 @@ const MobileAd = () => {
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
-      adDiv.style.pointerEvents = 'auto';
+      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
       
@@ -47,11 +48,12 @@ const MobileAd = () => {
   return (
     <div 
       ref={adContainerRef}
-      className="mx-auto my-4 flex justify-center items-center pointer-events-none"
+      className="mx-auto my-4 flex justify-center items-center relative"
       style={{ 
         maxWidth: '100%',
         minHeight: '100px',
-        background: 'transparent'
+        background: 'transparent',
+        isolation: 'isolate', // This creates a new stacking context
       }}
     />
   );
