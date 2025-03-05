@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PaymentVerificationProps {
   userId: string;
@@ -14,6 +14,7 @@ interface PaymentVerificationProps {
 export const usePaymentVerification = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const verifyPayment = async ({
     userId,
@@ -26,18 +27,70 @@ export const usePaymentVerification = () => {
     let retryCount = 0;
     const maxRetries = 3;
 
+    // For desktop, keep existing flow
+    if (!isMobile) {
+      while (retryCount < maxRetries) {
+        try {
+          // Check connection before proceeding
+          if (!navigator.onLine) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+  
+          // Refresh session before verification
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            throw new Error('Session expired');
+          }
+  
+          const verifyResponse = await supabase.functions.invoke('verify-payment', {
+            body: {
+              orderId,
+              paymentId,
+              signature,
+              planType,
+              userId
+            }
+          });
+  
+          if (verifyResponse.error) {
+            throw verifyResponse.error;
+          }
+  
+          // Wait for plan update with exponential backoff
+          const isUpdated = await checkPlanUpdate(userId);
+          if (!isUpdated) {
+            throw new Error('Plan update verification failed');
+          }
+  
+          setIsVerifying(false);
+          return true;
+        } catch (error: any) {
+          console.error(`Verification attempt ${retryCount + 1} failed:`, error);
+          retryCount++;
+          
+          if (retryCount === maxRetries) {
+            setIsVerifying(false);
+            throw error;
+          }
+          
+          // Exponential backoff between retries
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
+      }
+    }
+
+    // Mobile-specific verification with session handling
     while (retryCount < maxRetries) {
       try {
-        // Check connection before proceeding
-        if (!navigator.onLine) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-
-        // Refresh session before verification
+        // Ensure we have a fresh session for mobile
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          throw new Error('Session expired');
+          // Try to refresh the session
+          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+          if (!refreshedSession) {
+            throw new Error('Session expired');
+          }
         }
 
         const verifyResponse = await supabase.functions.invoke('verify-payment', {
@@ -54,7 +107,7 @@ export const usePaymentVerification = () => {
           throw verifyResponse.error;
         }
 
-        // Wait for plan update with exponential backoff
+        // Enhanced plan update check for mobile
         const isUpdated = await checkPlanUpdate(userId);
         if (!isUpdated) {
           throw new Error('Plan update verification failed');
@@ -63,7 +116,7 @@ export const usePaymentVerification = () => {
         setIsVerifying(false);
         return true;
       } catch (error: any) {
-        console.error(`Verification attempt ${retryCount + 1} failed:`, error);
+        console.error(`Mobile verification attempt ${retryCount + 1} failed:`, error);
         retryCount++;
         
         if (retryCount === maxRetries) {
@@ -71,13 +124,12 @@ export const usePaymentVerification = () => {
           throw error;
         }
         
-        // Exponential backoff between retries
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
       }
     }
   };
 
-  // Enhanced plan update checking with background sync
+  // Enhanced plan update checking with background sync for mobile
   const checkPlanUpdate = async (userId: string): Promise<boolean> => {
     const maxAttempts = 30; // Increased for mobile
     let attempt = 0;
