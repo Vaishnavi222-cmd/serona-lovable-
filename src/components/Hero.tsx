@@ -26,9 +26,10 @@ const Hero = () => {
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
-      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
+      // Explicitly set pointer events only for the ad container
+      adDiv.style.pointerEvents = 'auto';
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -48,6 +49,20 @@ const Hero = () => {
       `;
       adDiv.appendChild(script);
       adScriptRef.current.appendChild(adDiv);
+
+      // Clean up any potential rogue event listeners
+      const cleanup = () => {
+        const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
+        adScripts.forEach(script => script.remove());
+      };
+
+      return () => {
+        if (adScriptRef.current) {
+          cleanup();
+          adScriptRef.current.innerHTML = '';
+          scriptLoadedRef.current = false;
+        }
+      };
     }
 
     return () => {
@@ -98,12 +113,15 @@ const Hero = () => {
           {/* Ad Container - Mobile Only */}
           <div 
             ref={adScriptRef}
-            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
+            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent"
             style={{ 
               maxWidth: '100%',
-              isolation: 'isolate' // Creates a new stacking context
+              isolation: 'isolate',
+              pointerEvents: 'none', // Disable pointer events on the container
+              position: 'relative',
+              zIndex: 1
             }}
-          ></div>
+          />
         </div>
       </div>
     </section>

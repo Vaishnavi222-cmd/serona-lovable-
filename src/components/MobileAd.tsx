@@ -11,9 +11,10 @@ const MobileAd = () => {
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
       const adDiv = document.createElement('div');
-      // Remove pointer-events from the div itself
       adDiv.style.position = 'relative';
       adDiv.style.zIndex = '1';
+      // Explicitly set pointer events only for the ad container
+      adDiv.style.pointerEvents = 'auto';
       
       const script = document.createElement('script');
       script.innerHTML = `
@@ -33,14 +34,21 @@ const MobileAd = () => {
       `;
       adDiv.appendChild(script);
       adContainerRef.current.appendChild(adDiv);
+
+      // Clean up any potential rogue event listeners
+      const cleanup = () => {
+        const adScripts = document.querySelectorAll('script[src*="villainous-appointment.com"]');
+        adScripts.forEach(script => script.remove());
+      };
+
+      return () => {
+        if (adContainerRef.current) {
+          cleanup();
+          adContainerRef.current.innerHTML = '';
+          scriptLoadedRef.current = false;
+        }
+      };
     }
-    
-    return () => {
-      if (adContainerRef.current) {
-        adContainerRef.current.innerHTML = '';
-        scriptLoadedRef.current = false;
-      }
-    };
   }, [isMobile]);
 
   if (!isMobile) return null;
@@ -48,12 +56,15 @@ const MobileAd = () => {
   return (
     <div 
       ref={adContainerRef}
-      className="mx-auto my-4 flex justify-center items-center relative"
+      className="mx-auto my-4 flex justify-center items-center"
       style={{ 
         maxWidth: '100%',
         minHeight: '100px',
         background: 'transparent',
-        isolation: 'isolate', // This creates a new stacking context
+        isolation: 'isolate',
+        pointerEvents: 'none', // Disable pointer events on the container
+        position: 'relative',
+        zIndex: 1
       }}
     />
   );
