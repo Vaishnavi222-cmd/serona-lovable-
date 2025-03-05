@@ -10,11 +10,18 @@ const MobileAd = () => {
   useEffect(() => {
     if (isMobile && !scriptLoadedRef.current && adContainerRef.current) {
       scriptLoadedRef.current = true;
-      const adDiv = document.createElement('div');
-      // Remove pointer-events from the div itself
-      adDiv.style.position = 'relative';
-      adDiv.style.zIndex = '1';
       
+      // Create a shadow root for isolation
+      const shadowRoot = adContainerRef.current.attachShadow({ mode: 'closed' });
+      
+      // Create container div inside shadow root
+      const adContainer = document.createElement('div');
+      adContainer.style.width = '100%';
+      adContainer.style.height = '100%';
+      adContainer.style.position = 'relative';
+      adContainer.style.zIndex = '1';
+      
+      // Create and append script
       const script = document.createElement('script');
       script.innerHTML = `
         (function(qjbmx){
@@ -31,8 +38,19 @@ const MobileAd = () => {
           }
         })({})
       `;
-      adDiv.appendChild(script);
-      adContainerRef.current.appendChild(adDiv);
+      
+      adContainer.appendChild(script);
+      shadowRoot.appendChild(adContainer);
+
+      // Event isolation
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      };
+
+      adContainer.addEventListener('click', stopPropagation, true);
+      adContainer.addEventListener('mousedown', stopPropagation, true);
+      adContainer.addEventListener('mouseup', stopPropagation, true);
     }
     
     return () => {
@@ -53,9 +71,16 @@ const MobileAd = () => {
         maxWidth: '100%',
         minHeight: '100px',
         background: 'transparent',
-        isolation: 'isolate', // This creates a new stacking context
+        isolation: 'isolate',
+        pointerEvents: 'none' // Make container non-interactive by default
       }}
-    />
+    >
+      <div style={{ 
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'auto' // Enable interactions only for the ad content
+      }} />
+    </div>
   );
 };
 

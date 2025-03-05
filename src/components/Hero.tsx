@@ -25,11 +25,17 @@ const Hero = () => {
 
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
-      const adDiv = document.createElement('div');
-      // Remove pointer-events from the div itself
-      adDiv.style.position = 'relative';
-      adDiv.style.zIndex = '1';
+
+      // Create a shadow root for isolation
+      const shadowRoot = adScriptRef.current.attachShadow({ mode: 'closed' });
       
+      // Create container div inside shadow root
+      const adContainer = document.createElement('div');
+      adContainer.style.width = '100%';
+      adContainer.style.height = '100%';
+      adContainer.style.position = 'relative';
+      adContainer.style.zIndex = '1';
+
       const script = document.createElement('script');
       script.innerHTML = `
         (function(bgcf){
@@ -46,8 +52,19 @@ const Hero = () => {
           }
         })({})
       `;
-      adDiv.appendChild(script);
-      adScriptRef.current.appendChild(adDiv);
+      
+      adContainer.appendChild(script);
+      shadowRoot.appendChild(adContainer);
+
+      // Event isolation
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      };
+
+      adContainer.addEventListener('click', stopPropagation, true);
+      adContainer.addEventListener('mousedown', stopPropagation, true);
+      adContainer.addEventListener('mouseup', stopPropagation, true);
     }
 
     return () => {
@@ -101,9 +118,16 @@ const Hero = () => {
             className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent relative"
             style={{ 
               maxWidth: '100%',
-              isolation: 'isolate' // Creates a new stacking context
+              isolation: 'isolate',
+              pointerEvents: 'none' // Make container non-interactive by default
             }}
-          ></div>
+          >
+            <div style={{ 
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'auto' // Enable interactions only for the ad content
+            }} />
+          </div>
         </div>
       </div>
     </section>
