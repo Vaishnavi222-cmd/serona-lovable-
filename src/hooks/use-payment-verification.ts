@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -80,7 +81,7 @@ export const usePaymentVerification = () => {
       }
     }
 
-    // Mobile-specific verification with session handling
+    // Mobile-specific verification with enhanced session handling
     while (retryCount < maxRetries) {
       try {
         // Ensure we have a fresh session for mobile
