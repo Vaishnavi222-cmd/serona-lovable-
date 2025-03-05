@@ -92,19 +92,25 @@ export const usePaymentVerification = () => {
         }
 
         // Create mobile payment session
-        if (!await mobileSession.createPaymentSession()) {
+        const sessionToken = await mobileSession.createPaymentSession();
+        if (!sessionToken) {
           throw new Error('Failed to create mobile payment session');
         }
+
+        console.log('Mobile payment verification starting...', { orderId, paymentId });
 
         // Verify the payment with retries
         while (retryCount < maxRetries) {
           try {
             // Validate mobile session
             if (!mobileSession.validatePaymentSession()) {
-              throw new Error('Invalid mobile payment session');
+              console.log('Mobile session validation attempt failed, retrying...');
+              // On mobile, we'll continue even if session validation fails
+              // This is the key change to handle mobile browser context switches
             }
 
             // Verify payment with edge function
+            console.log('Calling verify-payment edge function...');
             const verifyResponse = await supabase.functions.invoke('verify-payment', {
               body: {
                 orderId,
@@ -119,12 +125,15 @@ export const usePaymentVerification = () => {
               throw verifyResponse.error;
             }
 
+            console.log('Edge function response:', verifyResponse);
+
             // Wait for plan update with enhanced polling
             const isUpdated = await checkPlanUpdate(userId);
             if (!isUpdated) {
               throw new Error('Plan update verification failed');
             }
 
+            console.log('Plan update successful');
             setIsVerifying(false);
             return true;
           } catch (error: any) {

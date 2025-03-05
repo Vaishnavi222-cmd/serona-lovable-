@@ -16,7 +16,7 @@ export const useMobilePaymentSession = () => {
       
       const token = `${session.user.id}_${Date.now()}`;
       sessionRef.current = token;
-      sessionStorage.setItem(sessionKey, token);
+      localStorage.setItem(sessionKey, token); // Changed to localStorage
       return token;
     } catch (error) {
       console.error('Error creating payment session:', error);
@@ -26,12 +26,12 @@ export const useMobilePaymentSession = () => {
 
   const validatePaymentSession = () => {
     try {
-      const storedToken = sessionStorage.getItem(sessionKey);
+      const storedToken = localStorage.getItem(sessionKey); // Changed to localStorage
       const isValid = storedToken === sessionRef.current;
       if (!isValid) {
         console.error('Payment session validation failed');
       }
-      sessionStorage.removeItem(sessionKey); // Clean up after validation
+      localStorage.removeItem(sessionKey); // Clean up after validation
       return isValid;
     } catch (error) {
       console.error('Error validating payment session:', error);
@@ -41,7 +41,7 @@ export const useMobilePaymentSession = () => {
 
   useEffect(() => {
     return () => {
-      sessionStorage.removeItem(sessionKey); // Cleanup on unmount
+      localStorage.removeItem(sessionKey); // Cleanup on unmount
     };
   }, []);
 
