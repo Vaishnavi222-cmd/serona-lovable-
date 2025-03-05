@@ -23,7 +23,6 @@ const Hero = () => {
       observer.observe(contentRef.current);
     }
 
-    // Load ad script for mobile only
     if (isMobile && adScriptRef.current && !scriptLoadedRef.current) {
       scriptLoadedRef.current = true;
       const script = document.createElement('script');
@@ -43,19 +42,6 @@ const Hero = () => {
         })({})
       `;
       adScriptRef.current.appendChild(script);
-
-      // Prevent click propagation
-      const stopPropagation = (e: Event) => {
-        e.stopPropagation();
-      };
-      
-      adScriptRef.current.addEventListener('click', stopPropagation);
-      
-      return () => {
-        if (adScriptRef.current) {
-          adScriptRef.current.removeEventListener('click', stopPropagation);
-        }
-      };
     }
 
     return () => {
@@ -106,9 +92,17 @@ const Hero = () => {
           {/* Ad Container - Mobile Only */}
           <div 
             ref={adScriptRef}
-            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent"
-            style={{ maxWidth: '100%' }}
-            onClick={(e) => e.stopPropagation()}
+            className="block md:hidden mx-auto my-4 w-[300px] h-[100px] bg-transparent pointer-events-auto"
+            style={{ 
+              maxWidth: '100%',
+              isolation: 'isolate',
+              position: 'relative',
+              zIndex: 1
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.nativeEvent.stopImmediatePropagation();
+            }}
           ></div>
         </div>
       </div>

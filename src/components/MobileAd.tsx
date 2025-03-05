@@ -27,19 +27,6 @@ const MobileAd = () => {
         })({})
       `;
       adContainerRef.current.appendChild(script);
-
-      // Prevent click propagation
-      const stopPropagation = (e: Event) => {
-        e.stopPropagation();
-      };
-      
-      adContainerRef.current.addEventListener('click', stopPropagation);
-      
-      return () => {
-        if (adContainerRef.current) {
-          adContainerRef.current.removeEventListener('click', stopPropagation);
-        }
-      };
     }
     
     return () => {
@@ -55,13 +42,19 @@ const MobileAd = () => {
   return (
     <div 
       ref={adContainerRef}
-      className="mx-auto my-4 flex justify-center items-center"
+      className="mx-auto my-4 flex justify-center items-center pointer-events-auto"
       style={{ 
         maxWidth: '100%',
         minHeight: '100px',
-        background: 'transparent'
+        background: 'transparent',
+        isolation: 'isolate',
+        position: 'relative',
+        zIndex: 1
       }}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+      }}
     />
   );
 };
