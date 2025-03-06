@@ -87,7 +87,13 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw userMessageError;
     }
 
-    console.log("[saveMessage] User message saved, calling process-message function");
+    console.log("[saveMessage] User message saved successfully:", {
+      messageId: userMessage?.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Return immediately the user message for optimistic UI update
+    const response = { userMessage, aiMessage: null };
     
     // Call the edge function with proper error handling
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
@@ -98,9 +104,6 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       headers: {
         Authorization: `Bearer ${session.access_token}`
       }
-    }).catch(error => {
-      console.error("[saveMessage] Edge function network error:", error);
-      throw new Error("Failed to connect to AI service");
     });
 
     if (aiError) {

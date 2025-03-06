@@ -177,8 +177,15 @@ const Chat = () => {
     // Clear input immediately for better UX
     setMessage('');
 
+    // Add user message immediately to UI for optimistic update
+    const optimisticUserMessage = {
+      id: tempMessageId,
+      content: messageContent,
+      sender: 'user' as const
+    };
+    setMessages(prev => [...prev, optimisticUserMessage]);
+
     try {
-      // Save user message first
       const savedMessage = await saveMessage(
         currentChatId,
         messageContent,
@@ -192,7 +199,30 @@ const Chat = () => {
           description: "Failed to send message. Please try again.",
           variant: "destructive",
         });
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
+      }
+
+      // Update messages with real IDs from the database
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === tempMessageId) {
+          return {
+            id: savedMessage.userMessage.id,
+            content: savedMessage.userMessage.content,
+            sender: 'user' as const
+          };
+        }
+        return msg;
+      }));
+
+      // Add AI response if available
+      if (savedMessage.aiMessage) {
+        setMessages(prev => [...prev, {
+          id: savedMessage.aiMessage.id,
+          content: savedMessage.aiMessage.content,
+          sender: 'ai' as const
+        }]);
       }
 
       // Update chat title if this is the first message
@@ -201,9 +231,10 @@ const Chat = () => {
         try {
           const { error: updateError } = await supabase
             .from('chats')
-            .update({ title: messageContent.length > 50 
-              ? `${messageContent.substring(0, 47)}...`
-              : messageContent 
+            .update({ 
+              title: messageContent.length > 50 
+                ? `${messageContent.substring(0, 47)}...`
+                : messageContent 
             })
             .eq('id', currentChatId);
 
@@ -211,9 +242,11 @@ const Chat = () => {
             setChats(prevChats => 
               prevChats.map(chat => 
                 chat.id === currentChatId 
-                  ? { ...chat, title: messageContent.length > 50 
-                      ? `${messageContent.substring(0, 47)}...`
-                      : messageContent 
+                  ? { 
+                      ...chat, 
+                      title: messageContent.length > 50 
+                        ? `${messageContent.substring(0, 47)}...`
+                        : messageContent 
                     }
                   : chat
               )
@@ -226,6 +259,8 @@ const Chat = () => {
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
       toast({
         title: "Error",
         description: error.message || "Failed to send message. Please try again.",
