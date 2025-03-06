@@ -116,7 +116,7 @@ serve(async (req) => {
     ];
 
     console.log("🤖 Calling OpenAI API with configuration:", {
-      model: "gpt-4o-mini",  // Changed to correct model name
+      model: "gpt-4o-mini",
       messagesCount: messages.length,
       timestamp: new Date().toISOString()
     });
@@ -128,7 +128,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",  // Changed to correct model name
+        model: "gpt-4o-mini",
         messages: messages,
         temperature: 0.7,
         max_tokens: 1000,
@@ -175,7 +175,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       error: error.message 
     }), { 
-      status: 500,  // Changed from 200 to 500 for errors
+      status: 500,  // Return 500 for server errors
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
