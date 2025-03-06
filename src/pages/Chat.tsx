@@ -498,7 +498,7 @@ const Chat = () => {
     console.log('Selected plan:', planType);
   };
 
-  const handleQuickStart = async (topic: string) => {
+  const handleQuickStart = (topic: string) => {
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -509,71 +509,13 @@ const Chat = () => {
       return;
     }
 
-    if (!currentChatId) {
-      return;
-    }
-
-    const messageContent = `Help me with ${topic}`;
-
-    // Add user message immediately to UI for optimistic update
-    const tempMessageId = Date.now().toString();
-    const optimisticUserMessage = {
-      id: tempMessageId,
-      content: messageContent,
-      sender: 'user' as const
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      content: `Help me with ${topic}`,
+      sender: 'user'
     };
-    setMessages(prev => [...prev, optimisticUserMessage]);
-
-    try {
-      const savedMessage = await saveMessage(
-        currentChatId,
-        messageContent,
-        user.id,
-        user.email || ''
-      );
-
-      if (!savedMessage) {
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        });
-        // Remove optimistic message on error
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-        return;
-      }
-
-      // Update messages with real IDs from the database
-      setMessages(prev => prev.map(msg => {
-        if (msg.id === tempMessageId) {
-          return {
-            id: savedMessage.userMessage.id,
-            content: savedMessage.userMessage.content,
-            sender: 'user' as const
-          };
-        }
-        return msg;
-      }));
-
-      // Add AI response if available
-      if (savedMessage.aiMessage) {
-        setMessages(prev => [...prev, {
-          id: savedMessage.aiMessage.id,
-          content: savedMessage.aiMessage.content,
-          sender: 'ai' as const
-        }]);
-      }
-
-    } catch (error: any) {
-      console.error("Error in handleQuickStart:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    }
+    setMessages(prev => [...prev, newMessage]);
+    setMessage('');
   };
 
   const toggleSidebar = () => {
@@ -897,4 +839,19 @@ const Chat = () => {
         open={showLimitReachedDialog}
         onOpenChange={setShowLimitReachedDialog}
         timeRemaining={timeRemaining}
-        onUpgrade={() =>
+        onUpgrade={() => {
+          setShowLimitReachedDialog(false);
+          setShowUpgradePlansDialog(true);
+        }}
+      />
+
+      <UpgradePlansDialog
+        open={showUpgradePlansDialog}
+        onOpenChange={setShowUpgradePlansDialog}
+        onSelectPlan={handleSelectPlan}
+      />
+    </div>
+  );
+};
+
+export default Chat;
