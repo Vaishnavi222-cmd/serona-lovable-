@@ -124,10 +124,10 @@ serve(async (req) => {
       { role: "user", content: content }
     ];
 
-    console.log("🤖 Calling OpenAI API with configuration:", {
-      model: "gpt-4o",
+    console.log("🤖 Calling OpenAI API with messages:", {
       messagesCount: messages.length,
-      timestamp: new Date().toISOString()
+      systemPromptLength: systemPrompt.length,
+      modelName: "gpt-4o"
     });
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -146,11 +146,16 @@ serve(async (req) => {
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
-      console.error("❌ OpenAI API error:", {
+      console.error("❌ OpenAI API error details:", {
         status: openAIResponse.status,
         statusText: openAIResponse.statusText,
         error: errorText,
-        timestamp: new Date().toISOString()
+        requestBody: {
+          model: "gpt-4o",
+          messagesCount: messages.length,
+          temperature: 0.7,
+          max_tokens: 1000
+        }
       });
       return new Response(JSON.stringify({ 
         error: `OpenAI API error: ${openAIResponse.status} - ${errorText}` 
