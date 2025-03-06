@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -55,8 +56,7 @@ serve(async (req) => {
     });
 
     if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
-      console.error('❌ Missing environment variables');
-      throw new Error('Missing configuration');
+      throw new Error('Missing environment variables');
     }
 
     // Get the JWT token from the Authorization header
@@ -115,7 +115,11 @@ serve(async (req) => {
       { role: "user", content: content }
     ];
 
-    console.log("🤖 Calling OpenAI API");
+    console.log("🤖 Calling OpenAI API with configuration:", {
+      model: "gpt-4o",
+      messagesCount: messages.length,
+      timestamp: new Date().toISOString()
+    });
     
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -124,7 +128,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: "gpt-4o",
         messages: messages,
         temperature: 0.7,
         max_tokens: 1000,
@@ -135,12 +139,20 @@ serve(async (req) => {
       const errorData = await openAIResponse.text();
       console.error("❌ OpenAI API error:", {
         status: openAIResponse.status,
-        error: errorData
+        statusText: openAIResponse.statusText,
+        error: errorData,
+        timestamp: new Date().toISOString()
       });
       throw new Error(`OpenAI API error: ${errorData}`);
     }
 
     const aiData = await openAIResponse.json();
+    
+    if (!aiData.choices || !aiData.choices[0] || !aiData.choices[0].message) {
+      console.error("❌ Invalid OpenAI response format:", aiData);
+      throw new Error('Invalid response from OpenAI');
+    }
+    
     const aiResponse = aiData.choices[0].message.content;
 
     console.log("✅ Got OpenAI response:", { 
@@ -150,10 +162,12 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ content: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
     });
+
   } catch (error) {
     console.error("❌ Error:", {
-      error: error.message,
+      message: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
     });
@@ -161,7 +175,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       error: error.message 
     }), { 
-      status: 200, // Keep 200 to handle errors gracefully in frontend
+      status: 500,  // Changed from 200 to 500 for errors
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
