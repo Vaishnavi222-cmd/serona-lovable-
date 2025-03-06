@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createChat() {
@@ -68,12 +67,6 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw new Error("Authentication required");
     }
 
-    console.log("[saveMessage] Session verified for user:", {
-      sessionUserId: session.user.id,
-      providedUserId: userId,
-      doTheyMatch: session.user.id === userId
-    });
-
     // First, save the user's message
     const { data: userMessage, error: userMessageError } = await supabase
       .from('messages')
@@ -101,8 +94,12 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       timestamp: new Date().toISOString()
     });
 
-    // Now call process-message to get AI response with proper auth headers
-    console.log("[saveMessage] Calling process-message for AI response with auth");
+    // Now call process-message with proper auth headers
+    console.log("[saveMessage] Calling process-message with auth token:", {
+      hasAccessToken: !!session.access_token,
+      timestamp: new Date().toISOString()
+    });
+
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
         content: message,
@@ -121,7 +118,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw aiError;
     }
 
-    // Save the AI response as a new message
+    // Save the AI response
     if (aiResponse?.content) {
       console.log("[saveMessage] Saving AI response");
       const { data: aiMessage, error: aiMessageError } = await supabase
