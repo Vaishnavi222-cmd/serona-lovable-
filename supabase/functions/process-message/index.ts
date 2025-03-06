@@ -116,7 +116,7 @@ serve(async (req) => {
     ];
 
     console.log("🤖 Calling OpenAI API with configuration:", {
-      model: "gpt-4o",
+      model: "gpt-4o-mini",  // Changed to correct model name
       messagesCount: messages.length,
       timestamp: new Date().toISOString()
     });
@@ -128,7 +128,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",  // Changed to correct model name
         messages: messages,
         temperature: 0.7,
         max_tokens: 1000,
