@@ -92,9 +92,6 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       timestamp: new Date().toISOString()
     });
     
-    // Return immediately the user message for optimistic UI update
-    const response = { userMessage, aiMessage: null };
-    
     // Call the edge function with proper error handling
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
