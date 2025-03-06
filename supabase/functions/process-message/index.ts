@@ -8,68 +8,47 @@ console.log('🚀 Process Message Function Started');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
-const systemPrompt = `You are Serona AI, a life coach and human behavior analyst. Your purpose is to help and guide people in various aspects of life, including career guidance, decision-making, relationship advice, self-improvement & personal growth, confidence-building, communication skills, emotional intelligence, life transitions, overcoming self-doubt, productivity, and goal-setting.
-
-Your approach:
-1. Always begin by warmly asking for the user's name, age, and gender if not already provided
-2. Address users by their name occasionally (not every message) to maintain a personal touch
-3. Analyze their personality through:
-   - Word choice (positive/negative, confident/uncertain)
-   - Response style (direct/indirect, detailed/vague)
-   - Emotional undertones (confidence, anxiety, enthusiasm)
-   - Question types (seeking validation, guidance, self-discovery)
-   - Interaction patterns (agreeable, resistant, reflective)
-
-Key principles:
-- Provide deeply personalized guidance based on behavioral analysis
-- Ask relevant questions to understand users better
-- Guide users toward self-discovery rather than giving direct answers
-- Maintain a warm, human-like conversation style
-- Keep responses focused on personal growth and development
-
-Important boundaries:
-- You are NOT a mental health professional - refer such cases to qualified experts
-- Do not engage with illegal or harmful topics
-- Stay focused on personal development and growth
-- Avoid generic advice - always personalize based on the individual
-- Guide off-topic discussions back to personal development
-
-Remember: Help users understand themselves better through insightful analysis while maintaining a supportive, professional, and ethical approach.`;
-
 serve(async (req) => {
-  console.log('📥 New request received');
+  console.log('📥 New request received:', {
+    method: req.method,
+    url: req.url,
+    hasAuthorization: !!req.headers.get('Authorization'),
+    timestamp: new Date().toISOString()
+  });
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log('👉 Handling CORS preflight request');
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders 
+    });
   }
 
   try {
+    // Check environment variables
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Log environment variables status (without revealing actual values)
+    // Log environment variables status (without revealing values)
     console.log('🔑 Environment variables check:', {
       hasOpenAIKey: !!openAIApiKey,
       hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseKey
+      hasSupabaseKey: !!supabaseKey,
+      timestamp: new Date().toISOString()
     });
 
-    if (!openAIApiKey) {
-      const error = 'OpenAI API key not configured';
-      console.error('❌', error);
-      return new Response(JSON.stringify({ error }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (!supabaseUrl || !supabaseKey) {
-      const error = 'Missing Supabase configuration';
+    if (!openAIApiKey || !supabaseUrl || !supabaseKey) {
+      const missingVars = [];
+      if (!openAIApiKey) missingVars.push('OPENAI_API_KEY');
+      if (!supabaseUrl) missingVars.push('SUPABASE_URL');
+      if (!supabaseKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+      
+      const error = `Missing required environment variables: ${missingVars.join(', ')}`;
       console.error('❌', error);
       return new Response(JSON.stringify({ error }), {
         status: 500,
@@ -80,9 +59,8 @@ serve(async (req) => {
     // Get the JWT token from the Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      const error = 'Missing Authorization header';
-      console.error('❌', error);
-      return new Response(JSON.stringify({ error }), {
+      console.error('❌ Missing Authorization header');
+      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -146,9 +124,35 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    console.log('✅ Message history fetched, count:', messageHistory?.length || 0);
+    console.log('📚 Message history fetched, count:', messageHistory?.length || 0);
 
     // Create messages array for OpenAI
+    const systemPrompt = `You are Serona AI, a life coach and human behavior analyst. Your purpose is to help and guide people in various aspects of life, including career guidance, decision-making, relationship advice, self-improvement & personal growth, confidence-building, communication skills, emotional intelligence, life transitions, overcoming self-doubt, productivity, and goal-setting.
+
+Your approach:
+1. Always begin by warmly asking for the user's name, age, and gender if not already provided
+2. Address users by their name occasionally (not every message) to maintain a personal touch
+3. Analyze their personality through:
+   - Word choice (positive/negative, confident/uncertain)
+   - Response style (direct/indirect, detailed/vague)
+   - Emotional undertones (confidence, anxiety, enthusiasm)
+   - Question types (seeking validation, guidance, self-discovery)
+   - Interaction patterns (agreeable, resistant, reflective)
+
+Key principles:
+- Provide deeply personalized guidance based on behavioral analysis
+- Ask relevant questions to understand users better
+- Guide users toward self-discovery rather than giving direct answers
+- Maintain a warm, human-like conversation style
+- Keep responses focused on personal growth and development
+
+Important boundaries:
+- You are NOT a mental health professional - refer such cases to qualified experts
+- Do not engage with illegal or harmful topics
+- Avoid generic advice - always personalize based on the individual
+- Guide off-topic discussions back to personal development
+- Remember: Help users understand themselves better through insightful analysis while maintaining a supportive, professional, and ethical approach.`;
+
     const messages = [
       { role: "system", content: systemPrompt },
       ...(messageHistory || []).map(msg => ({

@@ -87,8 +87,9 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw userMessageError;
     }
 
-    console.log("[saveMessage] Calling process-message function");
+    console.log("[saveMessage] User message saved, calling process-message function");
     
+    // Call the edge function with proper error handling
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
         content: message,
@@ -97,6 +98,9 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       headers: {
         Authorization: `Bearer ${session.access_token}`
       }
+    }).catch(error => {
+      console.error("[saveMessage] Edge function network error:", error);
+      throw new Error("Failed to connect to AI service");
     });
 
     if (aiError) {
@@ -106,6 +110,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       });
       throw new Error(`AI response error: ${aiError.message}`);
     }
+
+    console.log("[saveMessage] AI response received:", {
+      hasContent: !!aiResponse?.content,
+      timestamp: new Date().toISOString()
+    });
 
     if (!aiResponse?.content) {
       console.error("[saveMessage] No AI response content");
@@ -125,11 +134,16 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .maybeSingle();
 
     if (aiMessageError) {
-      console.error("[saveMessage] AI message insert error:", aiMessageError);
+      console.error("[saveMessage] AI message insert error:", {
+        error: aiMessageError,
+        timestamp: new Date().toISOString()
+      });
       throw aiMessageError;
     }
 
-    return userMessage;
+    console.log("[saveMessage] AI message saved successfully");
+    return { userMessage, aiMessage };
+
   } catch (error: any) {
     console.error("[saveMessage] Caught error:", {
       error,
