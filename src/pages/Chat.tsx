@@ -173,24 +173,12 @@ const Chat = () => {
 
     const messageContent = message.trim();
     const tempMessageId = Date.now().toString();
-    const tempUserMessage = {
-      id: tempMessageId,
-      content: messageContent,
-      sender: 'user' as const
-    };
+    
+    // Clear input immediately for better UX
+    setMessage('');
 
     try {
-      // Clear input and show optimistic update immediately
-      setMessage('');
-      setMessages(prev => [...prev, tempUserMessage]);
-
-      console.log("🚀 Sending message:", {
-        chatId: currentChatId,
-        userId: user.id,
-        messageLength: messageContent.length
-      });
-
-      // Save the message
+      // Save user message first
       const savedMessage = await saveMessage(
         currentChatId,
         messageContent,
@@ -198,45 +186,46 @@ const Chat = () => {
         user.email || ''
       );
 
-      // Update chat title if this is the first message
-      const currentChat = chats.find(chat => chat.id === currentChatId);
-      if (currentChat && currentChat.title === 'New Chat') {
-        // Create a title from the first message (max 50 chars)
-        const newTitle = messageContent.length > 50 
-          ? `${messageContent.substring(0, 47)}...`
-          : messageContent;
-
-        const { error: updateError } = await supabase
-          .from('chats')
-          .update({ title: newTitle })
-          .eq('id', currentChatId);
-
-        if (!updateError) {
-          setChats(prevChats => 
-            prevChats.map(chat => 
-              chat.id === currentChatId 
-                ? { ...chat, title: newTitle }
-                : chat
-            )
-          );
-        }
-      }
-
       if (!savedMessage) {
-        console.error("Failed to save message");
-        // Remove optimistic message on failure
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         toast({
           title: "Error",
           description: "Failed to send message. Please try again.",
           variant: "destructive",
         });
+        return;
+      }
+
+      // Update chat title if this is the first message
+      const currentChat = chats.find(chat => chat.id === currentChatId);
+      if (currentChat && currentChat.title === 'New Chat') {
+        try {
+          const { error: updateError } = await supabase
+            .from('chats')
+            .update({ title: messageContent.length > 50 
+              ? `${messageContent.substring(0, 47)}...`
+              : messageContent 
+            })
+            .eq('id', currentChatId);
+
+          if (!updateError) {
+            setChats(prevChats => 
+              prevChats.map(chat => 
+                chat.id === currentChatId 
+                  ? { ...chat, title: messageContent.length > 50 
+                      ? `${messageContent.substring(0, 47)}...`
+                      : messageContent 
+                    }
+                  : chat
+              )
+            );
+          }
+        } catch (error) {
+          console.error("Failed to update chat title:", error);
+        }
       }
 
     } catch (error: any) {
-      console.error("Error sending message:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      console.error("Error in handleSend:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to send message. Please try again.",
@@ -309,26 +298,32 @@ const Chat = () => {
   }, []);
 
   const loadChatMessages = async (chatId: string) => {
-    console.log("🔍 loadChatMessages started for chatId:", chatId);
+    console.log("🔍 Loading messages for chat:", chatId);
     
     if (!user) {
-      console.log("❌ No user found in loadChatMessages");
+      console.log("❌ No user found, aborting message load");
       return;
     }
     
     try {
-      console.log("🔍 Fetching messages for chat:", chatId);
       const fetchedMessages = await fetchMessages(chatId);
-      console.log("✅ Messages fetched:", fetchedMessages);
       
-      const formattedMessages: Message[] = fetchedMessages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        sender: msg.sender as 'user' | 'ai'
-      }));
-      
-      console.log("✅ Messages formatted:", formattedMessages);
-      setMessages(formattedMessages);
+      if (Array.isArray(fetchedMessages)) {
+        console.log("✅ Messages loaded successfully:", fetchedMessages.length);
+        const formattedMessages = fetchedMessages.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.sender as 'user' | 'ai'
+        }));
+        setMessages(formattedMessages);
+      } else {
+        console.error("❌ Invalid messages format:", fetchedMessages);
+        toast({
+          title: "Error",
+          description: "Failed to load messages. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("❌ Error loading messages:", {
         error,

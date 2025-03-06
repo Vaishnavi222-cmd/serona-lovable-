@@ -82,24 +82,13 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     if (userMessageError) {
       console.error("[saveMessage] User message insert error:", {
         error: userMessageError,
-        errorMessage: userMessageError.message,
-        errorDetails: userMessageError.details,
         timestamp: new Date().toISOString()
       });
       throw userMessageError;
     }
 
-    console.log("[saveMessage] User message saved successfully:", {
-      savedMessageId: userMessage?.id,
-      timestamp: new Date().toISOString()
-    });
-
-    // Now call process-message with proper auth headers
-    console.log("[saveMessage] Calling process-message with auth token:", {
-      hasAccessToken: !!session.access_token,
-      timestamp: new Date().toISOString()
-    });
-
+    console.log("[saveMessage] Calling process-message function");
+    
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
         content: message,
@@ -115,35 +104,29 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         error: aiError,
         timestamp: new Date().toISOString()
       });
-      throw aiError;
+      throw new Error(`AI response error: ${aiError.message}`);
+    }
+
+    if (!aiResponse?.content) {
+      console.error("[saveMessage] No AI response content");
+      throw new Error("No response from AI");
     }
 
     // Save the AI response
-    if (aiResponse?.content) {
-      console.log("[saveMessage] Saving AI response");
-      const { data: aiMessage, error: aiMessageError } = await supabase
-        .from('messages')
-        .insert({
-          chat_session_id: chatId,
-          content: aiResponse.content,
-          user_id: userId,
-          sender: 'ai'
-        })
-        .select()
-        .maybeSingle();
+    const { data: aiMessage, error: aiMessageError } = await supabase
+      .from('messages')
+      .insert({
+        chat_session_id: chatId,
+        content: aiResponse.content,
+        user_id: userId,
+        sender: 'ai'
+      })
+      .select()
+      .maybeSingle();
 
-      if (aiMessageError) {
-        console.error("[saveMessage] AI message insert error:", {
-          error: aiMessageError,
-          timestamp: new Date().toISOString()
-        });
-        throw aiMessageError;
-      }
-
-      console.log("[saveMessage] AI response saved successfully:", {
-        savedAiMessageId: aiMessage?.id,
-        timestamp: new Date().toISOString()
-      });
+    if (aiMessageError) {
+      console.error("[saveMessage] AI message insert error:", aiMessageError);
+      throw aiMessageError;
     }
 
     return userMessage;
