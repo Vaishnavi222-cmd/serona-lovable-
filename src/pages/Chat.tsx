@@ -158,6 +158,86 @@ const Chat = () => {
   };
 
   // Modified handleSend to update chat title on first message
+  const [isMessagingAllowed, setIsMessagingAllowed] = useState(true);
+
+  // Update useEffect to check plan status and limits
+  useEffect(() => {
+    if (!user) return;
+
+    const checkMessageLimits = async () => {
+      try {
+        // Check for active paid plan
+        const { data: activePlan } = await supabase
+          .from('user_plans')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        // If there's an active paid plan, messaging is allowed
+        if (activePlan && new Date(activePlan.end_time) > new Date()) {
+          setIsMessagingAllowed(true);
+          return;
+        }
+
+        // If no active paid plan, check free plan limits
+        const currentDate = new Date().toISOString().split('T')[0];
+        const { data: dailyUsage } = await supabase
+          .from('user_daily_usage')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', currentDate)
+          .single();
+
+        // If no usage record exists or responses are under limit, messaging is allowed
+        if (!dailyUsage || dailyUsage.responses_count < 7) {
+          setIsMessagingAllowed(true);
+        } else {
+          setIsMessagingAllowed(false);
+        }
+      } catch (error) {
+        console.error('Error checking message limits:', error);
+        // Default to allowed in case of error to prevent false restrictions
+        setIsMessagingAllowed(true);
+      }
+    };
+
+    // Check limits immediately
+    checkMessageLimits();
+
+    // Set up real-time subscription for plan and usage changes
+    const channel = supabase
+      .channel('limits-check')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_plans',
+          filter: `user_id=eq.${user.id}`
+        },
+        checkMessageLimits
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_daily_usage',
+          filter: `user_id=eq.${user.id}`
+        },
+        checkMessageLimits
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Update the handleSend function to include the messaging allowed check
   const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
@@ -166,7 +246,7 @@ const Chat = () => {
       return;
     }
 
-    if (isLimitReached) {
+    if (!isMessagingAllowed) {
       setShowLimitReachedDialog(true);
       return;
     }
@@ -729,21 +809,26 @@ const Chat = () => {
                 value={message}
                 onChange={adjustTextareaHeight}
                 onKeyDown={handleKeyDown}
-                placeholder="Message Serona AI..."
-                className="w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
+                placeholder={isMessagingAllowed ? "Message Serona AI..." : "Daily limit reached. Upgrade plan or wait for reset."}
+                className={`w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                          bg-white border border-gray-200 shadow-sm resize-none text-gray-800
-                         placeholder-gray-400 min-h-[44px] max-h-[200px] overflow-y-auto"
+                         placeholder-gray-400 min-h-[44px] max-h-[200px] overflow-y-auto
+                         ${!isMessagingAllowed ? 'cursor-not-allowed bg-gray-50' : ''}`}
                 style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                 rows={1}
-                disabled={isLimitReached}
+                disabled={!isMessagingAllowed}
               />
               <button 
                 onClick={handleSend}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className={`p-2 rounded-full transition-colors ${
+                  isMessagingAllowed 
+                    ? 'hover:bg-gray-100 text-[#1EAEDB]' 
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
                 aria-label="Send message"
-                disabled={isLimitReached}
+                disabled={!isMessagingAllowed}
               >
-                <Send className="w-5 h-5 text-[#1EAEDB]" />
+                <Send className="w-5 h-5" />
               </button>
             </div>
           </div>
