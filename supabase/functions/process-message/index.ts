@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -61,20 +60,27 @@ serve(async (req) => {
 
     if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
       console.error('❌ Missing environment variables');
-      return new Response(
-        JSON.stringify({ 
-          content: "Configuration error. Please try again later.",
-          error: "Missing configuration" 
-        }),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      throw new Error('Missing configuration');
     }
 
-    // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Extract authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("❌ No authorization header");
+      throw new Error('No authorization header');
+    }
+
+    // Verify the JWT token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    
+    if (authError || !user) {
+      console.error("❌ Authentication error:", { authError, hasUser: !!user });
+      throw new Error('Authentication required');
+    }
+
+    console.log("✅ Authentication successful:", { userId: user.id });
 
     // Parse request body
     const { content, chat_session_id } = await req.json();
@@ -84,42 +90,6 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    if (!content || !chat_session_id) {
-      console.error("❌ Missing required fields:", { content, chat_session_id });
-      return new Response(
-        JSON.stringify({ 
-          content: "Missing required information. Please try again.",
-          error: "Missing required fields" 
-        }),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log("👤 Auth check:", {
-      hasUser: !!user,
-      userId: user?.id,
-      authError: authError?.message
-    });
-
-    if (authError || !user) {
-      console.error('❌ Authentication error:', authError);
-      return new Response(
-        JSON.stringify({ 
-          content: "Please sign in to continue.",
-          error: "Authentication required" 
-        }),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     // Get conversation history
     const { data: messageHistory, error: historyError } = await supabase
       .from('messages')
@@ -127,14 +97,12 @@ serve(async (req) => {
       .eq('chat_session_id', chat_session_id)
       .order('created_at', { ascending: true });
 
-    console.log("📚 Message history:", {
-      messageCount: messageHistory?.length,
-      historyError: historyError?.message
-    });
-
     if (historyError) {
-      console.error('❌ Error fetching message history:', historyError);
+      console.error("❌ Error fetching message history:", historyError);
+      throw historyError;
     }
+
+    console.log("📚 Found message history:", { count: messageHistory?.length });
 
     // Create messages array for OpenAI
     const messages = [
@@ -146,116 +114,53 @@ serve(async (req) => {
       { role: "user", content: content }
     ];
 
-    console.log("🤖 Preparing OpenAI request:", {
-      messageCount: messages.length,
-      lastMessageContent: content.substring(0, 50) + "..."
+    console.log("🤖 Calling OpenAI API");
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      })
     });
 
-    // Call OpenAI API
-    try {
-      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 1000,
-        })
-      });
-
-      console.log("📡 OpenAI API response status:", {
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.text();
+      console.error("❌ OpenAI API error:", {
         status: openAIResponse.status,
-        statusText: openAIResponse.statusText
+        error: errorData
       });
-
-      if (!openAIResponse.ok) {
-        const errorData = await openAIResponse.text();
-        console.error("❌ OpenAI API error:", {
-          status: openAIResponse.status,
-          statusText: openAIResponse.statusText,
-          errorData
-        });
-        throw new Error(`OpenAI API error: ${openAIResponse.statusText}\n${errorData}`);
-      }
-
-      const aiData = await openAIResponse.json();
-      console.log("✅ OpenAI API success:", {
-        hasChoices: !!aiData.choices,
-        choicesLength: aiData.choices?.length,
-        firstChoiceLength: aiData.choices?.[0]?.message?.content?.length
-      });
-
-      const aiResponse = aiData.choices[0].message.content;
-
-      // Save AI response to database
-      const { data: savedResponse, error: saveError } = await supabase
-        .from('messages')
-        .insert({
-          chat_session_id,
-          content: aiResponse,
-          user_id: user.id,
-          sender: 'ai'
-        })
-        .select()
-        .single();
-
-      if (saveError) {
-        console.error('❌ Error saving AI response:', saveError);
-        return new Response(
-          JSON.stringify({ 
-            content: "Message received but couldn't be saved. Please try again.",
-            error: "Database error" 
-          }),
-          { 
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      console.log("💾 Saved response to database:", {
-        responseId: savedResponse?.id,
-        timestamp: new Date().toISOString()
-      });
-
-      return new Response(
-        JSON.stringify({ 
-          content: aiResponse,
-          message: savedResponse
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-
-    } catch (openAIError) {
-      console.error('❌ Error in OpenAI API call:', {
-        error: openAIError.message,
-        stack: openAIError.stack
-      });
-      throw openAIError;
+      throw new Error(`OpenAI API error: ${errorData}`);
     }
 
+    const aiData = await openAIResponse.json();
+    const aiResponse = aiData.choices[0].message.content;
+
+    console.log("✅ Got OpenAI response:", { 
+      length: aiResponse.length,
+      timestamp: new Date().toISOString()
+    });
+
+    return new Response(JSON.stringify({ content: aiResponse }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('❌ Error in process-message function:', {
+    console.error("❌ Error in process-message function:", {
       error: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
     });
-    return new Response(
-      JSON.stringify({ 
-        content: "An unexpected error occurred. Please try again.",
-        error: error.message 
-      }),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+
+    return new Response(JSON.stringify({ 
+      error: error.message 
+    }), { 
+      status: 200, // Keep 200 to handle errors gracefully in the frontend
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });

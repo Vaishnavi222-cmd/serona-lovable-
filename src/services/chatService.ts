@@ -101,8 +101,8 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       timestamp: new Date().toISOString()
     });
 
-    // Now call process-message to get AI response with auth headers
-    console.log("[saveMessage] Calling process-message for AI response");
+    // Now call process-message to get AI response with proper auth headers
+    console.log("[saveMessage] Calling process-message for AI response with auth");
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
       body: {
         content: message,
