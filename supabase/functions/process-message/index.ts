@@ -155,7 +155,7 @@ Important boundaries:
 
     // Prepare OpenAI request with optimized settings
     const openAIBody = {
-      model: "gpt-4o-mini", // Using the faster model
+      model: "gpt-4o", // Keep using gpt-4o as specified
       messages: [
         { 
           role: "system", 
@@ -167,10 +167,10 @@ Important boundaries:
         })),
         { role: "user", content }
       ],
-      temperature: 0.5, // Lower temperature for faster, more focused responses
-      max_tokens: 800, // Reduced max tokens for faster responses while maintaining quality
-      presence_penalty: 0.1, // Slight adjustment to maintain conversation flow
-      frequency_penalty: 0.1 // Slight adjustment to maintain natural responses
+      temperature: 0.5,  // Lower temperature for faster responses
+      max_tokens: 800,   // Optimized token limit
+      presence_penalty: 0.1,
+      frequency_penalty: 0.1
     };
 
     console.log('📤 Sending request to OpenAI...');
