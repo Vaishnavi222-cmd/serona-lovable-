@@ -3,6 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
+console.log('🚀 Process Message Function Started');
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -37,20 +39,26 @@ Important boundaries:
 Remember: Help users understand themselves better through insightful analysis while maintaining a supportive, professional, and ethical approach.`;
 
 serve(async (req) => {
+  console.log('📥 New request received');
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('👉 Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Log request start
-    console.log('🔄 Processing new message request');
-    
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Validate environment variables
+    // Log environment variables status (without revealing actual values)
+    console.log('🔑 Environment variables check:', {
+      hasOpenAIKey: !!openAIApiKey,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey
+    });
+
     if (!openAIApiKey) {
       const error = 'OpenAI API key not configured';
       console.error('❌', error);
@@ -84,6 +92,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Verify the JWT token
+    console.log('🔒 Verifying JWT token');
     const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
     
     if (authError || !user) {
@@ -93,11 +102,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+    console.log('✅ User authenticated:', user.id);
 
     // Parse request body
     let requestBody;
     try {
       requestBody = await req.json();
+      console.log('📝 Parsed request body:', {
+        hasContent: !!requestBody.content,
+        hasChatSessionId: !!requestBody.chat_session_id
+      });
     } catch (e) {
       console.error('❌ Failed to parse request body:', e);
       return new Response(JSON.stringify({ error: 'Invalid request body' }), {
@@ -132,6 +146,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+    console.log('✅ Message history fetched, count:', messageHistory?.length || 0);
 
     // Create messages array for OpenAI
     const messages = [
@@ -151,13 +166,15 @@ serve(async (req) => {
       max_tokens: 1000,
     };
 
-    console.log('🚀 Sending request to OpenAI:', {
+    console.log('🚀 Preparing OpenAI request:', {
       model: openAIBody.model,
       messageCount: messages.length,
-      lastMessage: content
+      temperature: openAIBody.temperature,
+      max_tokens: openAIBody.max_tokens
     });
 
     // Make request to OpenAI
+    console.log('📤 Sending request to OpenAI...');
     let openAIResponse;
     try {
       openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -167,6 +184,12 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(openAIBody)
+      });
+
+      console.log('📥 Received response from OpenAI:', {
+        status: openAIResponse.status,
+        statusText: openAIResponse.statusText,
+        ok: openAIResponse.ok
       });
     } catch (error) {
       console.error('❌ Network error calling OpenAI:', error);
@@ -191,7 +214,6 @@ serve(async (req) => {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.error?.message || errorMessage;
       } catch (e) {
-        // If error text is not JSON, use it directly
         errorMessage = errorText;
       }
 
@@ -203,10 +225,11 @@ serve(async (req) => {
       });
     }
 
+    // Parse OpenAI response
     let aiData;
     try {
       aiData = await openAIResponse.json();
-      console.log('✅ Received valid JSON response from OpenAI');
+      console.log('✅ Successfully parsed OpenAI response');
     } catch (error) {
       console.error('❌ Failed to parse OpenAI response:', error);
       return new Response(JSON.stringify({ 
