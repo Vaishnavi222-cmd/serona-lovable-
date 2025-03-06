@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -6,37 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// Initialize conversation context to track user details across messages
-const conversationContext = new Map();
-
-const systemPrompt = `You are Serona AI, a life coach and human behavior analyst. Your purpose is to help and guide people in various aspects of life, including career guidance, decision-making, relationship advice, self-improvement & personal growth, confidence-building, communication skills, emotional intelligence, life transitions, overcoming self-doubt, productivity, and goal-setting.
-
-Your approach:
-1. Always begin by warmly asking for the user's name, age, and gender if not already provided
-2. Address users by their name occasionally (not every message) to maintain a personal touch
-3. Analyze their personality through:
-   - Word choice (positive/negative, confident/uncertain)
-   - Response style (direct/indirect, detailed/vague)
-   - Emotional undertones (confidence, anxiety, enthusiasm)
-   - Question types (seeking validation, guidance, self-discovery)
-   - Interaction patterns (agreeable, resistant, reflective)
-
-Key principles:
-- Provide deeply personalized guidance based on behavioral analysis
-- Ask relevant questions to understand users better
-- Guide users toward self-discovery rather than giving direct answers
-- Maintain a warm, human-like conversation style
-- Keep responses focused on personal growth and development
-
-Important boundaries:
-- You are NOT a mental health professional - refer such cases to qualified experts
-- Do not engage with illegal or harmful topics
-- Stay focused on personal development and growth
-- Avoid generic advice - always personalize based on the individual
-- Guide off-topic discussions back to personal development
-
-Remember: Help users understand themselves better through insightful analysis while maintaining a supportive, professional, and ethical approach.`;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -51,7 +21,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Log environment setup
     console.log("📝 Environment check:", {
       hasOpenAIKey: !!openAIApiKey,
       hasSupabaseUrl: !!supabaseUrl,
@@ -63,20 +32,20 @@ serve(async (req) => {
       throw new Error('Missing configuration');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Extract authorization header
+    // Get the JWT token from the Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("❌ No authorization header");
-      throw new Error('No authorization header');
+      throw new Error('Missing Authorization header');
     }
 
+    const jwt = authHeader.replace('Bearer ', '');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
     // Verify the JWT token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
     
     if (authError || !user) {
-      console.error("❌ Authentication error:", { authError, hasUser: !!user });
+      console.error("❌ Auth error:", authError);
       throw new Error('Authentication required');
     }
 
@@ -84,6 +53,11 @@ serve(async (req) => {
 
     // Parse request body
     const { content, chat_session_id } = await req.json();
+    
+    if (!content || !chat_session_id) {
+      throw new Error('Missing required fields');
+    }
+
     console.log("📨 Received request:", { 
       contentLength: content?.length,
       chat_session_id,
@@ -115,6 +89,7 @@ serve(async (req) => {
     ];
 
     console.log("🤖 Calling OpenAI API");
+    
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -150,7 +125,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error("❌ Error in process-message function:", {
+    console.error("❌ Error:", {
       error: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
@@ -159,7 +134,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       error: error.message 
     }), { 
-      status: 200, // Keep 200 to handle errors gracefully in the frontend
+      status: 200, // Keep 200 to handle errors gracefully in frontend
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
