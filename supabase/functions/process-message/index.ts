@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -72,7 +73,10 @@ serve(async (req) => {
     
     if (authError || !user) {
       console.error("❌ Auth error:", authError);
-      throw new Error('Authentication required');
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log("✅ Authentication successful:", { userId: user.id });
@@ -81,7 +85,10 @@ serve(async (req) => {
     const { content, chat_session_id } = await req.json();
     
     if (!content || !chat_session_id) {
-      throw new Error('Missing required fields');
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log("📨 Received request:", { 
@@ -99,7 +106,10 @@ serve(async (req) => {
 
     if (historyError) {
       console.error("❌ Error fetching message history:", historyError);
-      throw historyError;
+      return new Response(JSON.stringify({ error: 'Failed to fetch message history' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log("📚 Found message history:", { count: messageHistory?.length });
@@ -119,7 +129,7 @@ serve(async (req) => {
       messagesCount: messages.length,
       timestamp: new Date().toISOString()
     });
-    
+
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -135,21 +145,29 @@ serve(async (req) => {
     });
 
     if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.text();
+      const errorText = await openAIResponse.text();
       console.error("❌ OpenAI API error:", {
         status: openAIResponse.status,
         statusText: openAIResponse.statusText,
-        error: errorData,
+        error: errorText,
         timestamp: new Date().toISOString()
       });
-      throw new Error(`OpenAI API error: ${errorData}`);
+      return new Response(JSON.stringify({ 
+        error: `OpenAI API error: ${openAIResponse.status} - ${errorText}` 
+      }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const aiData = await openAIResponse.json();
     
     if (!aiData.choices || !aiData.choices[0] || !aiData.choices[0].message) {
       console.error("❌ Invalid OpenAI response format:", aiData);
-      throw new Error('Invalid response from OpenAI');
+      return new Response(JSON.stringify({ error: 'Invalid response from OpenAI' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     const aiResponse = aiData.choices[0].message.content;
@@ -174,7 +192,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       error: error.message 
     }), { 
-      status: 500,  // Return 500 for server errors
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
