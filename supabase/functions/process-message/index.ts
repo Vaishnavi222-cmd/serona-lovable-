@@ -46,12 +46,21 @@ serve(async (req) => {
   }
 
   try {
+    console.log("🚀 Starting process-message function");
+    
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    // Log environment setup
+    console.log("📝 Environment check:", {
+      hasOpenAIKey: !!openAIApiKey,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey
+    });
+
     if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
-      console.error('Missing environment variables');
+      console.error('❌ Missing environment variables');
       return new Response(
         JSON.stringify({ 
           content: "Configuration error. Please try again later.",
@@ -69,8 +78,14 @@ serve(async (req) => {
 
     // Parse request body
     const { content, chat_session_id } = await req.json();
+    console.log("📨 Received request:", { 
+      contentLength: content?.length,
+      chat_session_id,
+      timestamp: new Date().toISOString()
+    });
 
     if (!content || !chat_session_id) {
+      console.error("❌ Missing required fields:", { content, chat_session_id });
       return new Response(
         JSON.stringify({ 
           content: "Missing required information. Please try again.",
@@ -85,9 +100,14 @@ serve(async (req) => {
 
     // Get the authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log("👤 Auth check:", {
+      hasUser: !!user,
+      userId: user?.id,
+      authError: authError?.message
+    });
 
     if (authError || !user) {
-      console.error('Authentication error:', authError);
+      console.error('❌ Authentication error:', authError);
       return new Response(
         JSON.stringify({ 
           content: "Please sign in to continue.",
@@ -107,8 +127,13 @@ serve(async (req) => {
       .eq('chat_session_id', chat_session_id)
       .order('created_at', { ascending: true });
 
+    console.log("📚 Message history:", {
+      messageCount: messageHistory?.length,
+      historyError: historyError?.message
+    });
+
     if (historyError) {
-      console.error('Error fetching message history:', historyError);
+      console.error('❌ Error fetching message history:', historyError);
     }
 
     // Create messages array for OpenAI
@@ -121,67 +146,107 @@ serve(async (req) => {
       { role: "user", content: content }
     ];
 
-    // Call OpenAI API
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',  // Changed back to gpt-4o which is the correct model
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000,
-      })
+    console.log("🤖 Preparing OpenAI request:", {
+      messageCount: messages.length,
+      lastMessageContent: content.substring(0, 50) + "..."
     });
 
-    if (!openAIResponse.ok) {
-      throw new Error(`OpenAI API error: ${openAIResponse.statusText}`);
-    }
+    // Call OpenAI API
+    try {
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 1000,
+        })
+      });
 
-    const aiData = await openAIResponse.json();
-    const aiResponse = aiData.choices[0].message.content;
+      console.log("📡 OpenAI API response status:", {
+        status: openAIResponse.status,
+        statusText: openAIResponse.statusText
+      });
 
-    // Save AI response to database
-    const { data: savedResponse, error: saveError } = await supabase
-      .from('messages')
-      .insert({
-        chat_session_id,
-        content: aiResponse,
-        user_id: user.id,
-        sender: 'ai'
-      })
-      .select()
-      .single();
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.text();
+        console.error("❌ OpenAI API error:", {
+          status: openAIResponse.status,
+          statusText: openAIResponse.statusText,
+          errorData
+        });
+        throw new Error(`OpenAI API error: ${openAIResponse.statusText}\n${errorData}`);
+      }
 
-    if (saveError) {
-      console.error('Error saving AI response:', saveError);
+      const aiData = await openAIResponse.json();
+      console.log("✅ OpenAI API success:", {
+        hasChoices: !!aiData.choices,
+        choicesLength: aiData.choices?.length,
+        firstChoiceLength: aiData.choices?.[0]?.message?.content?.length
+      });
+
+      const aiResponse = aiData.choices[0].message.content;
+
+      // Save AI response to database
+      const { data: savedResponse, error: saveError } = await supabase
+        .from('messages')
+        .insert({
+          chat_session_id,
+          content: aiResponse,
+          user_id: user.id,
+          sender: 'ai'
+        })
+        .select()
+        .single();
+
+      if (saveError) {
+        console.error('❌ Error saving AI response:', saveError);
+        return new Response(
+          JSON.stringify({ 
+            content: "Message received but couldn't be saved. Please try again.",
+            error: "Database error" 
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      console.log("💾 Saved response to database:", {
+        responseId: savedResponse?.id,
+        timestamp: new Date().toISOString()
+      });
+
       return new Response(
         JSON.stringify({ 
-          content: "Message received but couldn't be saved. Please try again.",
-          error: "Database error" 
+          content: aiResponse,
+          message: savedResponse
         }),
-        { 
+        {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
+
+    } catch (openAIError) {
+      console.error('❌ Error in OpenAI API call:', {
+        error: openAIError.message,
+        stack: openAIError.stack
+      });
+      throw openAIError;
     }
 
-    return new Response(
-      JSON.stringify({ 
-        content: aiResponse,
-        message: savedResponse
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-
   } catch (error) {
-    console.error('Error in process-message function:', error);
+    console.error('❌ Error in process-message function:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     return new Response(
       JSON.stringify({ 
         content: "An unexpected error occurred. Please try again.",
