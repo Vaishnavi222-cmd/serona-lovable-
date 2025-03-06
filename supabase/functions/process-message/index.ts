@@ -129,7 +129,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Fixed: Changed from 'gpt-4o' to the correct model name
+        model: 'gpt-4',  // Changed from 'gpt-4o' to 'gpt-4'
         messages: messages,
         temperature: 0.7,
         max_tokens: 1000,
