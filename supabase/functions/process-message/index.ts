@@ -4,11 +4,13 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 console.log('🚀 Process Message Function Started');
 
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
@@ -125,7 +127,6 @@ serve(async (req) => {
     }
     console.log('📚 Message history fetched, count:', messageHistory?.length || 0);
 
-    // Create messages array for OpenAI
     const systemPrompt = `You are Serona AI, a life coach and human behavior analyst. Your purpose is to help and guide people in various aspects of life, including career guidance, decision-making, relationship advice, self-improvement & personal growth, confidence-building, communication skills, emotional intelligence, life transitions, overcoming self-doubt, productivity, and goal-setting.
 
 Your approach:
@@ -152,57 +153,42 @@ Important boundaries:
 - Guide off-topic discussions back to personal development
 - Remember: Help users understand themselves better through insightful analysis while maintaining a supportive, professional, and ethical approach.`;
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...(messageHistory || []).map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      })),
-      { role: "user", content }
-    ];
-
-    // Prepare OpenAI request
+    // Prepare OpenAI request with optimized settings
     const openAIBody = {
-      model: "gpt-4o",
-      messages,
-      temperature: 0.7,
-      max_tokens: 1000,
+      model: "gpt-4o-mini", // Using the faster model
+      messages: [
+        { 
+          role: "system", 
+          content: systemPrompt 
+        },
+        ...(messageHistory || []).map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: "user", content }
+      ],
+      temperature: 0.5, // Lower temperature for faster, more focused responses
+      max_tokens: 800, // Reduced max tokens for faster responses while maintaining quality
+      presence_penalty: 0.1, // Slight adjustment to maintain conversation flow
+      frequency_penalty: 0.1 // Slight adjustment to maintain natural responses
     };
 
-    console.log('🚀 Preparing OpenAI request:', {
-      model: openAIBody.model,
-      messageCount: messages.length,
-      temperature: openAIBody.temperature,
-      max_tokens: openAIBody.max_tokens
+    console.log('📤 Sending request to OpenAI...');
+    
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(openAIBody)
     });
 
-    // Make request to OpenAI
-    console.log('📤 Sending request to OpenAI...');
-    let openAIResponse;
-    try {
-      openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(openAIBody)
-      });
-
-      console.log('📥 Received response from OpenAI:', {
-        status: openAIResponse.status,
-        statusText: openAIResponse.statusText,
-        ok: openAIResponse.ok
-      });
-    } catch (error) {
-      console.error('❌ Network error calling OpenAI:', error);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to connect to OpenAI API'
-      }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    console.log('📥 Received response from OpenAI:', {
+      status: openAIResponse.status,
+      statusText: openAIResponse.statusText,
+      ok: openAIResponse.ok
+    });
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
