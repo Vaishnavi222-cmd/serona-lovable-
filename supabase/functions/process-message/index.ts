@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -116,7 +115,7 @@ serve(async (req) => {
     ];
 
     console.log("🤖 Calling OpenAI API with configuration:", {
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messagesCount: messages.length,
       timestamp: new Date().toISOString()
     });
@@ -128,7 +127,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: messages,
         temperature: 0.7,
         max_tokens: 1000,
