@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -141,7 +140,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
 
     // Call the edge function with streaming
     const response = await fetch(
-      `${supabase.functions.getUrl('process-message')}`,
+      `${process.env.VITE_SUPABASE_URL}/functions/v1/process-message`,
       {
         method: 'POST',
         headers: {
