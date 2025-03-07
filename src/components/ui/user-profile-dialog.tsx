@@ -40,7 +40,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       // Get current timestamp for comparison
       const now = new Date().toISOString();
 
-      // First update expired plans - only if there are any active plans
+      // Update expired plans first
       const { data: activePlans, error: activePlansError } = await supabase
         .from('user_plans')
         .select('*')
@@ -49,19 +49,15 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
 
       if (!activePlansError && activePlans && activePlans.length > 0) {
         console.log('Found active plans, checking for expired ones...');
-        const { error: updateError } = await supabase
+        await supabase
           .from('user_plans')
           .update({ status: 'expired' })
           .eq('user_id', user.id)
           .eq('status', 'active')
           .lt('end_time', now);
-
-        if (updateError) {
-          console.error('Error updating expired plans:', updateError);
-        }
       }
 
-      // Then get active plan
+      // Get active plan with immediate refetch
       console.log('Fetching current active plan...');
       const { data: planData, error: planError } = await supabase
         .from('user_plans')
@@ -105,7 +101,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     }
   };
 
-  // Set up real-time subscription for plan updates
+  // Enhanced real-time subscription setup
   useEffect(() => {
     if (!open) return;
 
@@ -113,6 +109,9 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('Setting up real-time subscription for user plans...');
+      
+      // Subscribe to ANY changes in user_plans table for this user
       const channel = supabase
         .channel('user-plans-changes')
         .on(
@@ -125,12 +124,14 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
           },
           (payload) => {
             console.log('Real-time update received:', payload);
+            // Immediately fetch fresh data when any change is detected
             fetchUserData();
           }
         )
         .subscribe();
 
       return () => {
+        console.log('Cleaning up subscription...');
         supabase.removeChannel(channel);
       };
     };
@@ -138,7 +139,7 @@ export function UserProfileDialog({ open, onOpenChange, userEmail }: UserProfile
     setupSubscription();
   }, [open]);
 
-  // Fetch data when dialog opens
+  // Initial data fetch when dialog opens
   useEffect(() => {
     if (open) {
       fetchUserData();
