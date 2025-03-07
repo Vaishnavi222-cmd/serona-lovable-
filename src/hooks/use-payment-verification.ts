@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +17,37 @@ export const usePaymentVerification = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const mobileSession = useMobilePaymentSession();
+
+  // Enhanced session refresh mechanism
+  const refreshSession = async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Session refresh error:', error);
+        // Even if refresh fails, try to get current session
+        const { data: { session } } = await supabase.auth.getSession();
+        return !!session;
+      }
+      return !!data.session;
+    } catch (error) {
+      console.error('Session refresh attempt failed:', error);
+      return false;
+    }
+  };
+
+  // Helper to verify and refresh session with retries
+  const ensureValidSession = async (): Promise<boolean> => {
+    let retries = 3;
+    while (retries > 0) {
+      const isValid = await refreshSession();
+      if (isValid) return true;
+      retries--;
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    return false;
+  };
 
   // Enhanced plan update checking with retries and better error handling
   const checkPlanUpdate = async (userId: string): Promise<boolean> => {
@@ -79,41 +109,59 @@ export const usePaymentVerification = () => {
     const maxRetries = 3;
 
     try {
-      // For mobile payments, handle session carefully
       if (isMobile) {
         const sessionToken = await mobileSession.createPaymentSession();
         if (!sessionToken) {
           throw new Error('Could not create mobile payment session');
         }
-
-        console.log('Mobile payment verification starting...', { orderId, paymentId });
       }
 
-      // Start verification with retries
       while (retryCount < maxRetries) {
         try {
-          // Always verify session first
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.user?.id) {
-            await supabase.auth.refreshSession();
+          // Always ensure valid session before proceeding
+          const hasValidSession = await ensureValidSession();
+          if (!hasValidSession) {
+            throw new Error('Could not establish valid session');
           }
 
-          console.log('Calling verify-payment edge function...');
-          const verifyResponse = await supabase.functions.invoke('verify-payment', {
-            body: {
-              orderId,
-              paymentId,
-              signature,
-              planType,
-              userId
+          // For mobile, use direct HTTP request
+          if (isMobile) {
+            const response = await fetch('https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/verify-payment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              },
+              body: JSON.stringify({
+                userId,
+                planType,
+                orderId,
+                paymentId,
+                signature,
+                isMobile: true
+              }),
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || 'Payment verification failed');
             }
-          });
+          } else {
+            // Desktop flow remains unchanged
+            const verifyResponse = await supabase.functions.invoke('verify-payment', {
+              body: {
+                orderId,
+                paymentId,
+                signature,
+                planType,
+                userId
+              }
+            });
 
-          if (verifyResponse.error) {
-            throw verifyResponse.error;
+            if (verifyResponse.error) {
+              throw verifyResponse.error;
+            }
           }
-
-          console.log('Edge function response:', verifyResponse);
 
           // Wait for plan update with enhanced polling
           const isUpdated = await checkPlanUpdate(userId);
@@ -121,9 +169,13 @@ export const usePaymentVerification = () => {
             throw new Error('Plan update verification failed');
           }
 
-          console.log('Plan update successful');
+          // Final session refresh after successful verification
+          await refreshSession();
+          
+          console.log('Payment verification and session refresh successful');
           setIsVerifying(false);
           return true;
+
         } catch (error: any) {
           console.error(`Verification attempt ${retryCount + 1} failed:`, error);
           retryCount++;
@@ -133,7 +185,6 @@ export const usePaymentVerification = () => {
             throw error;
           }
 
-          // Exponential backoff between retries
           await new Promise(resolve => 
             setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 5000))
           );
