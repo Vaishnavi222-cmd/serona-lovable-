@@ -509,34 +509,64 @@ const Chat = () => {
       return;
     }
 
-    setIsTyping(true); // Show typing indicator
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: `Help me with ${topic}`,
-      sender: 'user'
+    const messageContent = `Help me with ${topic}`;
+    const tempMessageId = Date.now().toString();
+    
+    setIsTyping(true);
+    
+    // Add optimistic user message
+    const optimisticUserMessage = {
+      id: tempMessageId,
+      content: messageContent,
+      sender: 'user' as const
     };
-    setMessages(prev => [...prev, newMessage]);
-    setMessage('');
+    setMessages(prev => [...prev, optimisticUserMessage]);
 
     try {
       const savedMessage = await saveMessage(
         currentChatId!,
-        newMessage.content,
+        messageContent,
         user.id,
         user.email || ''
       );
 
-      if (savedMessage?.aiMessage) {
+      if (!savedMessage) {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+        return;
+      }
+
+      // Update user message with saved ID
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempMessageId
+          ? { ...msg, id: savedMessage.userMessage.id }
+          : msg
+      ));
+
+      // Add AI response if available
+      if (savedMessage.aiMessage) {
         setMessages(prev => [...prev, {
           id: savedMessage.aiMessage.id,
           content: savedMessage.aiMessage.content,
           sender: 'ai' as const
         }]);
       }
-    } catch (error) {
-      console.error('Error in handleQuickStart:', error);
+
+    } catch (error: any) {
+      console.error("Error in handleQuickStart:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process message. Please try again.",
+        variant: "destructive",
+      });
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
     } finally {
-      setIsTyping(false); // Hide typing indicator
+      setIsTyping(false);
     }
   };
 
@@ -856,30 +886,4 @@ const Chat = () => {
                 aria-label="Send message"
                 disabled={!isMessagingAllowed}
               >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <LimitReachedDialog
-        open={showLimitReachedDialog}
-        onOpenChange={setShowLimitReachedDialog}
-        timeRemaining={timeRemaining}
-        onUpgrade={() => {
-          setShowLimitReachedDialog(false);
-          setShowUpgradePlansDialog(true);
-        }}
-      />
-
-      <UpgradePlansDialog
-        open={showUpgradePlansDialog}
-        onOpenChange={setShowUpgradePlansDialog}
-        onSelectPlan={handleSelectPlan}
-      />
-    </div>
-  );
-};
-
-export default Chat;
+                <Send className
