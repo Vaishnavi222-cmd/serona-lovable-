@@ -14,6 +14,7 @@ import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 import TypingIndicator from '@/components/TypingIndicator';
 import { useDailyReset } from "@/hooks/use-daily-reset";
 import { usePlanUpdates } from '@/hooks/use-plan-updates';
+import MessageContent from '@/components/MessageContent';
 
 interface Message {
   id: string;
@@ -794,9 +795,7 @@ const Chat = () => {
                           max-w-[92%] md:max-w-[85%] px-4 py-3 md:px-6 md:py-4
                           min-w-[100px]`} // Added min-width and adjusted padding
                       >
-                        <p className="text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap break-words">
-                          {msg.content}
-                        </p>
+                        <MessageContent content={msg.content} />
                       </div>
                     </div>
                   ))}
