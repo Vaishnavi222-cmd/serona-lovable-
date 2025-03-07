@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { LimitReachedDialog } from "@/components/ui/limit-reached-dialog";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 import TypingIndicator from '@/components/TypingIndicator';
+import { useDailyReset } from "@/hooks/use-daily-reset";
 
 interface Message {
   id: string;
@@ -163,48 +164,53 @@ const Chat = () => {
   const [isMessagingAllowed, setIsMessagingAllowed] = useState(true);
 
   // Update useEffect to check plan status and limits
-  useEffect(() => {
+  const checkMessageLimits = async () => {
     if (!user) return;
 
-    const checkMessageLimits = async () => {
-      try {
-        // Check for active paid plan
-        const { data: activePlan } = await supabase
-          .from('user_plans')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+    try {
+      // Check for active paid plan
+      const { data: activePlan } = await supabase
+        .from('user_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-        // If there's an active paid plan, messaging is allowed
-        if (activePlan && new Date(activePlan.end_time) > new Date()) {
-          setIsMessagingAllowed(true);
-          return;
-        }
-
-        // If no active paid plan, check free plan limits
-        const currentDate = new Date().toISOString().split('T')[0];
-        const { data: dailyUsage } = await supabase
-          .from('user_daily_usage')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('date', currentDate)
-          .single();
-
-        // If no usage record exists or responses are under limit, messaging is allowed
-        if (!dailyUsage || dailyUsage.responses_count < 7) {
-          setIsMessagingAllowed(true);
-        } else {
-          setIsMessagingAllowed(false);
-        }
-      } catch (error) {
-        console.error('Error checking message limits:', error);
-        // Default to allowed in case of error to prevent false restrictions
+      // If there's an active paid plan, messaging is allowed
+      if (activePlan && new Date(activePlan.end_time) > new Date()) {
         setIsMessagingAllowed(true);
+        return;
       }
-    };
+
+      // If no active paid plan, check free plan limits
+      const currentDate = new Date().toISOString().split('T')[0];
+      const { data: dailyUsage } = await supabase
+        .from('user_daily_usage')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', currentDate)
+        .single();
+
+      // If no usage record exists or responses are under limit, messaging is allowed
+      if (!dailyUsage || dailyUsage.responses_count < 7) {
+        setIsMessagingAllowed(true);
+      } else {
+        setIsMessagingAllowed(false);
+      }
+    } catch (error) {
+      console.error('Error checking message limits:', error);
+      // Default to allowed in case of error to prevent false restrictions
+      setIsMessagingAllowed(true);
+    }
+  };
+
+  // Add daily reset listener
+  useDailyReset(checkMessageLimits);
+
+  useEffect(() => {
+    if (!user) return;
 
     // Check limits immediately
     checkMessageLimits();
