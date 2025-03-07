@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Crown } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -110,22 +111,45 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         }
       }
 
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: { planType },
-      });
+      // Check if running on mobile
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      let paymentData;
 
-      if (error || !data?.orderId) {
-        throw new Error('Could not create payment order. Please try again.');
+      if (isMobile) {
+        // Use direct HTTP request for mobile
+        const response = await fetch('https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/create-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ planType }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Could not create payment order. Please try again.');
+        }
+
+        paymentData = await response.json();
+      } else {
+        // Use Supabase client for desktop
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+          body: { planType },
+        });
+
+        if (error || !data?.orderId) {
+          throw new Error('Could not create payment order. Please try again.');
+        }
+        paymentData = data;
       }
 
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const options = {
-        key: data.keyId,
-        amount: data.amount,
-        currency: data.currency,
+        key: paymentData.keyId,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
         name: "Serona AI",
         description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan`,
-        order_id: data.orderId,
+        order_id: paymentData.orderId,
         prefill: {
           email: userEmail,
         },
@@ -143,7 +167,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
           ondismiss: async function() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-              // Only reset if we still have a valid session
               setShowUpgradeDialog(false);
             }
           },
@@ -157,13 +180,39 @@ export function UserMenu({ userEmail }: UserMenuProps) {
               throw new Error('Invalid payment response received');
             }
 
-            await verifyPayment({
-              userId: user.id,
-              planType,
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature
-            });
+            // Handle verification based on platform
+            if (isMobile) {
+              // Direct HTTP request for mobile
+              const verifyResponse = await fetch('https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/verify-payment', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                  userId: user.id,
+                  planType,
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature,
+                  isMobile: true
+                }),
+              });
+
+              if (!verifyResponse.ok) {
+                const error = await verifyResponse.json();
+                throw new Error(error.message || 'Payment verification failed');
+              }
+            } else {
+              // Supabase client for desktop
+              await verifyPayment({
+                userId: user.id,
+                planType,
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature
+              });
+            }
 
             toast({
               title: "Payment successful",
