@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export async function createChat() {
   try {
@@ -64,6 +66,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         hasUser: !!session?.user,
         timestamp: new Date().toISOString()
       });
+      toast({
+        title: "Authentication Error",
+        description: "Please sign in again to continue.",
+        variant: "destructive",
+      });
       throw new Error("Authentication required");
     }
 
@@ -84,6 +91,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         error: userMessageError,
         timestamp: new Date().toISOString()
       });
+      toast({
+        title: "Error",
+        description: "Failed to save your message. Please try again.",
+        variant: "destructive",
+      });
       throw userMessageError;
     }
 
@@ -95,7 +107,14 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     // Call the edge function with proper error handling and timeout
     const timeoutDuration = 30000; // 30 seconds timeout
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('AI response timeout')), timeoutDuration);
+      setTimeout(() => {
+        toast({
+          title: "Request Timeout",
+          description: "The response took too long. Please try again.",
+          variant: "destructive",
+        });
+        reject(new Error('AI response timeout'));
+      }, timeoutDuration);
     });
 
     const aiResponsePromise = supabase.functions.invoke('process-message', {
@@ -118,6 +137,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         error: aiError,
         timestamp: new Date().toISOString()
       });
+      toast({
+        title: "AI Response Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive",
+      });
       throw new Error(`AI response error: ${aiError.message}`);
     }
 
@@ -128,6 +152,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
 
     if (!aiResponse?.content) {
       console.error("[saveMessage] No AI response content");
+      toast({
+        title: "Error",
+        description: "No response received from AI. Please try again.",
+        variant: "destructive",
+      });
       throw new Error("No response from AI");
     }
 
@@ -156,7 +185,15 @@ export async function saveMessage(chatId: string, message: string, userId: strin
 
       aiMessageError = result.error;
       retryCount++;
-      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+      
+      if (retryCount < maxRetries) {
+        toast({
+          title: "Retrying...",
+          description: `Attempt ${retryCount} of ${maxRetries} to save AI response`,
+        });
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
     }
 
     if (aiMessageError) {
@@ -164,6 +201,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         error: aiMessageError,
         timestamp: new Date().toISOString(),
         retryCount
+      });
+      toast({
+        title: "Error",
+        description: "Failed to save AI response after multiple attempts.",
+        variant: "destructive",
       });
       throw aiMessageError;
     }
@@ -177,6 +219,14 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       errorMessage: error.message,
       timestamp: new Date().toISOString()
     });
+    // Only show toast if one hasn't been shown for this error already
+    if (!error.message.includes("timeout")) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
     throw error;
   }
 }
