@@ -64,13 +64,14 @@ async function verifyRazorpayPayment(orderId: string, keyId: string, keySecret: 
   }
 }
 
-// Helper function to verify plan update with retries
-async function verifyPlanUpdate(supabase: any, userId: string, orderId: string, maxRetries = 5): Promise<boolean> {
-  console.log('Starting plan update verification with retries:', { userId, orderId, maxRetries });
+// Enhanced retry mechanism for plan updates
+async function updatePlanWithRetry(supabase: any, userId: string, planType: string, orderId: string, paymentId: string, amount: number, maxRetries = 5): Promise<boolean> {
+  console.log('Starting plan update with retries:', { userId, planType, orderId, maxRetries });
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const { data: plan, error } = await supabase
+      // First verify if the plan is already updated to avoid duplicates
+      const { data: existingPlan } = await supabase
         .from('user_plans')
         .select('*')
         .eq('user_id', userId)
@@ -78,25 +79,56 @@ async function verifyPlanUpdate(supabase: any, userId: string, orderId: string, 
         .eq('status', 'active')
         .maybeSingle();
 
-      if (error) {
-        console.error(`Attempt ${attempt + 1}: Error checking plan:`, error);
-        continue;
-      }
-
-      if (plan) {
-        console.log('Plan update verified successfully:', plan);
+      if (existingPlan) {
+        console.log('Plan already updated:', existingPlan);
         return true;
       }
 
-      console.log(`Attempt ${attempt + 1}: Plan not found, waiting before retry...`);
-      const delay = Math.min(200 * Math.pow(2, attempt), 2000);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      // Expire any existing active plans
+      const { error: updateError } = await supabase
+        .from('user_plans')
+        .update({ status: 'expired' })
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (updateError) {
+        console.error(`Attempt ${attempt + 1}: Error updating existing plans:`, updateError);
+        continue;
+      }
+
+      // Insert new plan
+      const { data: newPlan, error: insertError } = await supabase
+        .from('user_plans')
+        .insert([{
+          user_id: userId,
+          plan_type: planType,
+          status: 'active',
+          start_time: new Date().toISOString(),
+          order_id: orderId,
+          payment_id: paymentId,
+          amount_paid: amount
+        }])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error(`Attempt ${attempt + 1}: Error creating new plan:`, insertError);
+        continue;
+      }
+
+      console.log('Plan created successfully:', newPlan);
+      return true;
+
     } catch (error) {
       console.error(`Attempt ${attempt + 1}: Unexpected error:`, error);
+      if (attempt === maxRetries - 1) throw error;
     }
+
+    // Exponential backoff between retries
+    const delay = Math.min(200 * Math.pow(2, attempt), 2000);
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
 
-  console.error('Plan verification failed after all retries');
   return false;
 }
 
@@ -119,7 +151,7 @@ serve(async (req) => {
     const { orderId, paymentId, signature, planType, userId, isMobile } = await req.json();
     console.log('Starting payment verification for:', { orderId, paymentId, planType, userId, isMobile });
 
-    // Initialize Supabase client with conditional config for mobile
+    // Initialize Supabase client with explicit headers for mobile
     const supabaseConfig = {
       auth: {
         autoRefreshToken: false,
@@ -127,9 +159,7 @@ serve(async (req) => {
       }
     };
 
-    // Add explicit headers for mobile requests
     if (isMobile) {
-      console.log('Mobile payment detected, adding explicit headers');
       Object.assign(supabaseConfig, {
         global: {
           headers: {
@@ -141,12 +171,14 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, supabaseConfig);
-    
+
+    // Verify all required parameters
     if (!orderId || !paymentId || !signature || !planType || !userId) {
       console.error('Missing required payment information');
       throw new Error('Missing required payment information');
     }
 
+    // Verify signature with retries
     let isSignatureValid = false;
     for (let i = 0; i < 3; i++) {
       isSignatureValid = await verifyRazorpaySignature(orderId, paymentId, signature, razorpaySecret);
@@ -159,6 +191,7 @@ serve(async (req) => {
       throw new Error('Invalid payment signature');
     }
 
+    // Verify payment with Razorpay API with retries
     let isPaymentVerified = false;
     for (let i = 0; i < 3; i++) {
       isPaymentVerified = await verifyRazorpayPayment(orderId, razorpayKeyId, razorpaySecret);
@@ -171,82 +204,15 @@ serve(async (req) => {
       throw new Error('Payment verification failed with Razorpay API');
     }
 
-    // Verify user exists with explicit headers for mobile
-    const userQuery = supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
-
-    // Add explicit headers for mobile requests
-    if (isMobile) {
-      userQuery.headers({
-        apikey: supabaseServiceKey,
-        Authorization: `Bearer ${supabaseServiceKey}`
-      });
+    // Try to update plan with retries
+    const planUpdated = await updatePlanWithRetry(supabase, userId, planType, orderId, paymentId, planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900);
+    
+    if (!planUpdated) {
+      throw new Error('Failed to update plan after multiple attempts');
     }
 
-    const { data: user, error: userError } = await userQuery;
-
-    if (userError || !user) {
-      console.error('User verification failed:', userError);
-      throw new Error('Invalid user');
-    }
-
-    // Update existing plans with mobile headers if needed
-    const updateQuery = supabase
-      .from('user_plans')
-      .update({ status: 'expired' })
-      .eq('user_id', userId)
-      .eq('status', 'active');
-
-    if (isMobile) {
-      updateQuery.headers({
-        apikey: supabaseServiceKey,
-        Authorization: `Bearer ${supabaseServiceKey}`
-      });
-    }
-
-    const { error: updateError } = await updateQuery;
-
-    if (updateError) {
-      console.error('Error updating existing plans:', updateError);
-      throw updateError;
-    }
-
-    // Insert new plan with mobile headers if needed
-    const insertQuery = supabase
-      .from('user_plans')
-      .insert([{
-        user_id: userId,
-        plan_type: planType,
-        status: 'active',
-        start_time: new Date().toISOString(),
-        end_time: new Date(Date.now() + (planType === 'hourly' ? 3600000 : planType === 'daily' ? 43200000 : 2592000000)).toISOString(),
-        remaining_output_tokens: planType === 'hourly' ? 9000 : planType === 'daily' ? 108000 : 3240000,
-        remaining_input_tokens: planType === 'hourly' ? 5000 : planType === 'daily' ? 60000 : 1800000,
-        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
-        order_id: orderId,
-        payment_id: paymentId
-      }])
-      .select();
-
-    if (isMobile) {
-      insertQuery.headers({
-        apikey: supabaseServiceKey,
-        Authorization: `Bearer ${supabaseServiceKey}`
-      });
-    }
-
-    const { data: planData, error: insertError } = await insertQuery;
-
-    if (insertError || !planData) {
-      console.error('Error creating new plan:', insertError);
-      throw insertError || new Error('Failed to create new plan');
-    }
-
-    // Verify plan creation with mobile headers if needed
-    const verificationQuery = supabase
+    // Final verification of plan update
+    const { data: finalVerification, error: verificationError } = await supabase
       .from('user_plans')
       .select('*')
       .eq('user_id', userId)
@@ -254,24 +220,13 @@ serve(async (req) => {
       .eq('status', 'active')
       .maybeSingle();
 
-    if (isMobile) {
-      verificationQuery.headers({
-        apikey: supabaseServiceKey,
-        Authorization: `Bearer ${supabaseServiceKey}`
-      });
+    if (verificationError || !finalVerification) {
+      console.error('Final verification failed:', verificationError);
+      throw new Error('Plan update could not be verified');
     }
-
-    const { data: verificationData, error: verificationError } = await verificationQuery;
-
-    if (verificationError || !verificationData) {
-      console.error('Plan verification failed:', verificationError);
-      throw new Error('Plan creation could not be verified');
-    }
-
-    console.log('Plan creation verified successfully:', verificationData);
 
     return new Response(
-      JSON.stringify({ success: true, data: verificationData }),
+      JSON.stringify({ success: true, data: finalVerification }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
