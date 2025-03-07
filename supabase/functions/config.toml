@@ -8,3 +8,7 @@ verify_jwt = false
 [[functions]]
 name = "verify-ebook-payment"
 verify_jwt = false
+
+[[functions]]
+name = "razorpay-webhook"
+verify_jwt = false

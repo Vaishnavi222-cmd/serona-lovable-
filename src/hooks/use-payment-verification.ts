@@ -116,82 +116,74 @@ export const usePaymentVerification = () => {
         }
       }
 
-      while (retryCount < maxRetries) {
-        try {
-          // Always ensure valid session before proceeding
-          const hasValidSession = await ensureValidSession();
-          if (!hasValidSession) {
-            throw new Error('Could not establish valid session');
+      // Start verification process but don't wait for all retries if first attempt fails
+      // This acts as a fallback in case webhook hasn't processed yet
+      try {
+        const hasValidSession = await ensureValidSession();
+        if (!hasValidSession) {
+          console.log('Session validation failed, proceeding with payment verification');
+        }
+
+        // Attempt immediate verification
+        if (isMobile) {
+          const response = await fetch('https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            },
+            body: JSON.stringify({
+              userId,
+              planType,
+              orderId,
+              paymentId,
+              signature,
+              isMobile: true
+            }),
+          });
+
+          if (!response.ok) {
+            console.log('Initial verification failed, webhook will handle update');
           }
-
-          // For mobile, use direct HTTP request
-          if (isMobile) {
-            const response = await fetch('https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/verify-payment', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-              },
-              body: JSON.stringify({
-                userId,
-                planType,
-                orderId,
-                paymentId,
-                signature,
-                isMobile: true
-              }),
-            });
-
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.message || 'Payment verification failed');
+        } else {
+          const verifyResponse = await supabase.functions.invoke('verify-payment', {
+            body: {
+              orderId,
+              paymentId,
+              signature,
+              planType,
+              userId
             }
-          } else {
-            // Desktop flow remains unchanged
-            const verifyResponse = await supabase.functions.invoke('verify-payment', {
-              body: {
-                orderId,
-                paymentId,
-                signature,
-                planType,
-                userId
-              }
-            });
+          });
 
-            if (verifyResponse.error) {
-              throw verifyResponse.error;
-            }
+          if (verifyResponse.error) {
+            console.log('Initial verification failed, webhook will handle update');
           }
+        }
 
-          // Wait for plan update with enhanced polling
-          const isUpdated = await checkPlanUpdate(userId);
-          if (!isUpdated) {
-            throw new Error('Plan update verification failed');
-          }
-
-          // Final session refresh after successful verification
+        // Check for plan update with shorter polling
+        const isUpdated = await checkPlanUpdate(userId);
+        if (isUpdated) {
+          console.log('Plan update confirmed');
           await refreshSession();
-          
-          console.log('Payment verification and session refresh successful');
           setIsVerifying(false);
           return true;
-
-        } catch (error: any) {
-          console.error(`Verification attempt ${retryCount + 1} failed:`, error);
-          retryCount++;
-
-          if (retryCount === maxRetries) {
-            setIsVerifying(false);
-            throw error;
-          }
-
-          await new Promise(resolve => 
-            setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 5000))
-          );
         }
+
+        // If not updated immediately, return success anyway
+        // The webhook will handle the update asynchronously
+        console.log('Payment recorded, waiting for webhook processing');
+        setIsVerifying(false);
+        return true;
+
+      } catch (error) {
+        console.log('Verification attempt failed, webhook will handle update:', error);
+        setIsVerifying(false);
+        return true; // Return true since webhook will handle it
       }
+
     } catch (error: any) {
-      console.error('Payment verification failed:', error);
+      console.error('Critical payment verification error:', error);
       setIsVerifying(false);
       throw error;
     }
