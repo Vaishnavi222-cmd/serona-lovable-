@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
@@ -63,6 +62,43 @@ async function verifyRazorpayPayment(orderId: string, keyId: string, keySecret: 
     console.error('Razorpay API verification error:', error);
     return false;
   }
+}
+
+// Helper function to verify plan update with retries
+async function verifyPlanUpdate(supabase: any, userId: string, orderId: string, maxRetries = 5): Promise<boolean> {
+  console.log('Starting plan update verification with retries:', { userId, orderId, maxRetries });
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const { data: plan, error } = await supabase
+        .from('user_plans')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('order_id', orderId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error) {
+        console.error(`Attempt ${attempt + 1}: Error checking plan:`, error);
+        continue;
+      }
+
+      if (plan) {
+        console.log('Plan update verified successfully:', plan);
+        return true;
+      }
+
+      console.log(`Attempt ${attempt + 1}: Plan not found, waiting before retry...`);
+      // Exponential backoff with max delay of 2 seconds
+      const delay = Math.min(200 * Math.pow(2, attempt), 2000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    } catch (error) {
+      console.error(`Attempt ${attempt + 1}: Unexpected error:`, error);
+    }
+  }
+
+  console.error('Plan verification failed after all retries');
+  return false;
 }
 
 serve(async (req) => {
@@ -183,7 +219,14 @@ serve(async (req) => {
 
         if (error) throw error;
         planData = data;
-        console.log('Plan created successfully:', planData);
+        
+        // Verify the plan was actually created
+        const isPlanVerified = await verifyPlanUpdate(supabase, userId, orderId);
+        if (!isPlanVerified) {
+          throw new Error('Plan creation could not be verified');
+        }
+        
+        console.log('Plan created and verified successfully:', planData);
         break;
       } catch (error) {
         console.error(`Insert attempt ${i + 1} failed:`, error);
