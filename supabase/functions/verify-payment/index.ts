@@ -87,7 +87,7 @@ serve(async (req) => {
     console.log('Received payment verification request:', { 
       orderId, 
       paymentId, 
-      signature: signature?.substring(0, 10) + '...', // Log partial signature for security
+      signature: signature?.substring(0, 10) + '...', 
       planType, 
       userId 
     });
@@ -98,18 +98,28 @@ serve(async (req) => {
       throw new Error('Missing required payment information');
     }
 
-    // Step 1: Verify Razorpay signature
-    const isSignatureValid = await verifyRazorpaySignature(orderId, paymentId, signature, razorpaySecret);
-    console.log('Signature verification result:', isSignatureValid);
+    // Step 1: Verify payment signature with retries
+    let isSignatureValid = false;
+    for (let i = 0; i < 3; i++) {
+      isSignatureValid = await verifyRazorpaySignature(orderId, paymentId, signature, razorpaySecret);
+      if (isSignatureValid) break;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
     
+    console.log('Signature verification result:', isSignatureValid);
     if (!isSignatureValid) {
       throw new Error('Invalid payment signature');
     }
 
-    // Step 2: Double-check with Razorpay API
-    const isPaymentVerified = await verifyRazorpayPayment(orderId, razorpayKeyId, razorpaySecret);
-    console.log('Razorpay API verification result:', isPaymentVerified);
+    // Step 2: Double-check with Razorpay API with retries
+    let isPaymentVerified = false;
+    for (let i = 0; i < 3; i++) {
+      isPaymentVerified = await verifyRazorpayPayment(orderId, razorpayKeyId, razorpaySecret);
+      if (isPaymentVerified) break;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
     
+    console.log('Razorpay API verification result:', isPaymentVerified);
     if (!isPaymentVerified) {
       throw new Error('Payment verification failed with Razorpay API');
     }
@@ -119,26 +129,36 @@ serve(async (req) => {
       .from('profiles')
       .select('id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (userError || !user) {
       console.error('User verification failed:', userError);
       throw new Error('Invalid user');
     }
 
-    // Step 4: Mark existing active plans as expired
-    const { error: updateError } = await supabase
-      .from('user_plans')
-      .update({ status: 'expired' })
-      .eq('user_id', userId)
-      .eq('status', 'active');
+    // Step 4: Mark existing active plans as expired with retry
+    let updateError = null;
+    for (let i = 0; i < 3; i++) {
+      const { error } = await supabase
+        .from('user_plans')
+        .update({ status: 'expired' })
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (!error) {
+        updateError = null;
+        break;
+      }
+      updateError = error;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
 
     if (updateError) {
       console.error('Error updating existing plans:', updateError);
       throw updateError;
     }
 
-    // Step 5: Create new plan with retry mechanism
+    // Step 5: Create new plan with enhanced retry mechanism
     let planData = null;
     let insertError = null;
     const maxRetries = 3;
@@ -163,11 +183,12 @@ serve(async (req) => {
 
         if (error) throw error;
         planData = data;
-        break; // Success, exit retry loop
+        console.log('Plan created successfully:', planData);
+        break;
       } catch (error) {
         console.error(`Insert attempt ${i + 1} failed:`, error);
         insertError = error;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
@@ -175,8 +196,6 @@ serve(async (req) => {
       console.error('Failed to create plan after retries:', insertError);
       throw new Error('Failed to create plan after multiple attempts');
     }
-
-    console.log('Plan created successfully:', planData[0]);
 
     return new Response(
       JSON.stringify({ success: true, data: planData[0] }),
