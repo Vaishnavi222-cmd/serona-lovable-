@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
@@ -116,7 +115,7 @@ serve(async (req) => {
       throw new Error('Missing environment variables');
     }
 
-    // Initialize Supabase client with service role key and explicit headers
+    // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -130,16 +129,10 @@ serve(async (req) => {
     });
     
     const { orderId, paymentId, signature, planType, userId } = await req.json();
-    console.log('Received payment verification request:', { 
-      orderId, 
-      paymentId, 
-      signature: signature?.substring(0, 10) + '...', 
-      planType, 
-      userId 
-    });
+    console.log('Starting payment verification for:', { orderId, paymentId, planType, userId });
 
     if (!orderId || !paymentId || !signature || !planType || !userId) {
-      console.error('Missing payment information:', { orderId, paymentId, planType, userId });
+      console.error('Missing required payment information');
       throw new Error('Missing required payment information');
     }
 
@@ -178,81 +171,61 @@ serve(async (req) => {
       throw new Error('Invalid user');
     }
 
-    // Mark existing active plans as expired with explicit error handling
-    let updateError = null;
-    for (let i = 0; i < 3; i++) {
-      const { error } = await supabase
-        .from('user_plans')
-        .update({ status: 'expired' })
-        .eq('user_id', userId)
-        .eq('status', 'active');
-
-      if (!error) {
-        updateError = null;
-        break;
-      }
-      updateError = error;
-      console.error(`Update attempt ${i + 1} failed:`, error);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    // Mark existing active plans as expired with explicit error handling and logging
+    console.log('Updating existing active plans to expired...');
+    const { error: updateError } = await supabase
+      .from('user_plans')
+      .update({ status: 'expired' })
+      .eq('user_id', userId)
+      .eq('status', 'active');
 
     if (updateError) {
       console.error('Error updating existing plans:', updateError);
       throw updateError;
     }
 
-    let planData = null;
-    let insertError = null;
-    const maxRetries = 3;
+    // Insert new plan with explicit error handling and verification
+    console.log('Creating new plan...');
+    const { data: planData, error: insertError } = await supabase
+      .from('user_plans')
+      .insert([{
+        user_id: userId,
+        plan_type: planType,
+        status: 'active',
+        start_time: new Date().toISOString(),
+        end_time: new Date(Date.now() + (planType === 'hourly' ? 3600000 : planType === 'daily' ? 43200000 : 2592000000)).toISOString(),
+        remaining_output_tokens: planType === 'hourly' ? 9000 : planType === 'daily' ? 108000 : 3240000,
+        remaining_input_tokens: planType === 'hourly' ? 5000 : planType === 'daily' ? 60000 : 1800000,
+        amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
+        order_id: orderId,
+        payment_id: paymentId
+      }])
+      .select();
 
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        // Use explicit await and error handling for plan creation
-        const { data, error } = await supabase
-          .from('user_plans')
-          .insert([{
-            user_id: userId,
-            plan_type: planType,
-            status: 'active',
-            start_time: new Date().toISOString(),
-            end_time: new Date(Date.now() + (planType === 'hourly' ? 3600000 : planType === 'daily' ? 43200000 : 2592000000)).toISOString(),
-            remaining_output_tokens: planType === 'hourly' ? 9000 : planType === 'daily' ? 108000 : 3240000,
-            remaining_input_tokens: planType === 'hourly' ? 5000 : planType === 'daily' ? 60000 : 1800000,
-            amount_paid: planType === 'hourly' ? 2500 : planType === 'daily' ? 15000 : 299900,
-            order_id: orderId,
-            payment_id: paymentId
-          }])
-          .select();
-
-        if (error) {
-          console.error(`Insert error on attempt ${i + 1}:`, error);
-          throw error;
-        }
-
-        planData = data;
-        
-        // Verify the plan was actually created
-        const isPlanVerified = await verifyPlanUpdate(supabase, userId, orderId);
-        if (!isPlanVerified) {
-          throw new Error('Plan creation could not be verified');
-        }
-        
-        console.log('Plan created and verified successfully:', planData);
-        break;
-      } catch (error) {
-        console.error(`Insert attempt ${i + 1} failed:`, error);
-        insertError = error;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+    if (insertError || !planData) {
+      console.error('Error creating new plan:', insertError);
+      throw insertError || new Error('Failed to create new plan');
     }
 
-    if (!planData || planData.length === 0) {
-      console.error('Failed to create plan after retries:', insertError);
-      throw new Error('Failed to create plan after multiple attempts');
+    // Verify the plan was actually created
+    console.log('Verifying plan creation...');
+    const { data: verificationData, error: verificationError } = await supabase
+      .from('user_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('order_id', orderId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (verificationError || !verificationData) {
+      console.error('Plan verification failed:', verificationError);
+      throw new Error('Plan creation could not be verified');
     }
+
+    console.log('Plan creation verified successfully:', verificationData);
 
     return new Response(
-      JSON.stringify({ success: true, data: planData[0] }),
+      JSON.stringify({ success: true, data: verificationData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
