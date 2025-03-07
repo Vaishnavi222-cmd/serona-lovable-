@@ -306,6 +306,10 @@ export type Database = {
           user_id: string
         }
       }
+      reset_daily_usage: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       plan_type: "hourly" | "daily" | "monthly"
