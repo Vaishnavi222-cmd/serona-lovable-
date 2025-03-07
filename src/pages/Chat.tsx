@@ -509,62 +509,54 @@ const Chat = () => {
       return;
     }
 
-    const messageContent = `Help me with ${topic}`;
-    const tempMessageId = Date.now().toString();
-    
-    setIsTyping(true);
-    
-    // Add optimistic user message
-    const optimisticUserMessage = {
-      id: tempMessageId,
-      content: messageContent,
-      sender: 'user' as const
-    };
-    setMessages(prev => [...prev, optimisticUserMessage]);
+    if (!currentChatId) {
+      console.error("No chat ID available");
+      return;
+    }
 
+    setIsTyping(true);
+    const messageContent = `Help me with ${topic}`;
+    
     try {
-      const savedMessage = await saveMessage(
-        currentChatId!,
+      const optimisticMessage = {
+        id: Date.now().toString(),
+        content: messageContent,
+        sender: 'user' as const
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      const result = await saveMessage(
+        currentChatId,
         messageContent,
         user.id,
         user.email || ''
       );
 
-      if (!savedMessage) {
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        });
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-        return;
+      if (result) {
+        // Update the optimistic message with the real one
+        setMessages(prev => prev.map(msg => 
+          msg.id === optimisticMessage.id 
+            ? { id: result.userMessage.id, content: result.userMessage.content, sender: 'user' as const }
+            : msg
+        ));
+
+        // Add AI response if it exists
+        if (result.aiMessage) {
+          setMessages(prev => [...prev, {
+            id: result.aiMessage.id,
+            content: result.aiMessage.content,
+            sender: 'ai' as const
+          }]);
+        }
       }
-
-      // Update user message with saved ID
-      setMessages(prev => prev.map(msg => 
-        msg.id === tempMessageId
-          ? { ...msg, id: savedMessage.userMessage.id }
-          : msg
-      ));
-
-      // Add AI response if available
-      if (savedMessage.aiMessage) {
-        setMessages(prev => [...prev, {
-          id: savedMessage.aiMessage.id,
-          content: savedMessage.aiMessage.content,
-          sender: 'ai' as const
-        }]);
-      }
-
-    } catch (error: any) {
-      console.error("Error in handleQuickStart:", error);
+    } catch (error) {
+      console.error('Error in handleQuickStart:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to process message. Please try again.",
+        description: "Failed to process your request. Please try again.",
         variant: "destructive",
       });
-      // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
     } finally {
       setIsTyping(false);
     }
@@ -886,4 +878,16 @@ const Chat = () => {
                 aria-label="Send message"
                 disabled={!isMessagingAllowed}
               >
-                <Send className
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <LimitReachedDialog
+        open={showLimitReachedDialog}
+        onOpenChange={setShowLimitReachedDialog}
+        timeRemaining={timeRemaining}
+        onUpgrade={() => {
+          setShowLimitReachedDialog
