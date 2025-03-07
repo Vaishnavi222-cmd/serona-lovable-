@@ -38,7 +38,7 @@ serve(async (req) => {
       throw new Error('Missing Razorpay credentials')
     }
 
-    // Create order
+    // Create order with enhanced error handling
     const response = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: {
@@ -51,11 +51,23 @@ serve(async (req) => {
       }),
     })
 
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('Razorpay API error:', errorData)
+      throw new Error(`Razorpay API error: ${response.status} - ${errorData.error?.description || 'Unknown error'}`)
+    }
+
     const data = await response.json()
 
-    if (!data.id) {
-      console.error('Razorpay error:', data)
-      throw new Error('Failed to create payment order')
+    // Strict validation for order ID
+    if (!data || typeof data !== 'object') {
+      console.error('Invalid response format from Razorpay:', data)
+      throw new Error('Invalid response format from Razorpay')
+    }
+
+    if (!data.id || typeof data.id !== 'string') {
+      console.error('Missing or invalid order ID from Razorpay:', data)
+      throw new Error('Failed to create payment order: Invalid order ID')
     }
 
     console.log('Order created successfully:', { 
@@ -79,7 +91,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Create payment error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.toString() 
+      }),
       { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
