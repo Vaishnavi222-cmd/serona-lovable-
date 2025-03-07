@@ -509,56 +509,34 @@ const Chat = () => {
       return;
     }
 
-    if (!currentChatId) {
-      console.error("No chat ID available");
-      return;
-    }
+    setIsTyping(true); // Show typing indicator
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      content: `Help me with ${topic}`,
+      sender: 'user'
+    };
+    setMessages(prev => [...prev, newMessage]);
+    setMessage('');
 
-    setIsTyping(true);
-    const messageContent = `Help me with ${topic}`;
-    
     try {
-      const optimisticMessage = {
-        id: Date.now().toString(),
-        content: messageContent,
-        sender: 'user' as const
-      };
-      
-      setMessages(prev => [...prev, optimisticMessage]);
-
-      const result = await saveMessage(
-        currentChatId,
-        messageContent,
+      const savedMessage = await saveMessage(
+        currentChatId!,
+        newMessage.content,
         user.id,
         user.email || ''
       );
 
-      if (result) {
-        // Update the optimistic message with the real one
-        setMessages(prev => prev.map(msg => 
-          msg.id === optimisticMessage.id 
-            ? { id: result.userMessage.id, content: result.userMessage.content, sender: 'user' as const }
-            : msg
-        ));
-
-        // Add AI response if it exists
-        if (result.aiMessage) {
-          setMessages(prev => [...prev, {
-            id: result.aiMessage.id,
-            content: result.aiMessage.content,
-            sender: 'ai' as const
-          }]);
-        }
+      if (savedMessage?.aiMessage) {
+        setMessages(prev => [...prev, {
+          id: savedMessage.aiMessage.id,
+          content: savedMessage.aiMessage.content,
+          sender: 'ai' as const
+        }]);
       }
     } catch (error) {
       console.error('Error in handleQuickStart:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process your request. Please try again.",
-        variant: "destructive",
-      });
     } finally {
-      setIsTyping(false);
+      setIsTyping(false); // Hide typing indicator
     }
   };
 
@@ -890,4 +868,18 @@ const Chat = () => {
         onOpenChange={setShowLimitReachedDialog}
         timeRemaining={timeRemaining}
         onUpgrade={() => {
-          setShowLimitReachedDialog
+          setShowLimitReachedDialog(false);
+          setShowUpgradePlansDialog(true);
+        }}
+      />
+
+      <UpgradePlansDialog
+        open={showUpgradePlansDialog}
+        onOpenChange={setShowUpgradePlansDialog}
+        onSelectPlan={handleSelectPlan}
+      />
+    </div>
+  );
+};
+
+export default Chat;
