@@ -92,8 +92,13 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       timestamp: new Date().toISOString()
     });
     
-    // Call the edge function with proper error handling
-    const { data: aiResponse, error: aiError } = await supabase.functions.invoke('process-message', {
+    // Call the edge function with proper error handling and timeout
+    const timeoutDuration = 30000; // 30 seconds timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('AI response timeout')), timeoutDuration);
+    });
+
+    const aiResponsePromise = supabase.functions.invoke('process-message', {
       body: {
         content: message,
         chat_session_id: chatId
@@ -102,6 +107,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         Authorization: `Bearer ${session.access_token}`
       }
     });
+
+    const { data: aiResponse, error: aiError } = await Promise.race([
+      aiResponsePromise,
+      timeoutPromise
+    ]) as { data: any, error: any };
 
     if (aiError) {
       console.error("[saveMessage] AI response error:", {
@@ -121,22 +131,39 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw new Error("No response from AI");
     }
 
-    // Save the AI response
-    const { data: aiMessage, error: aiMessageError } = await supabase
-      .from('messages')
-      .insert({
-        chat_session_id: chatId,
-        content: aiResponse.content,
-        user_id: userId,
-        sender: 'ai'
-      })
-      .select()
-      .maybeSingle();
+    // Save the AI response with retry logic
+    let retryCount = 0;
+    const maxRetries = 3;
+    let aiMessage;
+    let aiMessageError;
+
+    while (retryCount < maxRetries) {
+      const result = await supabase
+        .from('messages')
+        .insert({
+          chat_session_id: chatId,
+          content: aiResponse.content,
+          user_id: userId,
+          sender: 'ai'
+        })
+        .select()
+        .maybeSingle();
+
+      if (!result.error) {
+        aiMessage = result.data;
+        break;
+      }
+
+      aiMessageError = result.error;
+      retryCount++;
+      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+    }
 
     if (aiMessageError) {
-      console.error("[saveMessage] AI message insert error:", {
+      console.error("[saveMessage] AI message insert error after retries:", {
         error: aiMessageError,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        retryCount
       });
       throw aiMessageError;
     }
