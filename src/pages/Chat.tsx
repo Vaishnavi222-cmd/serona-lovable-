@@ -1,3 +1,4 @@
+<lov-code>
 import { useEffect, useRef, useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -486,34 +487,80 @@ const Chat = () => {
       return;
     }
 
-    setIsTyping(true); // Show typing indicator
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: `Help me with ${topic}`,
-      sender: 'user'
+    if (!currentChatId) return;
+
+    const content = `Help me with ${topic}`;
+    
+    // Add optimistic message
+    const tempMessageId = Date.now().toString();
+    const optimisticMessage = {
+      id: tempMessageId,
+      content: content,
+      sender: 'user' as const
     };
-    setMessages(prev => [...prev, newMessage]);
-    setMessage('');
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    setIsTyping(true);
 
     try {
-      const savedMessage = await saveMessage(
-        currentChatId!,
-        newMessage.content,
+      const streamResponse = await saveMessage(
+        currentChatId,
+        content,
         user.id,
         user.email || ''
       );
 
-      if (savedMessage?.aiMessage) {
-        setMessages(prev => [...prev, {
-          id: savedMessage.aiMessage.id,
-          content: savedMessage.aiMessage.content,
-          sender: 'ai' as const
-        }]);
+      if (!streamResponse) {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+        setIsTyping(false);
+        return;
       }
-    } catch (error) {
+
+      // Update user message with permanent ID
+      setMessages(prev => [
+        ...prev.map(msg => msg.id === tempMessageId ? {
+          ...msg,
+          id: streamResponse.userMessage.id,
+        } : msg)
+      ]);
+
+      // Add AI message placeholder for streaming
+      const aiMessageId = `ai-${Date.now()}`;
+      setMessages(prev => [...prev, {
+        id: aiMessageId,
+        content: '',
+        sender: 'ai' as const
+      }]);
+
+      // Handle streaming
+      try {
+        for await (const chunk of streamResponse.stream()) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessageId 
+              ? { ...msg, content: msg.content + chunk }
+              : msg
+          ));
+        }
+      } catch (error) {
+        console.error("Streaming error:", error);
+        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+        throw error;
+      }
+    } catch (error: any) {
       console.error('Error in handleQuickStart:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process your request. Please try again.",
+        variant: "destructive",
+      });
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
     } finally {
-      setIsTyping(false); // Hide typing indicator
+      setIsTyping(false);
     }
   };
 
@@ -843,20 +890,4 @@ const Chat = () => {
       <LimitReachedDialog
         open={showLimitReachedDialog}
         onOpenChange={setShowLimitReachedDialog}
-        timeRemaining={timeRemaining}
-        onUpgrade={() => {
-          setShowLimitReachedDialog(false);
-          setShowUpgradePlansDialog(true);
-        }}
-      />
-
-      <UpgradePlansDialog
-        open={showUpgradePlansDialog}
-        onOpenChange={setShowUpgradePlansDialog}
-        onSelectPlan={handleSelectPlan}
-      />
-    </div>
-  );
-};
-
-export default Chat;
+        time
