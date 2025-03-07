@@ -1,3 +1,4 @@
+<lov-code>
 import { useState, useEffect, useRef } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -613,6 +614,59 @@ const Chat = () => {
     };
   }, [isMobile, showHeaderMenu, isSidebarOpen]);
 
+  // Enhanced real-time plan status check
+  useEffect(() => {
+    if (!user) return;
+
+    console.log("Setting up real-time plan status listener");
+
+    // Subscribe to changes in user_plans table
+    const planChannel = supabase
+      .channel('plan-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_plans',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          console.log("Plan update detected, checking messaging allowance");
+          checkMessageLimits();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to changes in user_daily_usage table
+    const usageChannel = supabase
+      .channel('usage-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_daily_usage',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          console.log("Usage update detected, checking messaging allowance");
+          checkMessageLimits();
+        }
+      )
+      .subscribe();
+
+    // Poll for updates every minute in case real-time updates fail
+    const pollInterval = setInterval(checkMessageLimits, 60000);
+
+    return () => {
+      console.log("Cleaning up plan status listeners");
+      supabase.removeChannel(planChannel);
+      supabase.removeChannel(usageChannel);
+      clearInterval(pollInterval);
+    };
+  }, [user]);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       <AuthDialog 
@@ -844,21 +898,4 @@ const Chat = () => {
       
       <LimitReachedDialog
         open={showLimitReachedDialog}
-        onOpenChange={setShowLimitReachedDialog}
-        timeRemaining={timeRemaining}
-        onUpgrade={() => {
-          setShowLimitReachedDialog(false);
-          setShowUpgradePlansDialog(true);
-        }}
-      />
-
-      <UpgradePlansDialog
-        open={showUpgradePlansDialog}
-        onOpenChange={setShowUpgradePlansDialog}
-        onSelectPlan={handleSelectPlan}
-      />
-    </div>
-  );
-};
-
-export default Chat;
+        onOpenChange={setShow
