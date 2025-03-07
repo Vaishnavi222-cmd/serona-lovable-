@@ -115,22 +115,33 @@ serve(async (req) => {
       throw new Error('Missing environment variables');
     }
 
-    // Initialize Supabase client with service role key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Parse request body and check for mobile flag
+    const { orderId, paymentId, signature, planType, userId, isMobile } = await req.json();
+    console.log('Starting payment verification for:', { orderId, paymentId, planType, userId, isMobile });
+
+    // Initialize Supabase client with conditional config for mobile
+    const supabaseConfig = {
       auth: {
         autoRefreshToken: false,
         persistSession: false
-      },
-      global: {
-        headers: {
-          apikey: supabaseServiceKey
-        }
       }
-    });
-    
-    const { orderId, paymentId, signature, planType, userId } = await req.json();
-    console.log('Starting payment verification for:', { orderId, paymentId, planType, userId });
+    };
 
+    // Add explicit headers for mobile requests
+    if (isMobile) {
+      console.log('Mobile payment detected, adding explicit headers');
+      Object.assign(supabaseConfig, {
+        global: {
+          headers: {
+            apikey: supabaseServiceKey,
+            Authorization: `Bearer ${supabaseServiceKey}`
+          }
+        }
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, supabaseConfig);
+    
     if (!orderId || !paymentId || !signature || !planType || !userId) {
       console.error('Missing required payment information');
       throw new Error('Missing required payment information');
@@ -160,33 +171,51 @@ serve(async (req) => {
       throw new Error('Payment verification failed with Razorpay API');
     }
 
-    const { data: user, error: userError } = await supabase
+    // Verify user exists with explicit headers for mobile
+    const userQuery = supabase
       .from('profiles')
       .select('id')
       .eq('id', userId)
       .maybeSingle();
+
+    // Add explicit headers for mobile requests
+    if (isMobile) {
+      userQuery.headers({
+        apikey: supabaseServiceKey,
+        Authorization: `Bearer ${supabaseServiceKey}`
+      });
+    }
+
+    const { data: user, error: userError } = await userQuery;
 
     if (userError || !user) {
       console.error('User verification failed:', userError);
       throw new Error('Invalid user');
     }
 
-    // Mark existing active plans as expired with explicit error handling and logging
-    console.log('Updating existing active plans to expired...');
-    const { error: updateError } = await supabase
+    // Update existing plans with mobile headers if needed
+    const updateQuery = supabase
       .from('user_plans')
       .update({ status: 'expired' })
       .eq('user_id', userId)
       .eq('status', 'active');
+
+    if (isMobile) {
+      updateQuery.headers({
+        apikey: supabaseServiceKey,
+        Authorization: `Bearer ${supabaseServiceKey}`
+      });
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       console.error('Error updating existing plans:', updateError);
       throw updateError;
     }
 
-    // Insert new plan with explicit error handling and verification
-    console.log('Creating new plan...');
-    const { data: planData, error: insertError } = await supabase
+    // Insert new plan with mobile headers if needed
+    const insertQuery = supabase
       .from('user_plans')
       .insert([{
         user_id: userId,
@@ -202,20 +231,37 @@ serve(async (req) => {
       }])
       .select();
 
+    if (isMobile) {
+      insertQuery.headers({
+        apikey: supabaseServiceKey,
+        Authorization: `Bearer ${supabaseServiceKey}`
+      });
+    }
+
+    const { data: planData, error: insertError } = await insertQuery;
+
     if (insertError || !planData) {
       console.error('Error creating new plan:', insertError);
       throw insertError || new Error('Failed to create new plan');
     }
 
-    // Verify the plan was actually created
-    console.log('Verifying plan creation...');
-    const { data: verificationData, error: verificationError } = await supabase
+    // Verify plan creation with mobile headers if needed
+    const verificationQuery = supabase
       .from('user_plans')
       .select('*')
       .eq('user_id', userId)
       .eq('order_id', orderId)
       .eq('status', 'active')
       .maybeSingle();
+
+    if (isMobile) {
+      verificationQuery.headers({
+        apikey: supabaseServiceKey,
+        Authorization: `Bearer ${supabaseServiceKey}`
+      });
+    }
+
+    const { data: verificationData, error: verificationError } = await verificationQuery;
 
     if (verificationError || !verificationData) {
       console.error('Plan verification failed:', verificationError);
