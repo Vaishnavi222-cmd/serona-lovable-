@@ -11,6 +11,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { Link } from 'react-router-dom';
 import { LimitReachedDialog } from "@/components/ui/limit-reached-dialog";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
+import TypingIndicator from '@/components/TypingIndicator';
 
 interface Message {
   id: string;
@@ -45,6 +46,7 @@ const Chat = () => {
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
   
   // Add new ref for message container
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -254,10 +256,9 @@ const Chat = () => {
     const messageContent = message.trim();
     const tempMessageId = Date.now().toString();
     
-    // Clear input immediately for better UX
     setMessage('');
+    setIsTyping(true); // Show typing indicator
 
-    // Add user message immediately to UI for optimistic update
     const optimisticUserMessage = {
       id: tempMessageId,
       content: messageContent,
@@ -279,12 +280,11 @@ const Chat = () => {
           description: "Failed to send message. Please try again.",
           variant: "destructive",
         });
-        // Remove optimistic message on error
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+        setIsTyping(false); // Hide typing indicator on error
         return;
       }
 
-      // Update messages with real IDs from the database
       setMessages(prev => prev.map(msg => {
         if (msg.id === tempMessageId) {
           return {
@@ -296,7 +296,6 @@ const Chat = () => {
         return msg;
       }));
 
-      // Add AI response if available
       if (savedMessage.aiMessage) {
         setMessages(prev => [...prev, {
           id: savedMessage.aiMessage.id,
@@ -304,6 +303,7 @@ const Chat = () => {
           sender: 'ai' as const
         }]);
       }
+      setIsTyping(false); // Hide typing indicator after response
 
       // Update chat title if this is the first message
       const currentChat = chats.find(chat => chat.id === currentChatId);
@@ -339,8 +339,8 @@ const Chat = () => {
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
-      // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setIsTyping(false); // Hide typing indicator on error
       toast({
         title: "Error",
         description: error.message || "Failed to send message. Please try again.",
@@ -498,7 +498,7 @@ const Chat = () => {
     console.log('Selected plan:', planType);
   };
 
-  const handleQuickStart = (topic: string) => {
+  const handleQuickStart = async (topic: string) => {
     if (!user) {
       setShowAuthDialog(true);
       return;
@@ -509,6 +509,7 @@ const Chat = () => {
       return;
     }
 
+    setIsTyping(true); // Show typing indicator
     const newMessage: Message = {
       id: Date.now().toString(),
       content: `Help me with ${topic}`,
@@ -516,6 +517,27 @@ const Chat = () => {
     };
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
+
+    try {
+      const savedMessage = await saveMessage(
+        currentChatId!,
+        newMessage.content,
+        user.id,
+        user.email || ''
+      );
+
+      if (savedMessage?.aiMessage) {
+        setMessages(prev => [...prev, {
+          id: savedMessage.aiMessage.id,
+          content: savedMessage.aiMessage.content,
+          sender: 'ai' as const
+        }]);
+      }
+    } catch (error) {
+      console.error('Error in handleQuickStart:', error);
+    } finally {
+      setIsTyping(false); // Hide typing indicator
+    }
   };
 
   const toggleSidebar = () => {
@@ -801,6 +823,7 @@ const Chat = () => {
                       </div>
                     </div>
                   ))}
+                  {isTyping && <TypingIndicator />}
                   <div ref={messagesEndRef} />
                 </div>
               )}
