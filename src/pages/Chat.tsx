@@ -504,39 +504,73 @@ const Chat = () => {
       return;
     }
     
-    if (isLimitReached) {
+    if (!currentChatId || !isMessagingAllowed) {
       setShowLimitReachedDialog(true);
       return;
     }
 
-    setIsTyping(true); // Show typing indicator
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: `Help me with ${topic}`,
-      sender: 'user'
+    const messageContent = `Help me with ${topic}`;
+    const tempMessageId = Date.now().toString();
+    
+    // Add optimistic user message
+    const optimisticUserMessage = {
+      id: tempMessageId,
+      content: messageContent,
+      sender: 'user' as const
     };
-    setMessages(prev => [...prev, newMessage]);
-    setMessage('');
+    setMessages(prev => [...prev, optimisticUserMessage]);
+    setIsTyping(true);
 
     try {
       const savedMessage = await saveMessage(
-        currentChatId!,
-        newMessage.content,
+        currentChatId,
+        messageContent,
         user.id,
         user.email || ''
       );
 
-      if (savedMessage?.aiMessage) {
+      if (!savedMessage) {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+        setIsTyping(false);
+        return;
+      }
+
+      // Update user message with real ID
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempMessageId
+          ? {
+              id: savedMessage.userMessage.id,
+              content: savedMessage.userMessage.content,
+              sender: 'user' as const
+            }
+          : msg
+      ));
+
+      // Add AI response if it exists
+      if (savedMessage.aiMessage) {
         setMessages(prev => [...prev, {
           id: savedMessage.aiMessage.id,
           content: savedMessage.aiMessage.content,
           sender: 'ai' as const
         }]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in handleQuickStart:', error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process your request. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setIsTyping(false); // Hide typing indicator
+      setIsTyping(false);
     }
   };
 
@@ -851,35 +885,4 @@ const Chat = () => {
                 className={`p-2 rounded-full transition-colors ${
                   isMessagingAllowed 
                     ? 'hover:bg-gray-100 text-[#1EAEDB]' 
-                    : 'text-gray-400 cursor-not-allowed'
-                }`}
-                aria-label="Send message"
-                disabled={!isMessagingAllowed}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <LimitReachedDialog
-        open={showLimitReachedDialog}
-        onOpenChange={setShowLimitReachedDialog}
-        timeRemaining={timeRemaining}
-        onUpgrade={() => {
-          setShowLimitReachedDialog(false);
-          setShowUpgradePlansDialog(true);
-        }}
-      />
-
-      <UpgradePlansDialog
-        open={showUpgradePlansDialog}
-        onOpenChange={setShowUpgradePlansDialog}
-        onSelectPlan={handleSelectPlan}
-      />
-    </div>
-  );
-};
-
-export default Chat;
+                    :
