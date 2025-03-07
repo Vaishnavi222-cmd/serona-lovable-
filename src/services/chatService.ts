@@ -105,7 +105,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
 
     // Call the edge function with streaming
     const response = await fetch(
-      `${supabase.supabaseUrl}/functions/v1/process-message`,
+      `https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/process-message`,
       {
         method: 'POST',
         headers: {
