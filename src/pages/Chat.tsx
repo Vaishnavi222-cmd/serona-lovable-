@@ -257,7 +257,7 @@ const Chat = () => {
     const tempMessageId = Date.now().toString();
     
     setMessage('');
-    setIsTyping(true); // Show typing indicator
+    setIsTyping(true);
 
     const optimisticUserMessage = {
       id: tempMessageId,
@@ -267,85 +267,64 @@ const Chat = () => {
     setMessages(prev => [...prev, optimisticUserMessage]);
 
     try {
-      const savedMessage = await saveMessage(
+      const streamResponse = await saveMessage(
         currentChatId,
         messageContent,
         user.id,
         user.email || ''
       );
 
-      if (!savedMessage) {
+      if (!streamResponse) {
         toast({
           title: "Error",
           description: "Failed to send message. Please try again.",
           variant: "destructive",
         });
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-        setIsTyping(false); // Hide typing indicator on error
+        setIsTyping(false);
         return;
       }
 
-      setMessages(prev => prev.map(msg => {
-        if (msg.id === tempMessageId) {
-          return {
-            id: savedMessage.userMessage.id,
-            content: savedMessage.userMessage.content,
-            sender: 'user' as const
-          };
-        }
-        return msg;
-      }));
-
-      if (savedMessage.aiMessage) {
-        setMessages(prev => [...prev, {
-          id: savedMessage.aiMessage.id,
-          content: savedMessage.aiMessage.content,
+      // Add AI message placeholder for streaming
+      const aiMessageId = `ai-${Date.now()}`;
+      setMessages(prev => [
+        ...prev.map(msg => msg.id === tempMessageId ? {
+          ...msg,
+          id: streamResponse.userMessage.id,
+        } : msg),
+        {
+          id: aiMessageId,
+          content: '',
           sender: 'ai' as const
-        }]);
-      }
-      setIsTyping(false); // Hide typing indicator after response
-
-      // Update chat title if this is the first message
-      const currentChat = chats.find(chat => chat.id === currentChatId);
-      if (currentChat && currentChat.title === 'New Chat') {
-        try {
-          const { error: updateError } = await supabase
-            .from('chats')
-            .update({ 
-              title: messageContent.length > 50 
-                ? `${messageContent.substring(0, 47)}...`
-                : messageContent 
-            })
-            .eq('id', currentChatId);
-
-          if (!updateError) {
-            setChats(prevChats => 
-              prevChats.map(chat => 
-                chat.id === currentChatId 
-                  ? { 
-                      ...chat, 
-                      title: messageContent.length > 50 
-                        ? `${messageContent.substring(0, 47)}...`
-                        : messageContent 
-                    }
-                  : chat
-              )
-            );
-          }
-        } catch (error) {
-          console.error("Failed to update chat title:", error);
         }
+      ]);
+
+      // Handle streaming
+      try {
+        for await (const chunk of streamResponse.stream()) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessageId 
+              ? { ...msg, content: msg.content + chunk }
+              : msg
+          ));
+        }
+      } catch (error) {
+        console.error("Streaming error:", error);
+        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+        throw error;
+      } finally {
+        setIsTyping(false);
       }
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      setIsTyping(false); // Hide typing indicator on error
       toast({
         title: "Error",
         description: error.message || "Failed to send message. Please try again.",
         variant: "destructive",
       });
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setIsTyping(false);
     }
   };
 

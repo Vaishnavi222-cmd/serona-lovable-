@@ -298,97 +298,100 @@ Emojis (if suitable) to add warmth
 An interactive and friendly tone
 For example, if a user asks for career guidance, the response should have a clear title, categorized suggestions, and actionable steps. This structured approach should be followed for all topics to make responses more dynamic and user-friendly.\"`;
 
-    // Prepare OpenAI request with optimized settings
-    const openAIBody = {
-      model: "gpt-4o", // Keep using gpt-4o as specified
-      messages: [
-        { 
-          role: "system", 
-          content: systemPrompt 
-        },
-        ...(messageHistory || []).map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        })),
-        { role: "user", content }
-      ],
-      temperature: 0.5,  // Lower temperature for faster responses
-      max_tokens: 800,   // Optimized token limit
-      presence_penalty: 0.1,
-      frequency_penalty: 0.1
-    };
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+    const encoder = new TextEncoder();
 
-    console.log('📤 Sending request to OpenAI...');
-    
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Start streaming response
+    const streamResponse = new Response(stream.readable, {
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
+
+    // Make streaming request to OpenAI
+    fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(openAIBody)
-    });
-
-    console.log('📥 Received response from OpenAI:', {
-      status: openAIResponse.status,
-      statusText: openAIResponse.statusText,
-      ok: openAIResponse.ok
-    });
-
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('❌ OpenAI API Error:', {
-        status: openAIResponse.status,
-        statusText: openAIResponse.statusText,
-        error: errorText
-      });
-      
-      let errorMessage = 'Failed to get response from AI';
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error?.message || errorMessage;
-      } catch (e) {
-        errorMessage = errorText;
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { 
+            role: "system", 
+            content: systemPrompt 
+          },
+          ...(messageHistory || []).map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          })),
+          { role: "user", content }
+        ],
+        stream: true // Enable streaming
+      })
+    }).then(async (openAIResponse) => {
+      if (!openAIResponse.ok) {
+        const error = await openAIResponse.json();
+        throw new Error(error.error?.message || 'OpenAI API error');
       }
 
-      return new Response(JSON.stringify({ 
-        error: `OpenAI API error: ${errorMessage}` 
-      }), {
-        status: openAIResponse.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+      const reader = openAIResponse.body?.getReader();
+      if (!reader) throw new Error('No response body');
 
-    // Parse OpenAI response
-    let aiData;
-    try {
-      aiData = await openAIResponse.json();
-      console.log('✅ Successfully parsed OpenAI response');
-    } catch (error) {
-      console.error('❌ Failed to parse OpenAI response:', error);
-      return new Response(JSON.stringify({ 
-        error: 'Invalid response format from OpenAI'
-      }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    if (!aiData.choices || !aiData.choices[0] || !aiData.choices[0].message) {
-      console.error('❌ Invalid OpenAI response format:', aiData);
-      return new Response(JSON.stringify({ error: 'Invalid response from OpenAI' }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    const aiResponse = aiData.choices[0].message.content;
-    console.log('✅ Successfully processed OpenAI response');
+      let completeResponse = '';
 
-    return new Response(JSON.stringify({ content: aiResponse }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = new TextDecoder().decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(5);
+              if (data === '[DONE]') continue;
+
+              try {
+                const json = JSON.parse(data);
+                const content = json.choices[0]?.delta?.content || '';
+                if (content) {
+                  // Send chunk to client
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+                  completeResponse += content;
+                }
+              } catch (e) {
+                console.error('Error parsing JSON:', e);
+              }
+            }
+          }
+        }
+
+        // Save complete message to database
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        await supabase.from('messages').insert({
+          chat_session_id,
+          content: completeResponse,
+          sender: 'ai'
+        });
+
+      } finally {
+        reader.releaseLock();
+        await writer.close();
+      }
+    }).catch(async (error) => {
+      console.error('Error in streaming:', error);
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`));
+      await writer.close();
     });
+
+    return streamResponse;
 
   } catch (error) {
     console.error('❌ Unexpected error:', error);
