@@ -481,88 +481,39 @@ const Chat = () => {
       return;
     }
     
-    if (!isMessagingAllowed) {
+    if (isLimitReached) {
       setShowLimitReachedDialog(true);
       return;
     }
 
-    if (!currentChatId) {
-      console.error("No active chat session");
-      toast({
-        title: "Error",
-        description: "Failed to start chat. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsTyping(true);
-    const quickStartMessage = `Help me with ${topic}`;
+    setIsTyping(true); // Show typing indicator
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      content: `Help me with ${topic}`,
+      sender: 'user'
+    };
+    setMessages(prev => [...prev, newMessage]);
+    setMessage('');
 
     try {
-      const streamResponse = await saveMessage(
-        currentChatId,
-        quickStartMessage,
+      const savedMessage = await saveMessage(
+        currentChatId!,
+        newMessage.content,
         user.id,
         user.email || ''
       );
 
-      if (!streamResponse) {
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        });
-        setIsTyping(false);
-        return;
-      }
-
-      // Add user message to chat
-      const tempUserMessageId = `user-${Date.now()}`;
-      setMessages(prev => [...prev, {
-        id: tempUserMessageId,
-        content: quickStartMessage,
-        sender: 'user' as const
-      }]);
-
-      // Add AI message placeholder for streaming
-      const aiMessageId = `ai-${Date.now()}`;
-      setMessages(prev => [
-        ...prev.map(msg => msg.id === tempUserMessageId ? {
-          ...msg,
-          id: streamResponse.userMessage.id,
-        } : msg),
-        {
-          id: aiMessageId,
-          content: '',
+      if (savedMessage?.aiMessage) {
+        setMessages(prev => [...prev, {
+          id: savedMessage.aiMessage.id,
+          content: savedMessage.aiMessage.content,
           sender: 'ai' as const
-        }
-      ]);
-
-      // Handle streaming
-      try {
-        for await (const chunk of streamResponse.stream()) {
-          setMessages(prev => prev.map(msg =>
-            msg.id === aiMessageId 
-              ? { ...msg, content: msg.content + chunk }
-              : msg
-          ));
-        }
-      } catch (error) {
-        console.error("Streaming error:", error);
-        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
-        throw error;
+        }]);
       }
-
-    } catch (error: any) {
-      console.error("Error in handleQuickStart:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process quick start topic. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error('Error in handleQuickStart:', error);
     } finally {
-      setIsTyping(false);
+      setIsTyping(false); // Hide typing indicator
     }
   };
 
@@ -893,4 +844,19 @@ const Chat = () => {
         open={showLimitReachedDialog}
         onOpenChange={setShowLimitReachedDialog}
         timeRemaining={timeRemaining}
-        onUpgrade
+        onUpgrade={() => {
+          setShowLimitReachedDialog(false);
+          setShowUpgradePlansDialog(true);
+        }}
+      />
+
+      <UpgradePlansDialog
+        open={showUpgradePlansDialog}
+        onOpenChange={setShowUpgradePlansDialog}
+        onSelectPlan={handleSelectPlan}
+      />
+    </div>
+  );
+};
+
+export default Chat;
