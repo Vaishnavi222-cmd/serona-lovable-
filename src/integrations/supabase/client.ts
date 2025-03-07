@@ -4,6 +4,9 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://ptpxhzfjfssaxilyuwzd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0cHhoemZqZnNzYXhpbHl1d3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkwMjQ1MDUsImV4cCI6MjA1NDYwMDUwNX0.IlH5fNAwIS3H_D3zeaR90mrYjtHFc55B1nSFGBQPwcQ";
 
+// Cache the session in memory
+let cachedSession: any = null;
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
@@ -16,14 +19,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Enhanced debug listener for auth state changes with more detailed session info
+// Enhanced debug listener for auth state changes with session caching
 supabase.auth.onAuthStateChange(async (event, session) => {
-  // Basic logging for immediate response
   console.log("🔄 Auth state changed:", event);
+  
+  if (session) {
+    cachedSession = session;
+  }
 
-  // Move heavy operations to a background task
   if (event === 'SIGNED_IN' && session?.user) {
-    // Don't await this operation - let it run in the background
     initializeDailyUsage(session.user.id).catch(error => {
       console.error("Background task error:", error);
     });
@@ -68,79 +72,44 @@ async function initializeDailyUsage(userId: string) {
   }
 }
 
-// Enhanced helper function to get current user with more detailed logging
+// Enhanced helper function to get current user with session caching
 export const getCurrentUser = async () => {
   console.log("🔍 DEBUG - getCurrentUser started");
   
-  // First try to refresh the session
-  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-  
-  console.log("🔄 DEBUG - Session refresh attempt:", {
-    success: !refreshError,
-    error: refreshError,
-    hasSession: refreshData?.session ? true : false,
-    sessionDetails: refreshData?.session ? {
-      user: refreshData.session.user ? {
-        id: refreshData.session.user.id,
-        email: refreshData.session.user.email,
-        metadata: refreshData.session.user.user_metadata,
-        rawUser: refreshData.session.user // Added full user object for debugging
-      } : null,
-      rawSession: refreshData.session // Added full session object for debugging
-    } : null
-  });
+  try {
+    // First try to use cached session
+    if (cachedSession?.user) {
+      console.log("✅ Using cached session");
+      return { user: cachedSession.user, error: null };
+    }
 
-  if (refreshError) {
-    console.error("❌ Session refresh error:", refreshError);
+    // If no cached session, try to refresh
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
+    if (refreshError) {
+      console.error("❌ Session refresh error:", refreshError);
+      // Don't throw error here - try getting session first
+    }
+
+    if (refreshData?.session) {
+      cachedSession = refreshData.session;
+      console.log("✅ Session refreshed successfully");
+      return { user: refreshData.session.user, error: null };
+    }
+
+    // Last resort - get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      cachedSession = session;
+      console.log("✅ Got current session");
+      return { user: session.user, error: null };
+    }
+
+    console.log("❌ No valid session found");
+    return { user: null, error: new Error("No valid session found") };
+  } catch (error) {
+    console.error("❌ Error in getCurrentUser:", error);
+    return { user: null, error };
   }
-  
-  // Get the fresh session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  console.log("🔍 DEBUG - Fresh session check:", {
-    hasSession: session ? true : false,
-    error: sessionError,
-    sessionDetails: session ? {
-      hasUser: session.user ? true : false,
-      hasEmail: session.user?.email ? true : false,
-      userDetails: session.user ? {
-        id: session.user.id,
-        email: session.user.email,
-        hasEmailVerified: session.user.email_confirmed_at ? true : false,
-        hasUserMetadata: session.user.user_metadata,
-        metadata: session.user.user_metadata,
-        rawUser: session.user // Added full user object for debugging
-      } : null,
-      rawSession: session // Added full session object for debugging
-    } : null
-  });
-
-  if (sessionError) {
-    console.error("❌ Session error:", sessionError);
-    return { user: null, error: sessionError };
-  }
-
-  if (!session?.user) {
-    console.error("❌ No user in session");
-    return { user: null, error: new Error("No user in session") };
-  }
-
-  if (!session.user.email) {
-    console.error("❌ No email in user data:", {
-      user: session.user,
-      metadata: session.user.user_metadata,
-      rawUser: session.user // Added full user object for debugging
-    });
-    return { user: null, error: new Error("No email in user data") };
-  }
-
-  console.log("✅ User retrieved successfully:", {
-    id: session.user.id,
-    email: session.user.email,
-    hasEmailVerified: session.user.email_confirmed_at ? true : false,
-    metadata: session.user.user_metadata,
-    rawUser: session.user // Added full user object for debugging
-  });
-
-  return { user: session.user, error: null };
 };

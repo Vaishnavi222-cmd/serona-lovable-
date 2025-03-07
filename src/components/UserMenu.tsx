@@ -27,30 +27,40 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const { verifyPayment, isVerifying } = usePaymentVerification();
   const { isRazorpayLoaded, loadRazorpayScript } = useRazorpayLoader();
 
-  // Enhanced session verification
+  // Enhanced session verification with retry
   const verifySession = async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session) {
-      throw new Error('No active session found. Please sign in again.');
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!error && session) {
+          return session;
+        }
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error('Session verification attempt failed:', error);
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
     }
-    return session;
+    throw new Error('No active session found after retries.');
   };
-
-  useEffect(() => {
-    loadRazorpayScript().catch(error => {
-      console.error('Error initializing payment system:', error);
-    });
-  }, [loadRazorpayScript]);
 
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true);
       
-      // First verify we have a session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      // Verify session with retries
+      try {
+        await verifySession();
+      } catch (error) {
+        // If session verification fails, we're already signed out
         setIsSigningOut(false);
-        await supabase.auth.signOut();
         toast({
           title: "Already signed out",
           description: "You have been redirected to the home page",
@@ -58,7 +68,6 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         return;
       }
 
-      // Proceed with sign out if we have a session
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -77,6 +86,12 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       setIsSigningOut(false);
     }
   };
+
+  useEffect(() => {
+    loadRazorpayScript().catch(error => {
+      console.error('Error initializing payment system:', error);
+    });
+  }, [loadRazorpayScript]);
 
   const handleSelectPlan = async (planType: 'hourly' | 'daily' | 'monthly') => {
     try {
