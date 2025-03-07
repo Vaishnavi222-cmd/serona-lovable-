@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 import { UserProfileDialog } from "@/components/ui/user-profile-dialog";
 import { usePaymentVerification } from "@/hooks/use-payment-verification";
+import { useRazorpayLoader } from "@/hooks/use-razorpay-loader";
 
 interface UserMenuProps {
   userEmail: string | undefined;
@@ -22,38 +23,9 @@ export function UserMenu({ userEmail }: UserMenuProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const { toast } = useToast();
   const { verifyPayment, isVerifying } = usePaymentVerification();
-
-  // Enhanced Razorpay script loading with better error handling
-  const loadRazorpayScript = useCallback(() => {
-    return new Promise<void>((resolve, reject) => {
-      if (typeof (window as any).Razorpay !== 'undefined') {
-        setIsRazorpayLoaded(true);
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.id = 'razorpay-script';
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-
-      script.onload = () => {
-        console.log('Razorpay script loaded successfully');
-        setIsRazorpayLoaded(true);
-        resolve();
-      };
-
-      script.onerror = (error) => {
-        console.error('Failed to load Razorpay script:', error);
-        reject(new Error('Failed to load payment system'));
-      };
-
-      document.body.appendChild(script);
-    });
-  }, []);
+  const { isRazorpayLoaded, loadRazorpayScript } = useRazorpayLoader();
 
   // Enhanced session verification
   const verifySession = async () => {
@@ -64,57 +36,11 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     return session;
   };
 
-  // Enhanced polling with exponential backoff
-  const pollForPlanUpdate = async (userId: string, maxAttempts = 20): Promise<boolean> => {
-    let attempt = 0;
-    const baseDelay = 3000; // Increased base delay for mobile
-    
-    while (attempt < maxAttempts) {
-      try {
-        const { data, error } = await supabase
-          .from('user_plans')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (data) {
-          console.log('Plan update confirmed:', data);
-          return true;
-        }
-
-        // Exponential backoff
-        const delay = baseDelay * Math.pow(1.5, attempt);
-        console.log(`Attempt ${attempt + 1}/${maxAttempts}: Waiting ${delay}ms before next check`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        attempt++;
-      } catch (error) {
-        console.error('Error polling for plan update:', error);
-        attempt++;
-      }
-    }
-    return false;
-  };
-
   useEffect(() => {
     loadRazorpayScript().catch(error => {
-      console.error('Error loading Razorpay:', error);
-      toast({
-        title: "Payment system error",
-        description: "Failed to initialize payment system. Please refresh the page.",
-        variant: "destructive",
-      });
+      console.error('Error initializing payment system:', error);
     });
-
-    return () => {
-      const script = document.getElementById('razorpay-script');
-      if (script) {
-        script.remove();
-      }
-    };
-  }, [loadRazorpayScript, toast]);
+  }, [loadRazorpayScript]);
 
   const handleSignOut = async () => {
     try {
@@ -163,11 +89,10 @@ export function UserMenu({ userEmail }: UserMenuProps) {
       const user = session.user;
 
       if (!isRazorpayLoaded) {
-        await loadRazorpayScript();
-      }
-
-      if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Payment system failed to initialize. Please refresh the page.');
+        const loaded = await loadRazorpayScript();
+        if (!loaded) {
+          throw new Error('Payment system failed to initialize. Please refresh the page.');
+        }
       }
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
