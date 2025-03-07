@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
@@ -89,7 +90,6 @@ async function verifyPlanUpdate(supabase: any, userId: string, orderId: string, 
       }
 
       console.log(`Attempt ${attempt + 1}: Plan not found, waiting before retry...`);
-      // Exponential backoff with max delay of 2 seconds
       const delay = Math.min(200 * Math.pow(2, attempt), 2000);
       await new Promise(resolve => setTimeout(resolve, delay));
     } catch (error) {
@@ -116,9 +116,19 @@ serve(async (req) => {
       throw new Error('Missing environment variables');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Initialize Supabase client with service role key and explicit headers
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      global: {
+        headers: {
+          apikey: supabaseServiceKey
+        }
+      }
+    });
     
-    // Log incoming request data
     const { orderId, paymentId, signature, planType, userId } = await req.json();
     console.log('Received payment verification request:', { 
       orderId, 
@@ -128,13 +138,11 @@ serve(async (req) => {
       userId 
     });
 
-    // Enhanced validation
     if (!orderId || !paymentId || !signature || !planType || !userId) {
       console.error('Missing payment information:', { orderId, paymentId, planType, userId });
       throw new Error('Missing required payment information');
     }
 
-    // Step 1: Verify payment signature with retries
     let isSignatureValid = false;
     for (let i = 0; i < 3; i++) {
       isSignatureValid = await verifyRazorpaySignature(orderId, paymentId, signature, razorpaySecret);
@@ -147,7 +155,6 @@ serve(async (req) => {
       throw new Error('Invalid payment signature');
     }
 
-    // Step 2: Double-check with Razorpay API with retries
     let isPaymentVerified = false;
     for (let i = 0; i < 3; i++) {
       isPaymentVerified = await verifyRazorpayPayment(orderId, razorpayKeyId, razorpaySecret);
@@ -160,7 +167,6 @@ serve(async (req) => {
       throw new Error('Payment verification failed with Razorpay API');
     }
 
-    // Step 3: Verify user exists
     const { data: user, error: userError } = await supabase
       .from('profiles')
       .select('id')
@@ -172,7 +178,7 @@ serve(async (req) => {
       throw new Error('Invalid user');
     }
 
-    // Step 4: Mark existing active plans as expired with retry
+    // Mark existing active plans as expired with explicit error handling
     let updateError = null;
     for (let i = 0; i < 3; i++) {
       const { error } = await supabase
@@ -186,6 +192,7 @@ serve(async (req) => {
         break;
       }
       updateError = error;
+      console.error(`Update attempt ${i + 1} failed:`, error);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
@@ -194,13 +201,13 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Step 5: Create new plan with enhanced retry mechanism
     let planData = null;
     let insertError = null;
     const maxRetries = 3;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
+        // Use explicit await and error handling for plan creation
         const { data, error } = await supabase
           .from('user_plans')
           .insert([{
@@ -217,7 +224,11 @@ serve(async (req) => {
           }])
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error(`Insert error on attempt ${i + 1}:`, error);
+          throw error;
+        }
+
         planData = data;
         
         // Verify the plan was actually created
