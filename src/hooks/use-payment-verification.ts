@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMobilePaymentSession } from './use-mobile-payment-session';
+import { usePaymentVerificationRetry } from './use-payment-verification-retry';
 
 interface PaymentVerificationProps {
   userId: string;
@@ -17,6 +18,7 @@ export const usePaymentVerification = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const mobileSession = useMobilePaymentSession();
+  const { retryVerification, isRetrying } = usePaymentVerificationRetry();
 
   // Enhanced session refresh mechanism
   const refreshSession = async (): Promise<boolean> => {
@@ -49,54 +51,6 @@ export const usePaymentVerification = () => {
     return false;
   };
 
-  // Enhanced plan update checking with retries and better error handling
-  const checkPlanUpdate = async (userId: string): Promise<boolean> => {
-    const maxAttempts = 6;
-    let attempt = 0;
-    const baseDelay = 2000;
-
-    while (attempt < maxAttempts) {
-      try {
-        // First verify we have a valid session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log(`No session found on attempt ${attempt + 1}, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, baseDelay));
-          attempt++;
-          continue;
-        }
-
-        const { data, error } = await supabase
-          .from('user_plans')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error) {
-          console.error(`Plan check error on attempt ${attempt + 1}:`, error);
-          throw error;
-        }
-
-        if (data) {
-          console.log('Plan update confirmed:', data);
-          return true;
-        }
-
-        console.log(`Plan check attempt ${attempt + 1}/${maxAttempts}`);
-        const delay = Math.min(baseDelay * Math.pow(1.5, attempt), 10000);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        attempt++;
-      } catch (error) {
-        console.error(`Error on attempt ${attempt + 1}:`, error);
-        attempt++;
-      }
-    }
-    return false;
-  };
-
   const verifyPayment = async ({
     userId,
     planType,
@@ -105,8 +59,6 @@ export const usePaymentVerification = () => {
     signature
   }: PaymentVerificationProps) => {
     setIsVerifying(true);
-    let retryCount = 0;
-    const maxRetries = 3;
 
     try {
       if (isMobile) {
@@ -116,15 +68,13 @@ export const usePaymentVerification = () => {
         }
       }
 
-      // Start verification process but don't wait for all retries if first attempt fails
-      // This acts as a fallback in case webhook hasn't processed yet
+      // Initial verification attempt
       try {
         const hasValidSession = await ensureValidSession();
         if (!hasValidSession) {
           console.log('Session validation failed, proceeding with payment verification');
         }
 
-        // Attempt immediate verification
         if (isMobile) {
           const response = await fetch('https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/verify-payment', {
             method: 'POST',
@@ -161,23 +111,23 @@ export const usePaymentVerification = () => {
           }
         }
 
-        // Check for plan update with shorter polling
-        const isUpdated = await checkPlanUpdate(userId);
-        if (isUpdated) {
-          console.log('Plan update confirmed');
-          await refreshSession();
-          setIsVerifying(false);
-          return true;
-        }
+        // Start retry mechanism
+        retryVerification({ userId, orderId }).catch(error => {
+          console.error('Retry mechanism error:', error);
+        });
 
-        // If not updated immediately, return success anyway
-        // The webhook will handle the update asynchronously
-        console.log('Payment recorded, waiting for webhook processing');
+        // Return success immediately - webhook and retry mechanism will handle the update
         setIsVerifying(false);
         return true;
 
       } catch (error) {
         console.log('Verification attempt failed, webhook will handle update:', error);
+        
+        // Start retry mechanism even if initial verification fails
+        retryVerification({ userId, orderId }).catch(error => {
+          console.error('Retry mechanism error:', error);
+        });
+        
         setIsVerifying(false);
         return true; // Return true since webhook will handle it
       }
@@ -191,6 +141,6 @@ export const usePaymentVerification = () => {
 
   return {
     verifyPayment,
-    isVerifying
+    isVerifying: isVerifying || isRetrying
   };
 };
