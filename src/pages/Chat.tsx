@@ -733,8 +733,9 @@ const Chat = () => {
           </div>
         </div>
 
+        {/* Updated chat container */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32"> {/* Added bottom padding */}
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
@@ -791,18 +792,22 @@ const Chat = () => {
                             ? 'bg-[#1EAEDB]/10 ml-auto mr-0' 
                             : 'bg-gray-100 mr-auto ml-0'
                           }
-                          max-w-[92%] md:max-w-[85%] px-6 py-4`}
+                          max-w-[92%] md:max-w-[85%] px-4 py-3 md:px-6 md:py-4
+                          min-w-[100px]`} // Added min-width and adjusted padding
                       >
-                        <p className="text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap break-words">
+                          {msg.content}
+                        </p>
                       </div>
                     </div>
                   ))}
-                  <div ref={messagesEndRef} /> {/* Add scroll anchor */}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
             </div>
           </div>
 
+          {/* Updated message input container */}
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
