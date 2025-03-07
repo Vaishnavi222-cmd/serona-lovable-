@@ -31,8 +31,8 @@ serve(async (req) => {
 
     const { content, chat_session_id } = await req.json();
 
-    // Check for active paid plan
-    const { data: activePlan } = await supabaseClient
+    // Enhanced check for active paid plan with automatic expiration handling
+    const { data: activePlan, error: planError } = await supabaseClient
       .from('user_plans')
       .select('*')
       .eq('user_id', user.id)
@@ -42,7 +42,39 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    // If no active plan, check free plan limits
+    // Update expired plans
+    if (!activePlan && !planError) {
+      await supabaseClient
+        .from('user_plans')
+        .update({ status: 'expired' })
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .lt('end_time', new Date().toISOString());
+
+      // Ensure user has a free plan usage record for today
+      const currentDate = new Date().toISOString().split('T')[0];
+      const { data: existingUsage } = await supabaseClient
+        .from('user_daily_usage')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', currentDate)
+        .single();
+
+      if (!existingUsage) {
+        await supabaseClient
+          .from('user_daily_usage')
+          .upsert({
+            user_id: user.id,
+            date: currentDate,
+            responses_count: 0,
+            output_tokens_used: 0,
+            input_tokens_used: 0,
+            last_usage_time: new Date().toISOString()
+          });
+      }
+    }
+
+    // If no active paid plan, proceed with free plan checks
     if (!activePlan) {
       const currentDate = new Date().toISOString().split('T')[0];
       const { data: dailyUsage, error: usageError } = await supabaseClient
