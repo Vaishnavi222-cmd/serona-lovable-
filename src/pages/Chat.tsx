@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -13,6 +13,7 @@ import { LimitReachedDialog } from "@/components/ui/limit-reached-dialog";
 import { UpgradePlansDialog } from "@/components/ui/upgrade-plans-dialog";
 import TypingIndicator from '@/components/TypingIndicator';
 import { useDailyReset } from "@/hooks/use-daily-reset";
+import { usePlanUpdates } from '@/hooks/use-plan-updates';
 
 interface Message {
   id: string;
@@ -206,7 +207,8 @@ const Chat = () => {
     }
   };
 
-  // Add daily reset listener
+  // Add plan updates listener
+  usePlanUpdates(user?.id, checkMessageLimits);
   useDailyReset(checkMessageLimits);
 
   useEffect(() => {
@@ -218,16 +220,6 @@ const Chat = () => {
     // Set up real-time subscription for plan and usage changes
     const channel = supabase
       .channel('limits-check')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_plans',
-          filter: `user_id=eq.${user.id}`
-        },
-        checkMessageLimits
-      )
       .on(
         'postgres_changes',
         {
