@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -71,6 +72,41 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         variant: "destructive",
       });
       throw new Error("Authentication required");
+    }
+
+    // Check token availability for free plan users
+    const { data: activePlan } = await supabase
+      .from('user_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!activePlan) {
+      // Free plan user - check daily limits
+      const currentDate = new Date().toISOString().split('T')[0];
+      const { data: dailyUsage } = await supabase
+        .from('user_daily_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', currentDate)
+        .single();
+
+      if (dailyUsage) {
+        // Estimate token usage (conservative estimate)
+        const estimatedInputTokens = Math.ceil(message.length / 4); // Rough estimate
+        const estimatedOutputTokens = 400; // Base limit for free plan
+
+        if (dailyUsage.responses_count >= 7) {
+          throw new Error("Daily response limit reached");
+        }
+
+        if (dailyUsage.output_tokens_used + estimatedOutputTokens > 800) {
+          throw new Error("Daily token limit reached");
+        }
+      }
     }
 
     // Save user message
@@ -186,8 +222,14 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       errorMessage: error.message,
       timestamp: new Date().toISOString()
     });
-    // Only show toast if one hasn't been shown for this error already
-    if (!error.message.includes("timeout")) {
+    
+    if (error.message.includes("limit reached")) {
+      toast({
+        title: "Usage Limit Reached",
+        description: "You've reached your free plan limit. Please upgrade to continue.",
+        variant: "destructive",
+      });
+    } else if (!error.message.includes("timeout")) {
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
