@@ -137,26 +137,34 @@ serve(async (req) => {
     const stream = new TransformStream();
     const writer = stream.writable.getWriter();
 
-    fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openAIApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `You are Serona AI, a personal AI companion for growth and guidance. You provide personalized support for deep personality analysis, career guidance, and more. You are designed to understand the user and guide them forward. You are friendly, helpful, and encouraging. You are not a therapist, so do not give therapy advice. You are not a financial advisor, so do not give financial advice. You are not a doctor, so do not give medical advice. You are not a lawyer, so do not give legal advice. You are not a substitute for professional help.`,
-          },
-          { role: 'user', content: content },
-        ],
-        temperature: 0.7,
-        stream: true,
-      }),
-    }).then(async (response) => {
-      const reader = response.body?.getReader();
+    try {
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openAIApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: `You are Serona AI, a personal AI companion for growth and guidance. You provide personalized support for deep personality analysis, career guidance, and more. You are designed to understand the user and guide them forward. You are friendly, helpful, and encouraging. You are not a therapist, so do not give therapy advice. You are not a financial advisor, so do not give financial advice. You are not a doctor, so do not give medical advice. You are not a lawyer, so do not give legal advice. You are not a substitute for professional help.`,
+            },
+            { role: 'user', content: content },
+          ],
+          temperature: 0.7,
+          stream: true,
+        }),
+      });
+
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.text();
+        console.error('OpenAI API error:', errorData);
+        throw new Error(`OpenAI API error: ${errorData}`);
+      }
+
+      const reader = openAIResponse.body?.getReader();
       if (!reader) {
         throw new Error('No ReadableStream available');
       }
@@ -185,6 +193,7 @@ serve(async (req) => {
             if (line.startsWith('data: ')) {
               const data = line.substring(6);
               if (data === '[DONE]') {
+                console.log('Stream finished successfully');
                 break;
               }
 
@@ -193,8 +202,9 @@ serve(async (req) => {
                 const text = json.choices[0].delta.content;
 
                 if (text) {
+                  console.log('Streaming text:', text);
                   const queue = encoder.encode(JSON.stringify({ content: text }));
-                  writer.write(queue);
+                  await writer.write(queue);
                 }
               } catch (e) {
                 console.error('Error parsing JSON data:', e);
@@ -205,19 +215,23 @@ serve(async (req) => {
       } catch (e) {
         console.error('Error reading stream:', e);
         await writer.abort(e);
+        throw e;
       } finally {
-        console.log('Stream finished.');
         await writer.close();
         reader.releaseLock();
       }
-    });
 
-    return new Response(stream.readable, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-      },
-    });
+      return new Response(stream.readable, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+        },
+      });
+
+    } catch (error) {
+      console.error('OpenAI streaming error:', error);
+      throw error;
+    }
 
   } catch (error) {
     console.error('Error:', error.message);
