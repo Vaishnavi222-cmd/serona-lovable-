@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -155,7 +154,7 @@ serve(async (req) => {
             { role: 'user', content: content },
           ],
           stream: true,
-          max_tokens: 150, // Limit tokens per chunk
+          max_tokens: 150, // Keep chunk size limit for smooth streaming
         }),
       });
 
@@ -171,11 +170,9 @@ serve(async (req) => {
       }
 
       let partialLine = '';
-      let chunkCount = 0;
-      const MAX_CHUNKS = 5; // Maximum number of chunks to process
 
       try {
-        while (chunkCount < MAX_CHUNKS) {
+        while (true) { // Remove artificial chunk limit
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -212,7 +209,6 @@ serve(async (req) => {
               }
             }
           }
-          chunkCount++;
         }
       } catch (e) {
         console.error('Error reading stream:', e);
