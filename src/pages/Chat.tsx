@@ -1,4 +1,4 @@
-<lov-code>
+
 import { useEffect, useRef, useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +59,6 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Add effect to scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -681,6 +680,7 @@ const Chat = () => {
         onOpenChange={setShowAuthDialog}
       />
 
+      {/* Sidebar */}
       <div 
         ref={sidebarRef}
         className={`fixed md:relative w-64 h-screen bg-black text-white z-40
@@ -754,6 +754,7 @@ const Chat = () => {
       </div>
 
       <div className="flex-1 flex flex-col">
+        {/* Header */}
         <div className="bg-black text-white fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50 h-[56px]">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-4">
@@ -795,9 +796,9 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Updated chat container */}
+        {/* Chat container */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32"> {/* Added bottom padding */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32">
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
@@ -855,7 +856,7 @@ const Chat = () => {
                             : 'bg-gray-100 mr-auto ml-0'
                           }
                           max-w-[92%] md:max-w-[85%] px-4 py-3 md:px-6 md:py-4
-                          min-w-[100px]`} // Added min-width and adjusted padding
+                          min-w-[100px]`}
                       >
                         <MessageContent content={msg.content} />
                       </div>
@@ -868,7 +869,7 @@ const Chat = () => {
             </div>
           </div>
 
-          {/* Updated message input container */}
+          {/* Message input container */}
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
@@ -888,4 +889,18 @@ const Chat = () => {
                 onClick={handleSend}
                 className={`p-2 rounded-full transition-colors ${
                   isMessagingAllowed 
-                    ? 'hover:bg-gray-100 text-[#1
+                    ? 'hover:bg-gray-100 text-[#1EAEDB]' 
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Chat;
