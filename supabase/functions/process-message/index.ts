@@ -56,14 +56,14 @@ serve(async (req) => {
     if (!activePlan) {
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // Use UPSERT to safely handle concurrent requests
+      // First get or create the daily usage record
       const { data: dailyUsage, error: upsertError } = await supabaseClient
         .from('user_daily_usage')
         .upsert(
           {
             user_id: user.id,
             date: currentDate,
-            responses_count: 1,
+            responses_count: 0,  // Start with 0, will increment in next step
             output_tokens_used: 0,
             input_tokens_used: 0,
             last_usage_time: new Date().toISOString()
@@ -83,55 +83,52 @@ serve(async (req) => {
         throw upsertError;
       }
 
-      // If record existed and was returned, check and update limits
-      if (dailyUsage && dailyUsage.responses_count > 0) {
-        // Free tier limits
-        const maxResponses = 7;
-        const baseMaxOutputTokens = 400;
-        const absoluteMaxOutputTokens = 800;
+      // Now safely increment the responses_count
+      const { data: updatedUsage, error: updateError } = await supabaseClient
+        .from('user_daily_usage')
+        .update({ 
+          responses_count: dailyUsage.responses_count + 1,
+          last_usage_time: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('date', currentDate)
+        .select()
+        .single();
 
-        // Check response count
-        if (dailyUsage.responses_count >= maxResponses) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Daily response limit exceeded',
-              limitReached: true
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 429
-            }
-          );
-        }
+      if (updateError) {
+        console.error('Error updating daily usage:', updateError);
+        throw updateError;
+      }
 
-        // Check token limits
-        if (dailyUsage.output_tokens_used >= absoluteMaxOutputTokens) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Token limit exceeded',
-              limitReached: true
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 429
-            }
-          );
-        }
+      // Check limits using the updated count
+      const maxResponses = 7;
+      const baseMaxOutputTokens = 400;
+      const absoluteMaxOutputTokens = 800;
 
-        // Update usage count
-        const { error: updateError } = await supabaseClient
-          .from('user_daily_usage')
-          .update({
-            responses_count: dailyUsage.responses_count + 1,
-            last_usage_time: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-          .eq('date', currentDate);
+      if (updatedUsage.responses_count > maxResponses) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Daily response limit exceeded',
+            limitReached: true
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429
+          }
+        );
+      }
 
-        if (updateError) {
-          console.error('Error updating daily usage:', updateError);
-          throw updateError;
-        }
+      if (updatedUsage.output_tokens_used >= absoluteMaxOutputTokens) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Token limit exceeded',
+            limitReached: true
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429
+          }
+        );
       }
     }
 
