@@ -1,3 +1,4 @@
+<lov-code>
 import { useEffect, useRef, useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -476,6 +477,7 @@ const Chat = () => {
     console.log('Selected plan:', planType);
   };
 
+  // Modified handleQuickStart to ensure chat is initialized
   const handleQuickStart = async (topic: string) => {
     if (!user) {
       setShowAuthDialog(true);
@@ -487,34 +489,94 @@ const Chat = () => {
       return;
     }
 
-    setIsTyping(true); // Show typing indicator
+    // Ensure we have a valid chat session
+    if (!currentChatId) {
+      try {
+        const { data: newChat, error } = await createChat();
+        if (error || !newChat) {
+          console.error("Error creating new chat:", error);
+          toast({
+            title: "Error",
+            description: "Failed to start chat. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setCurrentChatId(newChat.id);
+        setChats(prevChats => [{
+          id: newChat.id,
+          title: newChat.title,
+          active: true,
+          chat_session_id: newChat.id
+        }, ...prevChats.map(chat => ({ ...chat, active: false }))]);
+      } catch (error) {
+        console.error("Error in handleQuickStart:", error);
+        toast({
+          title: "Error",
+          description: "Failed to start chat. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setIsTyping(true);
     const newMessage: Message = {
       id: Date.now().toString(),
       content: `Help me with ${topic}`,
       sender: 'user'
     };
     setMessages(prev => [...prev, newMessage]);
-    setMessage('');
 
     try {
-      const savedMessage = await saveMessage(
+      const streamResponse = await saveMessage(
         currentChatId!,
         newMessage.content,
         user.id,
         user.email || ''
       );
 
-      if (savedMessage?.aiMessage) {
-        setMessages(prev => [...prev, {
-          id: savedMessage.aiMessage.id,
-          content: savedMessage.aiMessage.content,
-          sender: 'ai' as const
-        }]);
+      if (!streamResponse) {
+        throw new Error("Failed to get response from AI");
       }
-    } catch (error) {
-      console.error('Error in handleQuickStart:', error);
+
+      // Add AI message placeholder for streaming
+      const aiMessageId = `ai-${Date.now()}`;
+      setMessages(prev => [
+        ...prev.map(msg => msg.id === newMessage.id ? {
+          ...msg,
+          id: streamResponse.userMessage.id,
+        } : msg),
+        {
+          id: aiMessageId,
+          content: '',
+          sender: 'ai' as const
+        }
+      ]);
+
+      // Handle streaming
+      try {
+        for await (const chunk of streamResponse.stream()) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessageId 
+              ? { ...msg, content: msg.content + chunk }
+              : msg
+          ));
+        }
+      } catch (error) {
+        console.error("Streaming error:", error);
+        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Error in handleQuickStart:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setIsTyping(false); // Hide typing indicator
+      setIsTyping(false);
     }
   };
 
@@ -826,36 +888,4 @@ const Chat = () => {
                 onClick={handleSend}
                 className={`p-2 rounded-full transition-colors ${
                   isMessagingAllowed 
-                    ? 'hover:bg-gray-100 text-[#1EAEDB]' 
-                    : 'text-gray-400 cursor-not-allowed'
-                }`}
-                aria-label="Send message"
-                disabled={!isMessagingAllowed}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <LimitReachedDialog
-        open={showLimitReachedDialog}
-        onOpenChange={setShowLimitReachedDialog}
-        timeRemaining={timeRemaining}
-        onUpgrade={() => {
-          setShowLimitReachedDialog(false);
-          setShowUpgradePlansDialog(true);
-        }}
-      />
-
-      <UpgradePlansDialog
-        open={showUpgradePlansDialog}
-        onOpenChange={setShowUpgradePlansDialog}
-        onSelectPlan={handleSelectPlan}
-      />
-    </div>
-  );
-};
-
-export default Chat;
+                    ? 'hover:bg-gray-100 text-[#1

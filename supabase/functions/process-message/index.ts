@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -56,43 +57,49 @@ serve(async (req) => {
     if (!activePlan) {
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // First try to get existing usage
-      const { data: dailyUsage, error: selectError } = await supabaseClient
+      // Use upsert with ON CONFLICT DO UPDATE to handle race conditions
+      const { data: dailyUsage, error: upsertError } = await supabaseClient
+        .from('user_daily_usage')
+        .upsert(
+          {
+            user_id: user.id,
+            date: currentDate,
+            responses_count: 1,
+            output_tokens_used: 0,
+            input_tokens_used: 0,
+            last_usage_time: new Date().toISOString()
+          },
+          {
+            onConflict: 'user_id,date',
+            returning: 'representation'
+          }
+        );
+
+      if (upsertError) {
+        console.error('Error upserting daily usage:', upsertError);
+        throw upsertError;
+      }
+
+      // After successful upsert, get the latest usage data
+      const { data: currentUsage, error: selectError } = await supabaseClient
         .from('user_daily_usage')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', currentDate)
         .maybeSingle();
 
-      if (selectError && selectError.code !== 'PGRST116') {
+      if (selectError) {
+        console.error('Error getting current usage:', selectError);
         throw selectError;
       }
 
-      // If no usage record exists, create one
-      if (!dailyUsage) {
-        const { error: insertError } = await supabaseClient
-          .from('user_daily_usage')
-          .insert([{
-            user_id: user.id,
-            date: currentDate,
-            responses_count: 1, // Start with 1 since we're about to process a message
-            output_tokens_used: 0,
-            input_tokens_used: 0,
-            last_usage_time: new Date().toISOString()
-          }]);
-
-        if (insertError) {
-          console.error('Error inserting daily usage:', insertError);
-          throw insertError;
-        }
-      } else {
+      if (currentUsage) {
         // Free tier limits
         const maxResponses = 7;
-        const baseMaxOutputTokens = 400;
         const absoluteMaxOutputTokens = 800;
 
         // Check response count
-        if (dailyUsage.responses_count >= maxResponses) {
+        if (currentUsage.responses_count >= maxResponses) {
           return new Response(
             JSON.stringify({ 
               error: 'Daily response limit exceeded',
@@ -106,7 +113,7 @@ serve(async (req) => {
         }
 
         // Check token limits
-        if (dailyUsage.output_tokens_used >= absoluteMaxOutputTokens) {
+        if (currentUsage.output_tokens_used >= absoluteMaxOutputTokens) {
           return new Response(
             JSON.stringify({ 
               error: 'Token limit exceeded',
@@ -119,18 +126,18 @@ serve(async (req) => {
           );
         }
 
-        // Update usage count
+        // Increment the response count
         const { error: updateError } = await supabaseClient
           .from('user_daily_usage')
           .update({
-            responses_count: dailyUsage.responses_count + 1,
+            responses_count: currentUsage.responses_count + 1,
             last_usage_time: new Date().toISOString()
           })
           .eq('user_id', user.id)
           .eq('date', currentDate);
 
         if (updateError) {
-          console.error('Error updating daily usage:', updateError);
+          console.error('Error updating usage count:', updateError);
           throw updateError;
         }
       }
