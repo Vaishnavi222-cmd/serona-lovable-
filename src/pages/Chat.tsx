@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Send, Menu, MessageSquare, Plus, X, Search, LogIn, Brain, Briefcase, Scale, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +58,7 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Add effect to scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -476,7 +476,6 @@ const Chat = () => {
     console.log('Selected plan:', planType);
   };
 
-  // Modified handleQuickStart to ensure chat is initialized
   const handleQuickStart = async (topic: string) => {
     if (!user) {
       setShowAuthDialog(true);
@@ -488,94 +487,34 @@ const Chat = () => {
       return;
     }
 
-    // Ensure we have a valid chat session
-    if (!currentChatId) {
-      try {
-        const { data: newChat, error } = await createChat();
-        if (error || !newChat) {
-          console.error("Error creating new chat:", error);
-          toast({
-            title: "Error",
-            description: "Failed to start chat. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-        setCurrentChatId(newChat.id);
-        setChats(prevChats => [{
-          id: newChat.id,
-          title: newChat.title,
-          active: true,
-          chat_session_id: newChat.id
-        }, ...prevChats.map(chat => ({ ...chat, active: false }))]);
-      } catch (error) {
-        console.error("Error in handleQuickStart:", error);
-        toast({
-          title: "Error",
-          description: "Failed to start chat. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
-    setIsTyping(true);
+    setIsTyping(true); // Show typing indicator
     const newMessage: Message = {
       id: Date.now().toString(),
       content: `Help me with ${topic}`,
       sender: 'user'
     };
     setMessages(prev => [...prev, newMessage]);
+    setMessage('');
 
     try {
-      const streamResponse = await saveMessage(
+      const savedMessage = await saveMessage(
         currentChatId!,
         newMessage.content,
         user.id,
         user.email || ''
       );
 
-      if (!streamResponse) {
-        throw new Error("Failed to get response from AI");
-      }
-
-      // Add AI message placeholder for streaming
-      const aiMessageId = `ai-${Date.now()}`;
-      setMessages(prev => [
-        ...prev.map(msg => msg.id === newMessage.id ? {
-          ...msg,
-          id: streamResponse.userMessage.id,
-        } : msg),
-        {
-          id: aiMessageId,
-          content: '',
+      if (savedMessage?.aiMessage) {
+        setMessages(prev => [...prev, {
+          id: savedMessage.aiMessage.id,
+          content: savedMessage.aiMessage.content,
           sender: 'ai' as const
-        }
-      ]);
-
-      // Handle streaming
-      try {
-        for await (const chunk of streamResponse.stream()) {
-          setMessages(prev => prev.map(msg =>
-            msg.id === aiMessageId 
-              ? { ...msg, content: msg.content + chunk }
-              : msg
-          ));
-        }
-      } catch (error) {
-        console.error("Streaming error:", error);
-        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
-        throw error;
+        }]);
       }
-    } catch (error: any) {
-      console.error("Error in handleQuickStart:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process message. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error('Error in handleQuickStart:', error);
     } finally {
-      setIsTyping(false);
+      setIsTyping(false); // Hide typing indicator
     }
   };
 
@@ -680,7 +619,6 @@ const Chat = () => {
         onOpenChange={setShowAuthDialog}
       />
 
-      {/* Sidebar */}
       <div 
         ref={sidebarRef}
         className={`fixed md:relative w-64 h-screen bg-black text-white z-40
@@ -754,7 +692,6 @@ const Chat = () => {
       </div>
 
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <div className="bg-black text-white fixed top-0 left-0 right-0 px-4 py-2 flex items-center justify-between z-50 h-[56px]">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-4">
@@ -796,9 +733,9 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Chat container */}
+        {/* Updated chat container */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32"> {/* Added bottom padding */}
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
@@ -856,7 +793,7 @@ const Chat = () => {
                             : 'bg-gray-100 mr-auto ml-0'
                           }
                           max-w-[92%] md:max-w-[85%] px-4 py-3 md:px-6 md:py-4
-                          min-w-[100px]`}
+                          min-w-[100px]`} // Added min-width and adjusted padding
                       >
                         <MessageContent content={msg.content} />
                       </div>
@@ -869,7 +806,7 @@ const Chat = () => {
             </div>
           </div>
 
-          {/* Message input container */}
+          {/* Updated message input container */}
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
@@ -892,6 +829,8 @@ const Chat = () => {
                     ? 'hover:bg-gray-100 text-[#1EAEDB]' 
                     : 'text-gray-400 cursor-not-allowed'
                 }`}
+                aria-label="Send message"
+                disabled={!isMessagingAllowed}
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -899,6 +838,22 @@ const Chat = () => {
           </div>
         </div>
       </div>
+      
+      <LimitReachedDialog
+        open={showLimitReachedDialog}
+        onOpenChange={setShowLimitReachedDialog}
+        timeRemaining={timeRemaining}
+        onUpgrade={() => {
+          setShowLimitReachedDialog(false);
+          setShowUpgradePlansDialog(true);
+        }}
+      />
+
+      <UpgradePlansDialog
+        open={showUpgradePlansDialog}
+        onOpenChange={setShowUpgradePlansDialog}
+        onSelectPlan={handleSelectPlan}
+      />
     </div>
   );
 };
