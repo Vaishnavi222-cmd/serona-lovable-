@@ -103,7 +103,7 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       timestamp: new Date().toISOString()
     });
 
-    // Call the edge function with streaming
+    // Call the edge function with non-streaming response
     const response = await fetch(
       `https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/process-message`,
       {
@@ -130,53 +130,13 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw new Error(error);
     }
 
-    if (!response.body) {
-      throw new Error("No response body");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let aiMessageContent = '';
-
+    const aiResponseData = await response.json();
     return {
       userMessage,
-      aiMessage: null,
-      stream: async function* () {
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(5);
-                try {
-                  const parsed = JSON.parse(data);
-                  if (parsed.content) {
-                    aiMessageContent += parsed.content;
-                    yield parsed.content;
-                  }
-                  if (parsed.error) {
-                    throw new Error(parsed.error);
-                  }
-                } catch (e) {
-                  console.error('Error parsing chunk:', e);
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error("[saveMessage] Streaming error:", error);
-          toast({
-            title: "Error",
-            description: "Error during streaming. Please try again.",
-            variant: "destructive",
-          });
-          throw error;
-        }
+      aiMessage: {
+        id: Date.now().toString(),
+        content: aiResponseData.content,
+        sender: 'ai' as const
       }
     };
 

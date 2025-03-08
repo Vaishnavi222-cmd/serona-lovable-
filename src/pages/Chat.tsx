@@ -266,14 +266,14 @@ const Chat = () => {
     setMessages(prev => [...prev, optimisticUserMessage]);
 
     try {
-      const streamResponse = await saveMessage(
+      const response = await saveMessage(
         currentChatId,
         messageContent,
         user.id,
         user.email || ''
       );
 
-      if (!streamResponse) {
+      if (!response) {
         toast({
           title: "Error",
           description: "Failed to send message. Please try again.",
@@ -284,36 +284,13 @@ const Chat = () => {
         return;
       }
 
-      // Add AI message placeholder for streaming
-      const aiMessageId = `ai-${Date.now()}`;
       setMessages(prev => [
         ...prev.map(msg => msg.id === tempMessageId ? {
           ...msg,
-          id: streamResponse.userMessage.id,
+          id: response.userMessage.id,
         } : msg),
-        {
-          id: aiMessageId,
-          content: '',
-          sender: 'ai' as const
-        }
+        response.aiMessage
       ]);
-
-      // Handle streaming
-      try {
-        for await (const chunk of streamResponse.stream()) {
-          setMessages(prev => prev.map(msg =>
-            msg.id === aiMessageId 
-              ? { ...msg, content: msg.content + chunk }
-              : msg
-          ));
-        }
-      } catch (error) {
-        console.error("Streaming error:", error);
-        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
-        throw error;
-      } finally {
-        setIsTyping(false);
-      }
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
@@ -323,6 +300,7 @@ const Chat = () => {
         variant: "destructive",
       });
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+    } finally {
       setIsTyping(false);
     }
   };
