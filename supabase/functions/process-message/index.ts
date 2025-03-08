@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -174,13 +175,12 @@ serve(async (req) => {
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
+          if (done) break;
 
           const chunk = new TextDecoder().decode(value);
           partialLine += chunk;
 
+          // Process complete lines only
           let completeLines;
           if (partialLine.includes('\n')) {
             completeLines = partialLine.split('\n');
@@ -199,11 +199,12 @@ serve(async (req) => {
 
               try {
                 const json = JSON.parse(data);
-                const text = json.choices[0].delta.content;
+                const text = json.choices[0]?.delta?.content;
 
                 if (text) {
                   console.log('Streaming text:', text);
-                  const queue = encoder.encode(JSON.stringify({ content: text }));
+                  // Send the raw text without double JSON encoding
+                  const queue = encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`);
                   await writer.write(queue);
                 }
               } catch (e) {
