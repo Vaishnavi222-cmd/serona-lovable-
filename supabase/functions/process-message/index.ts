@@ -56,36 +56,35 @@ serve(async (req) => {
     if (!activePlan) {
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // First try to get existing usage
-      const { data: dailyUsage, error: selectError } = await supabaseClient
+      // Use UPSERT to safely handle concurrent requests
+      const { data: dailyUsage, error: upsertError } = await supabaseClient
         .from('user_daily_usage')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', currentDate)
-        .maybeSingle();
-
-      if (selectError && selectError.code !== 'PGRST116') {
-        throw selectError;
-      }
-
-      // If no usage record exists, create one
-      if (!dailyUsage) {
-        const { error: insertError } = await supabaseClient
-          .from('user_daily_usage')
-          .insert([{
+        .upsert(
+          {
             user_id: user.id,
             date: currentDate,
-            responses_count: 1, // Start with 1 since we're about to process a message
+            responses_count: 1,
             output_tokens_used: 0,
             input_tokens_used: 0,
             last_usage_time: new Date().toISOString()
-          }]);
+          },
+          {
+            onConflict: 'user_id,date',
+            defaultOptions: {
+              returning: 'representation'
+            }
+          }
+        )
+        .select()
+        .single();
 
-        if (insertError) {
-          console.error('Error inserting daily usage:', insertError);
-          throw insertError;
-        }
-      } else {
+      if (upsertError) {
+        console.error('Error upserting daily usage:', upsertError);
+        throw upsertError;
+      }
+
+      // If record existed and was returned, check and update limits
+      if (dailyUsage && dailyUsage.responses_count > 0) {
         // Free tier limits
         const maxResponses = 7;
         const baseMaxOutputTokens = 400;
