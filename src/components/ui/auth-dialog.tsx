@@ -109,14 +109,19 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
+      }
+
+      console.log('Signup response:', data);
 
       // Check if user needs to confirm their email
       if (data?.user && !data.user.confirmed_at) {
         toast({
-          title: "Almost there!",
-          description: "Please check your email (including spam folder) for a confirmation link. You need to confirm your email before you can sign in.",
-          duration: 6000,
+          title: "Check your email",
+          description: "We've sent you a confirmation link to " + formData.email + ". Please check your email (including spam folder) to verify your account.",
+          duration: 10000,
         });
       } else {
         toast({
