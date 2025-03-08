@@ -132,11 +132,7 @@ serve(async (req) => {
       }
     }
 
-    // OpenAI Stream
-    const encoder = new TextEncoder();
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
-
+    // OpenAI Request with non-streaming
     try {
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -153,8 +149,8 @@ serve(async (req) => {
             },
             { role: 'user', content: content },
           ],
-          stream: true,
-          max_tokens: 150, // Keep chunk size limit for smooth streaming
+          stream: false,
+          max_tokens: 800,
         }),
       });
 
@@ -164,70 +160,31 @@ serve(async (req) => {
         throw new Error(`OpenAI API error: ${errorData}`);
       }
 
-      const reader = openAIResponse.body?.getReader();
-      if (!reader) {
-        throw new Error('No ReadableStream available');
+      const responseData = await openAIResponse.json();
+      const aiResponse = responseData.choices[0].message.content;
+
+      // Save AI message to database
+      const { error: messageError } = await supabaseClient
+        .from('messages')
+        .insert({
+          chat_session_id: chat_session_id,
+          content: aiResponse,
+          user_id: user.id,
+          sender: 'ai'
+        });
+
+      if (messageError) {
+        console.error('Error saving AI message:', messageError);
+        throw messageError;
       }
 
-      let partialLine = '';
-
-      try {
-        while (true) { // Remove artificial chunk limit
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = new TextDecoder().decode(value);
-          partialLine += chunk;
-
-          let completeLines;
-          if (partialLine.includes('\n')) {
-            completeLines = partialLine.split('\n');
-            partialLine = completeLines.pop() || '';
-          } else {
-            continue;
-          }
-
-          for (const line of completeLines) {
-            if (line.startsWith('data: ')) {
-              const data = line.substring(6);
-              if (data === '[DONE]') {
-                console.log('Stream finished successfully');
-                break;
-              }
-
-              try {
-                const json = JSON.parse(data);
-                const text = json.choices[0]?.delta?.content;
-
-                if (text) {
-                  console.log('Streaming text:', text);
-                  const queue = encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`);
-                  await writer.write(queue);
-                }
-              } catch (e) {
-                console.error('Error parsing JSON data:', e);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Error reading stream:', e);
-        await writer.abort(e);
-        throw e;
-      } finally {
-        await writer.close();
-        reader.releaseLock();
-      }
-
-      return new Response(stream.readable, {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/event-stream',
-        },
-      });
+      return new Response(
+        JSON.stringify({ content: aiResponse }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
 
     } catch (error) {
-      console.error('OpenAI streaming error:', error);
+      console.error('OpenAI error:', error);
       throw error;
     }
 
