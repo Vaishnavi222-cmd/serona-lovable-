@@ -46,12 +46,23 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     try {
       setLoading(true);
       console.log('Attempting sign in with:', formData.email);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if the error is due to email not being confirmed
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email Not Confirmed",
+            description: "Please check your email and click the confirmation link to verify your account.",
+            duration: 6000,
+          });
+          return;
+        }
+        throw error;
+      }
 
       onOpenChange(false);
       toast({
@@ -86,12 +97,10 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
       setLoading(true);
       console.log('Attempting sign up with:', formData.email);
       
-      // Add site URL to ensure confirmation emails work
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: formData.fullName,
           }
@@ -100,20 +109,39 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Please check your email (including spam folder) to confirm your account. The confirmation email should arrive within a few minutes.",
-      });
+      // Check if user needs to confirm their email
+      if (data?.user && !data.user.confirmed_at) {
+        toast({
+          title: "Almost there!",
+          description: "Please check your email (including spam folder) for a confirmation link. You need to confirm your email before you can sign in.",
+          duration: 6000,
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Your account has been created successfully.",
+        });
+      }
       
       // Close the dialog after successful signup
       onOpenChange(false);
     } catch (error: any) {
       console.error('Sign up error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred during sign up",
-        variant: "destructive",
-      });
+      
+      // Handle specific error cases
+      if (error.message.includes('User already registered')) {
+        toast({
+          title: "Account Exists",
+          description: "An account with this email already exists. Please sign in instead.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "An error occurred during sign up",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
