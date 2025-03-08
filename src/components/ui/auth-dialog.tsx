@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,6 +102,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: formData.fullName,
           }
@@ -123,12 +125,10 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         });
       }
       
-      // Close the dialog after successful signup
       onOpenChange(false);
     } catch (error: any) {
       console.error('Sign up error:', error);
       
-      // Handle specific error cases
       if (error.message.includes('User already registered')) {
         toast({
           title: "Account Exists",
