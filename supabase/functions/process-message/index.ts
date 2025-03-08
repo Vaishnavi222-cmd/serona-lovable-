@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -52,26 +51,24 @@ serve(async (req) => {
         .eq('status', 'active')
         .lt('end_time', new Date().toISOString());
 
-      // Ensure user has a free plan usage record for today
+      // Use upsert instead of insert for daily usage record
       const currentDate = new Date().toISOString().split('T')[0];
-      const { data: existingUsage } = await supabaseClient
+      const { error: usageUpsertError } = await supabaseClient
         .from('user_daily_usage')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', currentDate)
-        .single();
+        .upsert({
+          user_id: user.id,
+          date: currentDate,
+          responses_count: 0,
+          output_tokens_used: 0,
+          input_tokens_used: 0,
+          last_usage_time: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,date'
+        });
 
-      if (!existingUsage) {
-        await supabaseClient
-          .from('user_daily_usage')
-          .upsert({
-            user_id: user.id,
-            date: currentDate,
-            responses_count: 0,
-            output_tokens_used: 0,
-            input_tokens_used: 0,
-            last_usage_time: new Date().toISOString()
-          });
+      if (usageUpsertError) {
+        console.error('Error upserting daily usage:', usageUpsertError);
+        throw usageUpsertError;
       }
     }
 
