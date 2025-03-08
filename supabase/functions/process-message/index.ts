@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -202,7 +203,7 @@ serve(async (req) => {
 
                 if (text) {
                   const queue = encoder.encode(JSON.stringify({ content: text }));
-                  writer.enqueue(queue);
+                  writer.write(queue);
                 }
               } catch (e) {
                 console.error('Error parsing JSON data:', e);
