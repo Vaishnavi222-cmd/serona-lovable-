@@ -154,8 +154,8 @@ serve(async (req) => {
             },
             { role: 'user', content: content },
           ],
-          temperature: 0.7,
           stream: true,
+          max_tokens: 150, // Limit tokens per chunk
         }),
       });
 
@@ -171,16 +171,17 @@ serve(async (req) => {
       }
 
       let partialLine = '';
+      let chunkCount = 0;
+      const MAX_CHUNKS = 5; // Maximum number of chunks to process
 
       try {
-        while (true) {
+        while (chunkCount < MAX_CHUNKS) {
           const { done, value } = await reader.read();
           if (done) break;
 
           const chunk = new TextDecoder().decode(value);
           partialLine += chunk;
 
-          // Process complete lines only
           let completeLines;
           if (partialLine.includes('\n')) {
             completeLines = partialLine.split('\n');
@@ -203,7 +204,6 @@ serve(async (req) => {
 
                 if (text) {
                   console.log('Streaming text:', text);
-                  // Send the raw text without double JSON encoding
                   const queue = encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`);
                   await writer.write(queue);
                 }
@@ -212,6 +212,7 @@ serve(async (req) => {
               }
             }
           }
+          chunkCount++;
         }
       } catch (e) {
         console.error('Error reading stream:', e);
