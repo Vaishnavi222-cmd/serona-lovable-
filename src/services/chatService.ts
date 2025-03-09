@@ -159,7 +159,7 @@ export async function fetchMessages(chatId: string) {
     
     if (!session?.user) {
       console.error("[fetchMessages] No session");
-      return [];
+      throw new Error("Authentication required");
     }
 
     console.log("[fetchMessages] Fetching messages...");
@@ -172,14 +172,14 @@ export async function fetchMessages(chatId: string) {
 
     if (error) {
       console.error("[fetchMessages] Error:", error);
-      return [];
+      throw error;
     }
 
     console.log("[fetchMessages] Success, found messages:", data?.length);
     return data || [];
   } catch (error) {
     console.error("[fetchMessages] Error:", error);
-    return [];
+    throw error;
   }
 }
 

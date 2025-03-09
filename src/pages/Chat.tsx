@@ -333,7 +333,7 @@ const Chat = () => {
     }
   };
 
-  // Load initial chats when user logs in
+  // Updated authentication and chat initialization
   useEffect(() => {
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -343,12 +343,18 @@ const Chat = () => {
       }
     };
 
+    // Initialize session on mount
     initSession();
 
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[Auth] State change:", event, session?.user?.email);
+      
       if (session?.user) {
         setUser(session.user);
-        await initializeChat(session.user);
+        if (event === 'SIGNED_IN') {
+          await initializeChat(session.user);
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setChats([]);
@@ -357,16 +363,18 @@ const Chat = () => {
       }
     });
 
+    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
+  // Improved message loading with error handling
   const loadChatMessages = async (chatId: string) => {
-    console.log("🔍 Loading messages for chat:", chatId);
+    console.log("[loadChatMessages] Starting for chat:", chatId);
     
     if (!user) {
-      console.log("❌ No user found, aborting message load");
+      console.log("[loadChatMessages] No user, aborting");
       return;
     }
     
@@ -374,7 +382,7 @@ const Chat = () => {
       const fetchedMessages = await fetchMessages(chatId);
       
       if (Array.isArray(fetchedMessages)) {
-        console.log("✅ Messages loaded successfully:", fetchedMessages.length);
+        console.log("[loadChatMessages] Loaded messages:", fetchedMessages.length);
         const formattedMessages = fetchedMessages.map(msg => ({
           id: msg.id,
           content: msg.content,
@@ -382,19 +390,10 @@ const Chat = () => {
         }));
         setMessages(formattedMessages);
       } else {
-        console.error("❌ Invalid messages format:", fetchedMessages);
-        toast({
-          title: "Error",
-          description: "Failed to load messages. Please refresh the page.",
-          variant: "destructive",
-        });
+        throw new Error("Invalid messages format");
       }
     } catch (error) {
-      console.error("❌ Error loading messages:", {
-        error,
-        chatId,
-        timestamp: new Date().toISOString()
-      });
+      console.error("[loadChatMessages] Error:", error);
       toast({
         title: "Error",
         description: "Failed to load messages. Please try again.",
