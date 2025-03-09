@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -120,14 +121,20 @@ export async function saveMessage(chatId: string, message: string, userId: strin
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("[saveMessage] AI response error:", error);
+      const errorText = await response.text();
+      console.error("[saveMessage] AI response error:", errorText);
+      
+      // Check if the error is due to free plan limit
+      if (errorText.includes("Daily response limit exceeded for free plan")) {
+        throw new Error("FREE_PLAN_LIMIT_EXCEEDED");
+      }
+      
       toast({
         title: "Error",
         description: "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
-      throw new Error(error);
+      throw new Error(errorText);
     }
 
     const aiResponseData = await response.json();
@@ -146,6 +153,12 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       errorMessage: error.message,
       timestamp: new Date().toISOString()
     });
+    
+    // If it's a free plan limit error, propagate it
+    if (error.message === "FREE_PLAN_LIMIT_EXCEEDED") {
+      throw error;
+    }
+    
     // Only show toast if one hasn't been shown for this error already
     if (!error.message.includes("timeout")) {
       toast({
