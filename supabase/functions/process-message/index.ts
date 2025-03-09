@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -15,7 +16,6 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -31,8 +31,23 @@ serve(async (req) => {
 
     const { content, chat_session_id } = await req.json();
 
-    // Enhanced check for active paid plan with automatic expiration handling
-    const { data: activePlan, error: planError } = await supabaseClient
+    // Get current date for usage tracking
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Get or create daily usage record
+    const { data: dailyUsage, error: usageError } = await supabaseClient
+      .from('user_daily_usage')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', currentDate)
+      .single();
+
+    if (usageError && usageError.code !== 'PGRST116') {
+      throw usageError;
+    }
+
+    // Check active plan
+    const { data: activePlan } = await supabaseClient
       .from('user_plans')
       .select('*')
       .eq('user_id', user.id)
@@ -40,96 +55,36 @@ serve(async (req) => {
       .gt('end_time', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .single();
 
-    // Update expired plans
-    if (!activePlan && !planError) {
-      await supabaseClient
-        .from('user_plans')
-        .update({ status: 'expired' })
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .lt('end_time', new Date().toISOString());
-    }
-
-    // If no active paid plan, proceed with free plan checks
+    // If no active paid plan, enforce free plan limits
     if (!activePlan) {
-      const currentDate = new Date().toISOString().split('T')[0];
+      const responses_count = (dailyUsage?.responses_count || 0) + 1;
       
-      // First get or create the daily usage record
-      const { data: dailyUsage, error: upsertError } = await supabaseClient
-        .from('user_daily_usage')
-        .upsert(
+      if (responses_count > 7) {
+        return new Response(
+          JSON.stringify({
+            error: 'Daily response limit exceeded',
+            limitReached: true,
+          }),
           {
-            user_id: user.id,
-            date: currentDate,
-            responses_count: 0,  // Start with 0, will increment in next step
-            output_tokens_used: 0,
-            input_tokens_used: 0,
-            last_usage_time: new Date().toISOString()
-          },
-          {
-            onConflict: 'user_id,date',
-            defaultOptions: {
-              returning: 'representation'
-            }
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
-        )
-        .select()
-        .single();
-
-      if (upsertError) {
-        console.error('Error upserting daily usage:', upsertError);
-        throw upsertError;
+        );
       }
 
-      // Now safely increment the responses_count
-      const { data: updatedUsage, error: updateError } = await supabaseClient
+      // Update daily usage before processing to ensure limit is respected
+      await supabaseClient
         .from('user_daily_usage')
-        .update({ 
-          responses_count: dailyUsage.responses_count + 1,
+        .upsert({
+          user_id: user.id,
+          date: currentDate,
+          responses_count: responses_count,
           last_usage_time: new Date().toISOString()
         })
         .eq('user_id', user.id)
-        .eq('date', currentDate)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('Error updating daily usage:', updateError);
-        throw updateError;
-      }
-
-      // Check limits using the updated count
-      const maxResponses = 7;
-      const baseMaxOutputTokens = 400;
-      const absoluteMaxOutputTokens = 800;
-
-      if (updatedUsage.responses_count > maxResponses) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Daily response limit exceeded',
-            limitReached: true
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429
-          }
-        );
-      }
-
-      if (updatedUsage.output_tokens_used >= absoluteMaxOutputTokens) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Token limit exceeded',
-            limitReached: true
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429
-          }
-        );
-      }
+        .eq('date', currentDate);
     }
 
     // OpenAI Request with non-streaming
@@ -162,6 +117,24 @@ serve(async (req) => {
 
       const responseData = await openAIResponse.json();
       const aiResponse = responseData.choices[0].message.content;
+
+      // Calculate token usage
+      const inputTokens = Math.ceil(content.length / 4); // Approximate token count
+      const outputTokens = Math.ceil(aiResponse.length / 4); // Approximate token count
+
+      // Update usage statistics
+      await supabaseClient
+        .from('user_daily_usage')
+        .upsert({
+          user_id: user.id,
+          date: currentDate,
+          responses_count: (dailyUsage?.responses_count || 0) + 1,
+          input_tokens_used: (dailyUsage?.input_tokens_used || 0) + inputTokens,
+          output_tokens_used: (dailyUsage?.output_tokens_used || 0) + outputTokens,
+          last_usage_time: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('date', currentDate);
 
       // Save AI message to database
       const { error: messageError } = await supabaseClient
