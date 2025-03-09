@@ -51,16 +51,19 @@ const Chat = () => {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   
+  // Add new ref for message container
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Add effect to scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Modified loadChats to create a new chat if none exists
   const loadChats = async () => {
     if (!user) return;
     
@@ -79,6 +82,7 @@ const Chat = () => {
     try {
       const fetchedChats = await fetchChats(userId);
       
+      // If no chats exist, create a new one
       if (fetchedChats.length === 0) {
         const { data: newChat, error } = await createChat();
         if (error) {
@@ -108,20 +112,7 @@ const Chat = () => {
     }
   };
 
-  const initializeChat = async (user: User) => {
-    try {
-      console.log("[initializeChat] Starting initialization for user:", user.email);
-      await loadChats();
-    } catch (error) {
-      console.error("[initializeChat] Error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to initialize chat. Please try refreshing the page.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  // Add handleNewChat function
   const handleNewChat = async () => {
     if (!user) {
       setShowAuthDialog(true);
@@ -148,13 +139,14 @@ const Chat = () => {
           chat_session_id: newChat.id
         };
 
+        // Set all other chats to inactive
         setChats(prevChats => 
           prevChats.map(chat => ({ ...chat, active: false }))
         );
         setChats(prevChats => [formattedChat, ...prevChats.map(chat => ({ ...chat, active: false }))]);
 
         setCurrentChatId(newChat.id);
-        setMessages([]); 
+        setMessages([]); // Clear messages for new chat
         
         if (isMobile) {
           setIsSidebarOpen(false);
@@ -170,12 +162,15 @@ const Chat = () => {
     }
   };
 
+  // Modified handleSend to update chat title on first message
   const [isMessagingAllowed, setIsMessagingAllowed] = useState(true);
 
+  // Update useEffect to check plan status and limits
   const checkMessageLimits = async () => {
     if (!user) return;
 
     try {
+      // Check for active paid plan
       const { data: activePlan } = await supabase
         .from('user_plans')
         .select('*')
@@ -185,11 +180,13 @@ const Chat = () => {
         .limit(1)
         .single();
 
+      // If there's an active paid plan, messaging is allowed
       if (activePlan && new Date(activePlan.end_time) > new Date()) {
         setIsMessagingAllowed(true);
         return;
       }
 
+      // If no active paid plan, check free plan limits
       const currentDate = new Date().toISOString().split('T')[0];
       const { data: dailyUsage } = await supabase
         .from('user_daily_usage')
@@ -198,6 +195,7 @@ const Chat = () => {
         .eq('date', currentDate)
         .single();
 
+      // If no usage record exists or responses are under limit, messaging is allowed
       if (!dailyUsage || dailyUsage.responses_count < 7) {
         setIsMessagingAllowed(true);
       } else {
@@ -205,18 +203,22 @@ const Chat = () => {
       }
     } catch (error) {
       console.error('Error checking message limits:', error);
+      // Default to allowed in case of error to prevent false restrictions
       setIsMessagingAllowed(true);
     }
   };
 
+  // Add plan updates listener
   usePlanUpdates(user?.id, checkMessageLimits);
   useDailyReset(checkMessageLimits);
 
   useEffect(() => {
     if (!user) return;
 
+    // Check limits immediately
     checkMessageLimits();
 
+    // Set up real-time subscription for plan and usage changes
     const channel = supabase
       .channel('limits-check')
       .on(
@@ -236,7 +238,8 @@ const Chat = () => {
     };
   }, [user]);
 
-  const handleSend = async (retryCount = 0) => {
+  // Update the handleSend function to include the messaging allowed check
+  const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
         setShowAuthDialog(true);
@@ -255,13 +258,11 @@ const Chat = () => {
     setMessage('');
     setIsTyping(true);
 
-    // Immediately store message in state for optimistic UI update
     const optimisticUserMessage = {
       id: tempMessageId,
       content: messageContent,
       sender: 'user' as const
     };
-    
     setMessages(prev => [...prev, optimisticUserMessage]);
 
     try {
@@ -273,80 +274,43 @@ const Chat = () => {
       );
 
       if (!response) {
-        throw new Error('Failed to send message');
-      }
-
-      if (response.limitReached) {
-        setShowLimitReachedDialog(true);
-        // Remove the optimistic message if limit reached
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+        setIsTyping(false);
         return;
       }
 
-      // Replace optimistic message with confirmed message
-      setMessages(prev => {
-        const updatedMessages = prev.map(msg => 
-          msg.id === tempMessageId ? {
-            ...msg,
-            id: response.userMessage.id,
-          } : msg
-        );
-        
-        if (response.aiMessage) {
-          return [...updatedMessages, response.aiMessage];
-        }
-        
-        return updatedMessages;
-      });
+      setMessages(prev => [
+        ...prev.map(msg => msg.id === tempMessageId ? {
+          ...msg,
+          id: response.userMessage.id,
+        } : msg),
+        response.aiMessage
+      ]);
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
-      
-      // Implement retry mechanism (max 3 retries)
-      if (retryCount < 3) {
-        toast({
-          title: "Message send failed",
-          description: "Retrying in 2 seconds...",
-          variant: "destructive",
-        });
-        
-        // Retry after 2 seconds
-        setTimeout(() => {
-          handleSend(retryCount + 1);
-        }, 2000);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to send message after multiple retries. Please try again.",
-          variant: "destructive",
-        });
-        // Remove the optimistic message after all retries fail
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
     } finally {
       setIsTyping(false);
     }
   };
 
+  // Load initial chats when user logs in
   useEffect(() => {
-    const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
         await initializeChat(session.user);
-      }
-    };
-
-    initSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[Auth] State change:", event, session?.user?.email);
-      
-      if (session?.user) {
-        setUser(session.user);
-        if (event === 'SIGNED_IN') {
-          await initializeChat(session.user);
-        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setChats([]);
@@ -355,16 +319,60 @@ const Chat = () => {
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
+    // Initial session check
+    const initializeChat = async (currentUser: User) => {
+      try {
+        const fetchedChats = await fetchChats(currentUser.id);
+        
+        // Always create a new chat if none exists
+        let activeChat;
+        if (fetchedChats.length === 0) {
+          const { data: newChat, error } = await createChat();
+          if (error) {
+            console.error("Error creating new chat:", error);
+            return;
+          }
+          if (newChat) {
+            activeChat = newChat;
+            fetchedChats.unshift(newChat); // Add new chat to beginning of array
+          }
+        } else {
+          activeChat = fetchedChats[0]; // Use the most recent chat
+        }
+
+        const formattedChats = fetchedChats.map(chat => ({
+          id: chat.id,
+          title: chat.title,
+          active: chat.id === activeChat.id,
+          chat_session_id: chat.id
+        }));
+        
+        setChats(formattedChats);
+        setCurrentChatId(activeChat.id);
+        await loadChatMessages(activeChat.id);
+      } catch (error) {
+        console.error('Error initializing chat:', error);
+      }
     };
+
+    // Check initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        await initializeChat(session.user);
+      }
+    };
+
+    getInitialSession();
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadChatMessages = async (chatId: string) => {
-    console.log("[loadChatMessages] Starting for chat:", chatId);
+    console.log("🔍 Loading messages for chat:", chatId);
     
     if (!user) {
-      console.log("[loadChatMessages] No user, aborting");
+      console.log("❌ No user found, aborting message load");
       return;
     }
     
@@ -372,7 +380,7 @@ const Chat = () => {
       const fetchedMessages = await fetchMessages(chatId);
       
       if (Array.isArray(fetchedMessages)) {
-        console.log("[loadChatMessages] Loaded messages:", fetchedMessages.length);
+        console.log("✅ Messages loaded successfully:", fetchedMessages.length);
         const formattedMessages = fetchedMessages.map(msg => ({
           id: msg.id,
           content: msg.content,
@@ -380,10 +388,19 @@ const Chat = () => {
         }));
         setMessages(formattedMessages);
       } else {
-        throw new Error("Invalid messages format");
+        console.error("❌ Invalid messages format:", fetchedMessages);
+        toast({
+          title: "Error",
+          description: "Failed to load messages. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error("[loadChatMessages] Error:", error);
+      console.error("❌ Error loading messages:", {
+        error,
+        chatId,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Error",
         description: "Failed to load messages. Please try again.",
@@ -392,6 +409,7 @@ const Chat = () => {
     }
   };
 
+  // Add handleChatSelect function
   const handleChatSelect = async (chatId: string) => {
     setCurrentChatId(chatId);
     await loadChatMessages(chatId);
@@ -409,7 +427,6 @@ const Chat = () => {
   useEffect(() => {
     if (!user) return;
 
-    console.log('[Realtime] Setting up message subscription');
     const channel = supabase
       .channel('chat-updates')
       .on(
@@ -418,32 +435,17 @@ const Chat = () => {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `chat_session_id=eq.${currentChatId}`,
+          filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
-          console.log('[Realtime] Received message update:', payload);
-          if (payload.eventType === 'INSERT') {
-            // Only add the message if it's not already in the list
-            setMessages(prev => {
-              const exists = prev.some(msg => msg.id === payload.new.id);
-              if (!exists) {
-                return [...prev, {
-                  id: payload.new.id,
-                  content: payload.new.content,
-                  sender: payload.new.sender as 'user' | 'ai'
-                }];
-              }
-              return prev;
-            });
+        () => {
+          if (currentChatId) {
+            loadChatMessages(currentChatId);
           }
         }
       )
       .subscribe();
 
-    console.log('[Realtime] Subscription active for chat:', currentChatId);
-
     return () => {
-      console.log('[Realtime] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
   }, [user, currentChatId]);
@@ -463,7 +465,7 @@ const Chat = () => {
       return;
     }
 
-    setIsTyping(true); 
+    setIsTyping(true); // Show typing indicator
     const newMessage: Message = {
       id: Date.now().toString(),
       content: `Help me with ${topic}`,
@@ -490,7 +492,7 @@ const Chat = () => {
     } catch (error) {
       console.error('Error in handleQuickStart:', error);
     } finally {
-      setIsTyping(false); 
+      setIsTyping(false); // Hide typing indicator
     }
   };
 
@@ -562,6 +564,7 @@ const Chat = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile) {
+        // Handle header menu
         if (showHeaderMenu && 
             headerMenuRef.current && 
             !headerMenuRef.current.contains(event.target as Node) &&
@@ -570,6 +573,7 @@ const Chat = () => {
           setShowHeaderMenu(false);
         }
 
+        // Handle sidebar
         if (isSidebarOpen && 
             sidebarRef.current && 
             !sidebarRef.current.contains(event.target as Node) &&
@@ -707,11 +711,12 @@ const Chat = () => {
           </div>
         </div>
 
+        {/* Updated chat container */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32"> {/* Added bottom padding */}
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
-                <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md-ml-0 mx-auto px-4 mt-8">
+                <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
                     Hello! I'm your personal growth partner—here to support and guide you! 💡 Let me know how I can help😊
                   </h1>
@@ -766,7 +771,7 @@ const Chat = () => {
                             : 'bg-gray-100 mr-auto ml-0'
                           }
                           max-w-[92%] md:max-w-[85%] px-4 py-3 md:px-6 md:py-4
-                          min-w-[100px]`}
+                          min-w-[100px]`} // Added min-width and adjusted padding
                       >
                         <MessageContent content={msg.content} />
                       </div>
@@ -779,6 +784,7 @@ const Chat = () => {
             </div>
           </div>
 
+          {/* Updated message input container */}
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
@@ -789,20 +795,20 @@ const Chat = () => {
                 className={`w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                          bg-white border border-gray-200 shadow-sm resize-none text-gray-800
                          placeholder-gray-400 min-h-[44px] max-h-[200px] overflow-y-auto
-                         ${!isMessagingAllowed || isTyping ? 'cursor-not-allowed bg-gray-50' : ''}`}
+                         ${!isMessagingAllowed ? 'cursor-not-allowed bg-gray-50' : ''}`}
                 style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                 rows={1}
-                disabled={!isMessagingAllowed || isTyping}
+                disabled={!isMessagingAllowed}
               />
               <button 
-                onClick={() => handleSend()}
+                onClick={handleSend}
                 className={`p-2 rounded-full transition-colors ${
-                  isMessagingAllowed && !isTyping
+                  isMessagingAllowed 
                     ? 'hover:bg-gray-100 text-[#1EAEDB]' 
                     : 'text-gray-400 cursor-not-allowed'
                 }`}
                 aria-label="Send message"
-                disabled={!isMessagingAllowed || isTyping}
+                disabled={!isMessagingAllowed}
               >
                 <Send className="w-5 h-5" />
               </button>

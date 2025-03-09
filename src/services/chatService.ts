@@ -5,25 +5,14 @@ export async function createChat() {
   try {
     console.log("[createChat] Starting...");
     
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    let session = sessionData?.session;
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    // Try to refresh session if not found
-    if (!session || sessionError) {
-      console.log("[createChat] No session found, attempting refresh...");
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError || !refreshData.session) {
-        console.error("[createChat] Session refresh failed:", refreshError);
-        return { error: "Authentication error", data: null };
-      }
-      
-      session = refreshData.session;
-      console.log("[createChat] Session refreshed successfully");
-    }
-
-    if (!session?.user) {
-      console.error("[createChat] No user in session");
+    if (sessionError || !session?.user) {
+      console.error("[createChat] Session error or no user:", {
+        error: sessionError,
+        hasSession: !!session,
+        hasUser: session?.user ? true : false
+      });
       return { error: "Authentication error", data: null };
     }
 
@@ -67,55 +56,21 @@ export async function saveMessage(chatId: string, message: string, userId: strin
   });
 
   try {
-    // Get current session and attempt refresh if needed
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    let session = sessionData?.session;
-
-    if (!session || sessionError) {
-      console.log("[saveMessage] No session found, attempting refresh...");
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError || !refreshData.session) {
-        console.error("[saveMessage] Session refresh failed:", refreshError);
-        throw new Error("Authentication required");
-      }
-      
-      session = refreshData.session;
-      console.log("[saveMessage] Session refreshed successfully");
-    }
-
-    // Check plan limits before sending message
-    const response = await fetch(
-      `https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/check-plan-limits`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          input_tokens: Math.ceil(message.length / 4),
-          output_tokens: 800
-        })
-      }
-    );
-
-    const planCheckData = await response.json();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!response.ok) {
-      console.error("[saveMessage] Plan limit check failed:", planCheckData);
-      
-      if (planCheckData.planExpired) {
-        // Use toast to show expiry message
-        toast({
-          title: "Plan Expired",
-          description: "Your plan has expired. Please upgrade to continue using Serona AI.",
-          variant: "destructive",
-        });
-        return { error: planCheckData.error, planExpired: true };
-      }
-      
-      throw new Error(planCheckData.error || "Plan limit reached");
+    if (sessionError || !session?.user) {
+      console.error("[saveMessage] Auth error:", {
+        error: sessionError,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        timestamp: new Date().toISOString()
+      });
+      toast({
+        title: "Authentication Error",
+        description: "Please sign in again to continue.",
+        variant: "destructive",
+      });
+      throw new Error("Authentication required");
     }
 
     // Save user message
@@ -131,12 +86,25 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .maybeSingle();
 
     if (userMessageError) {
-      console.error("[saveMessage] User message insert error:", userMessageError);
+      console.error("[saveMessage] User message insert error:", {
+        error: userMessageError,
+        timestamp: new Date().toISOString()
+      });
+      toast({
+        title: "Error",
+        description: "Failed to save your message. Please try again.",
+        variant: "destructive",
+      });
       throw userMessageError;
     }
 
+    console.log("[saveMessage] User message saved successfully:", {
+      messageId: userMessage?.id,
+      timestamp: new Date().toISOString()
+    });
+
     // Call the edge function with non-streaming response
-    const aiResponse = await fetch(
+    const response = await fetch(
       `https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/process-message`,
       {
         method: 'POST',
@@ -151,44 +119,41 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       }
     );
 
-    if (!aiResponse.ok) {
-      throw new Error('Failed to get AI response');
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("[saveMessage] AI response error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive",
+      });
+      throw new Error(error);
     }
 
-    const aiResponseData = await aiResponse.json();
-
-    if (aiResponseData.error) {
-      console.error("[saveMessage] AI response error:", aiResponseData);
-      
-      if (aiResponseData.limitReached) {
-        return {
-          userMessage,
-          aiMessage: null,
-          limitReached: true
-        };
-      }
-      
-      throw new Error(aiResponseData.error);
-    }
-
-    console.log("[saveMessage] Success - AI response received");
-
+    const aiResponseData = await response.json();
     return {
       userMessage,
       aiMessage: {
         id: Date.now().toString(),
         content: aiResponseData.content,
         sender: 'ai' as const
-      },
-      limitReached: false
+      }
     };
 
   } catch (error: any) {
-    console.error("[saveMessage] Error:", {
+    console.error("[saveMessage] Caught error:", {
       error,
-      message: error.message,
+      errorMessage: error.message,
       timestamp: new Date().toISOString()
     });
+    // Only show toast if one hasn't been shown for this error already
+    if (!error.message.includes("timeout")) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
     throw error;
   }
 }
@@ -197,21 +162,11 @@ export async function fetchMessages(chatId: string) {
   console.log("[fetchMessages] Starting for chat:", chatId);
   
   try {
-    // Get current session and attempt refresh if needed
-    const { data: sessionData } = await supabase.auth.getSession();
-    let session = sessionData?.session;
-
-    if (!session) {
-      console.log("[fetchMessages] No session found, attempting refresh...");
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError || !refreshData.session) {
-        console.error("[fetchMessages] Session refresh failed:", refreshError);
-        throw new Error("Authentication required");
-      }
-      
-      session = refreshData.session;
-      console.log("[fetchMessages] Session refreshed successfully");
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      console.error("[fetchMessages] No session");
+      return [];
     }
 
     console.log("[fetchMessages] Fetching messages...");
@@ -224,14 +179,14 @@ export async function fetchMessages(chatId: string) {
 
     if (error) {
       console.error("[fetchMessages] Error:", error);
-      throw error;
+      return [];
     }
 
     console.log("[fetchMessages] Success, found messages:", data?.length);
     return data || [];
   } catch (error) {
     console.error("[fetchMessages] Error:", error);
-    throw error;
+    return [];
   }
 }
 
@@ -239,19 +194,11 @@ export async function fetchChats(userId: string) {
   console.log("[fetchChats] Starting for user:", userId);
   
   try {
-    // Get current session and attempt refresh if needed
     const { data: { session } } = await supabase.auth.getSession();
     
-    if (!session) {
-      console.log("[fetchChats] No session found, attempting refresh...");
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError || !refreshData.session) {
-        console.error("[fetchChats] Session refresh failed");
-        return [];
-      }
-      
-      console.log("[fetchChats] Session refreshed successfully");
+    if (!session?.user) {
+      console.error("[fetchChats] No session");
+      return [];
     }
 
     console.log("[fetchChats] Fetching chats...");
