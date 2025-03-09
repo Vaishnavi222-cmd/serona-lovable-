@@ -63,16 +63,17 @@ serve(async (req) => {
       const newCount = currentUsage ? currentUsage.responses_count + 1 : 1;
       const maxTokens = newCount <= 3 ? 400 : 800;
       
-      // Check message limit
+      // Check message limit - Return friendly response instead of error
       if (newCount > 7) {
         return new Response(
           JSON.stringify({ 
             error: 'Daily message limit exceeded',
-            limitReached: true 
+            limitReached: true,
+            timeRemaining: "24" // You can calculate exact time if needed
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429
+            status: 200 // Changed from 429 to 200 to handle gracefully
           }
         );
       }
@@ -96,7 +97,6 @@ serve(async (req) => {
         }
       }
 
-      // Make OpenAI request with appropriate token limit
       try {
         const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -119,14 +119,35 @@ serve(async (req) => {
         });
 
         if (!openAIResponse.ok) {
-          const errorData = await openAIResponse.text();
-          console.error('OpenAI API error:', errorData);
-          throw new Error(`OpenAI API error: ${errorData}`);
+          console.error('OpenAI API error:', await openAIResponse.text());
+          return new Response(
+            JSON.stringify({ 
+              error: 'Failed to generate response',
+              limitReached: false
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            }
+          );
         }
 
         const responseData = await openAIResponse.json();
         const aiResponse = responseData.choices[0].message.content;
-        const tokensUsed = responseData.usage.total_tokens;
+
+        // If token limit exceeded, return friendly message instead of error
+        if (responseData.usage.completion_tokens > maxTokens) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Response too long',
+              limitReached: true
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            }
+          );
+        }
 
         // Update usage with new count and tokens
         const { error: updateError } = await supabaseClient
@@ -167,7 +188,16 @@ serve(async (req) => {
 
       } catch (error) {
         console.error('OpenAI error:', error);
-        throw error;
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to process message',
+            limitReached: false
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
       }
     } else {
       // Paid plan - proceed with normal OpenAI request
@@ -230,9 +260,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'An unexpected error occurred',
+        limitReached: false
+      }),
       { 
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
