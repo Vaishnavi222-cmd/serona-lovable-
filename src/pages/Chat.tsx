@@ -51,19 +51,16 @@ const Chat = () => {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   
-  // Add new ref for message container
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Add effect to scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Modified loadChats to create a new chat if none exists
   const loadChats = async () => {
     if (!user) return;
     
@@ -82,7 +79,6 @@ const Chat = () => {
     try {
       const fetchedChats = await fetchChats(userId);
       
-      // If no chats exist, create a new one
       if (fetchedChats.length === 0) {
         const { data: newChat, error } = await createChat();
         if (error) {
@@ -126,7 +122,6 @@ const Chat = () => {
     }
   };
 
-  // Add handleNewChat function
   const handleNewChat = async () => {
     if (!user) {
       setShowAuthDialog(true);
@@ -153,14 +148,13 @@ const Chat = () => {
           chat_session_id: newChat.id
         };
 
-        // Set all other chats to inactive
         setChats(prevChats => 
           prevChats.map(chat => ({ ...chat, active: false }))
         );
         setChats(prevChats => [formattedChat, ...prevChats.map(chat => ({ ...chat, active: false }))]);
 
         setCurrentChatId(newChat.id);
-        setMessages([]); // Clear messages for new chat
+        setMessages([]); 
         
         if (isMobile) {
           setIsSidebarOpen(false);
@@ -176,15 +170,12 @@ const Chat = () => {
     }
   };
 
-  // Modified handleSend to update chat title on first message
   const [isMessagingAllowed, setIsMessagingAllowed] = useState(true);
 
-  // Update useEffect to check plan status and limits
   const checkMessageLimits = async () => {
     if (!user) return;
 
     try {
-      // Check for active paid plan
       const { data: activePlan } = await supabase
         .from('user_plans')
         .select('*')
@@ -194,13 +185,11 @@ const Chat = () => {
         .limit(1)
         .single();
 
-      // If there's an active paid plan, messaging is allowed
       if (activePlan && new Date(activePlan.end_time) > new Date()) {
         setIsMessagingAllowed(true);
         return;
       }
 
-      // If no active paid plan, check free plan limits
       const currentDate = new Date().toISOString().split('T')[0];
       const { data: dailyUsage } = await supabase
         .from('user_daily_usage')
@@ -209,7 +198,6 @@ const Chat = () => {
         .eq('date', currentDate)
         .single();
 
-      // If no usage record exists or responses are under limit, messaging is allowed
       if (!dailyUsage || dailyUsage.responses_count < 7) {
         setIsMessagingAllowed(true);
       } else {
@@ -217,22 +205,18 @@ const Chat = () => {
       }
     } catch (error) {
       console.error('Error checking message limits:', error);
-      // Default to allowed in case of error to prevent false restrictions
       setIsMessagingAllowed(true);
     }
   };
 
-  // Add plan updates listener
   usePlanUpdates(user?.id, checkMessageLimits);
   useDailyReset(checkMessageLimits);
 
   useEffect(() => {
     if (!user) return;
 
-    // Check limits immediately
     checkMessageLimits();
 
-    // Set up real-time subscription for plan and usage changes
     const channel = supabase
       .channel('limits-check')
       .on(
@@ -252,7 +236,6 @@ const Chat = () => {
     };
   }, [user]);
 
-  // Update the handleSend function to include the messaging allowed check
   const handleSend = async () => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
@@ -273,7 +256,6 @@ const Chat = () => {
     setIsTyping(true);
 
     try {
-      // Update optimistic message handling
       const optimisticUserMessage = {
         id: tempMessageId,
         content: messageContent,
@@ -304,7 +286,6 @@ const Chat = () => {
         return;
       }
 
-      // Update messages with confirmed user message and AI response
       setMessages(prev => {
         const updatedMessages = prev.map(msg => 
           msg.id === tempMessageId ? {
@@ -333,7 +314,6 @@ const Chat = () => {
     }
   };
 
-  // Updated authentication and chat initialization
   useEffect(() => {
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -343,10 +323,8 @@ const Chat = () => {
       }
     };
 
-    // Initialize session on mount
     initSession();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[Auth] State change:", event, session?.user?.email);
       
@@ -363,13 +341,11 @@ const Chat = () => {
       }
     });
 
-    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  // Improved message loading with error handling
   const loadChatMessages = async (chatId: string) => {
     console.log("[loadChatMessages] Starting for chat:", chatId);
     
@@ -402,7 +378,6 @@ const Chat = () => {
     }
   };
 
-  // Add handleChatSelect function
   const handleChatSelect = async (chatId: string) => {
     setCurrentChatId(chatId);
     await loadChatMessages(chatId);
@@ -458,7 +433,7 @@ const Chat = () => {
       return;
     }
 
-    setIsTyping(true); // Show typing indicator
+    setIsTyping(true); 
     const newMessage: Message = {
       id: Date.now().toString(),
       content: `Help me with ${topic}`,
@@ -485,7 +460,7 @@ const Chat = () => {
     } catch (error) {
       console.error('Error in handleQuickStart:', error);
     } finally {
-      setIsTyping(false); // Hide typing indicator
+      setIsTyping(false); 
     }
   };
 
@@ -557,7 +532,6 @@ const Chat = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile) {
-        // Handle header menu
         if (showHeaderMenu && 
             headerMenuRef.current && 
             !headerMenuRef.current.contains(event.target as Node) &&
@@ -566,7 +540,6 @@ const Chat = () => {
           setShowHeaderMenu(false);
         }
 
-        // Handle sidebar
         if (isSidebarOpen && 
             sidebarRef.current && 
             !sidebarRef.current.contains(event.target as Node) &&
@@ -704,9 +677,8 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Updated chat container */}
         <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-[56px]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32"> {/* Added bottom padding */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32">
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
                 <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
@@ -764,7 +736,7 @@ const Chat = () => {
                             : 'bg-gray-100 mr-auto ml-0'
                           }
                           max-w-[92%] md:max-w-[85%] px-4 py-3 md:px-6 md:py-4
-                          min-w-[100px]`} // Added min-width and adjusted padding
+                          min-w-[100px]`}
                       >
                         <MessageContent content={msg.content} />
                       </div>
@@ -777,7 +749,6 @@ const Chat = () => {
             </div>
           </div>
 
-          {/* Updated message input container */}
           <div className="fixed bottom-0 left-0 right-0 md:sticky w-full bg-white border-t border-gray-200 p-4">
             <div className="max-w-4xl mx-auto flex items-center gap-2">
               <textarea
