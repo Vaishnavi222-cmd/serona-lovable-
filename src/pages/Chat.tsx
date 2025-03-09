@@ -236,7 +236,7 @@ const Chat = () => {
     };
   }, [user]);
 
-  const handleSend = async () => {
+  const handleSend = async (retryCount = 0) => {
     if (!message.trim() || !user || !currentChatId) {
       if (!user) {
         setShowAuthDialog(true);
@@ -255,15 +255,16 @@ const Chat = () => {
     setMessage('');
     setIsTyping(true);
 
-    try {
-      const optimisticUserMessage = {
-        id: tempMessageId,
-        content: messageContent,
-        sender: 'user' as const
-      };
-      
-      setMessages(prev => [...prev, optimisticUserMessage]);
+    // Immediately store message in state for optimistic UI update
+    const optimisticUserMessage = {
+      id: tempMessageId,
+      content: messageContent,
+      sender: 'user' as const
+    };
+    
+    setMessages(prev => [...prev, optimisticUserMessage]);
 
+    try {
       const response = await saveMessage(
         currentChatId,
         messageContent,
@@ -272,20 +273,17 @@ const Chat = () => {
       );
 
       if (!response) {
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        });
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-        return;
+        throw new Error('Failed to send message');
       }
 
       if (response.limitReached) {
         setShowLimitReachedDialog(true);
+        // Remove the optimistic message if limit reached
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
 
+      // Replace optimistic message with confirmed message
       setMessages(prev => {
         const updatedMessages = prev.map(msg => 
           msg.id === tempMessageId ? {
@@ -303,12 +301,28 @@ const Chat = () => {
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      
+      // Implement retry mechanism (max 3 retries)
+      if (retryCount < 3) {
+        toast({
+          title: "Message send failed",
+          description: "Retrying in 2 seconds...",
+          variant: "destructive",
+        });
+        
+        // Retry after 2 seconds
+        setTimeout(() => {
+          handleSend(retryCount + 1);
+        }, 2000);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to send message after multiple retries. Please try again.",
+          variant: "destructive",
+        });
+        // Remove the optimistic message after all retries fail
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      }
     } finally {
       setIsTyping(false);
     }
@@ -697,7 +711,7 @@ const Chat = () => {
           <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-32">
             <div className="max-w-[800px] w-full mx-auto py-6 px-4 md:px-8">
               {messages.length === 0 && !message ? (
-                <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md:ml-0 mx-auto px-4 mt-8">
+                <div className="flex flex-col items-center justify-center min-h-[40vh] w-full md:w-[80%] md-ml-0 mx-auto px-4 mt-8">
                   <h1 className="text-lg md:text-2xl font-playfair font-semibold text-gray-800 text-center mb-8 md:mb-12 leading-relaxed px-4">
                     Hello! I'm your personal growth partner—here to support and guide you! 💡 Let me know how I can help😊
                   </h1>
@@ -775,20 +789,20 @@ const Chat = () => {
                 className={`w-full p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1EAEDB] 
                          bg-white border border-gray-200 shadow-sm resize-none text-gray-800
                          placeholder-gray-400 min-h-[44px] max-h-[200px] overflow-y-auto
-                         ${!isMessagingAllowed ? 'cursor-not-allowed bg-gray-50' : ''}`}
+                         ${!isMessagingAllowed || isTyping ? 'cursor-not-allowed bg-gray-50' : ''}`}
                 style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                 rows={1}
-                disabled={!isMessagingAllowed}
+                disabled={!isMessagingAllowed || isTyping}
               />
               <button 
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 className={`p-2 rounded-full transition-colors ${
-                  isMessagingAllowed 
+                  isMessagingAllowed && !isTyping
                     ? 'hover:bg-gray-100 text-[#1EAEDB]' 
                     : 'text-gray-400 cursor-not-allowed'
                 }`}
                 aria-label="Send message"
-                disabled={!isMessagingAllowed}
+                disabled={!isMessagingAllowed || isTyping}
               >
                 <Send className="w-5 h-5" />
               </button>
