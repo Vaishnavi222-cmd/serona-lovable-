@@ -258,14 +258,16 @@ const Chat = () => {
     setMessage('');
     setIsTyping(true);
 
-    const optimisticUserMessage = {
-      id: tempMessageId,
-      content: messageContent,
-      sender: 'user' as const
-    };
-    setMessages(prev => [...prev, optimisticUserMessage]);
-
     try {
+      // Update optimistic message handling
+      const optimisticUserMessage = {
+        id: tempMessageId,
+        content: messageContent,
+        sender: 'user' as const
+      };
+      
+      setMessages(prev => [...prev, optimisticUserMessage]);
+
       const response = await saveMessage(
         currentChatId,
         messageContent,
@@ -280,25 +282,29 @@ const Chat = () => {
           variant: "destructive",
         });
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-        setIsTyping(false);
         return;
       }
 
-      // Handle limit reached case
       if (response.limitReached) {
         setShowLimitReachedDialog(true);
-        setIsTyping(false);
         return;
       }
 
-      // Update messages with both user and AI response
-      setMessages(prev => [
-        ...prev.map(msg => msg.id === tempMessageId ? {
-          ...msg,
-          id: response.userMessage.id,
-        } : msg),
-        ...(response.aiMessage ? [response.aiMessage] : [])
-      ]);
+      // Update messages with confirmed user message and AI response
+      setMessages(prev => {
+        const updatedMessages = prev.map(msg => 
+          msg.id === tempMessageId ? {
+            ...msg,
+            id: response.userMessage.id,
+          } : msg
+        );
+        
+        if (response.aiMessage) {
+          return [...updatedMessages, response.aiMessage];
+        }
+        
+        return updatedMessages;
+      });
 
     } catch (error: any) {
       console.error("Error in handleSend:", error);
@@ -315,8 +321,18 @@ const Chat = () => {
 
   // Load initial chats when user logs in
   useEffect(() => {
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        await initializeChat(session.user);
+      }
+    };
+
+    initSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user) {
         setUser(session.user);
         await initializeChat(session.user);
       } else if (event === 'SIGNED_OUT') {
@@ -327,53 +343,9 @@ const Chat = () => {
       }
     });
 
-    // Initial session check
-    const initializeChat = async (currentUser: User) => {
-      try {
-        const fetchedChats = await fetchChats(currentUser.id);
-        
-        // Always create a new chat if none exists
-        let activeChat;
-        if (fetchedChats.length === 0) {
-          const { data: newChat, error } = await createChat();
-          if (error) {
-            console.error("Error creating new chat:", error);
-            return;
-          }
-          if (newChat) {
-            activeChat = newChat;
-            fetchedChats.unshift(newChat); // Add new chat to beginning of array
-          }
-        } else {
-          activeChat = fetchedChats[0]; // Use the most recent chat
-        }
-
-        const formattedChats = fetchedChats.map(chat => ({
-          id: chat.id,
-          title: chat.title,
-          active: chat.id === activeChat.id,
-          chat_session_id: chat.id
-        }));
-        
-        setChats(formattedChats);
-        setCurrentChatId(activeChat.id);
-        await loadChatMessages(activeChat.id);
-      } catch (error) {
-        console.error('Error initializing chat:', error);
-      }
+    return () => {
+      subscription.unsubscribe();
     };
-
-    // Check initial session
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await initializeChat(session.user);
-      }
-    };
-
-    getInitialSession();
-    return () => subscription.unsubscribe();
   }, []);
 
   const loadChatMessages = async (chatId: string) => {

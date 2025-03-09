@@ -65,11 +65,6 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         hasUser: !!session?.user,
         timestamp: new Date().toISOString()
       });
-      toast({
-        title: "Authentication Error",
-        description: "Please sign in again to continue.",
-        variant: "destructive",
-      });
       throw new Error("Authentication required");
     }
 
@@ -90,18 +85,8 @@ export async function saveMessage(chatId: string, message: string, userId: strin
         error: userMessageError,
         timestamp: new Date().toISOString()
       });
-      toast({
-        title: "Error",
-        description: "Failed to save your message. Please try again.",
-        variant: "destructive",
-      });
       throw userMessageError;
     }
-
-    console.log("[saveMessage] User message saved successfully:", {
-      messageId: userMessage?.id,
-      timestamp: new Date().toISOString()
-    });
 
     // Call the edge function with non-streaming response
     const response = await fetch(
@@ -119,13 +104,15 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       }
     );
 
+    if (!response.ok) {
+      throw new Error('Failed to get AI response');
+    }
+
     const aiResponseData = await response.json();
 
-    // Check if we have a valid AI response
-    if (!response.ok || (aiResponseData.error && !aiResponseData.content)) {
+    if (aiResponseData.error) {
       console.error("[saveMessage] AI response error:", aiResponseData);
       
-      // If it's a limit reached error, don't show error toast
       if (aiResponseData.limitReached) {
         return {
           userMessage,
@@ -133,44 +120,33 @@ export async function saveMessage(chatId: string, message: string, userId: strin
           limitReached: true
         };
       }
-
-      toast({
-        title: "Error",
-        description: "Failed to get AI response. Please try again.",
-        variant: "destructive",
-      });
-      throw new Error(aiResponseData.error || "Failed to get AI response");
+      
+      throw new Error(aiResponseData.error);
     }
 
-    // Log successful AI response
-    console.log("[saveMessage] AI response received:", {
-      hasContent: !!aiResponseData.content,
-      timestamp: new Date().toISOString()
-    });
+    if (!aiResponseData.content) {
+      console.error("[saveMessage] No content in AI response");
+      throw new Error('Invalid AI response format');
+    }
+
+    console.log("[saveMessage] Success - AI response received");
 
     return {
       userMessage,
-      aiMessage: aiResponseData.content ? {
+      aiMessage: {
         id: Date.now().toString(),
         content: aiResponseData.content,
         sender: 'ai' as const
-      } : null
+      },
+      limitReached: false
     };
 
   } catch (error: any) {
-    console.error("[saveMessage] Caught error:", {
+    console.error("[saveMessage] Error:", {
       error,
-      errorMessage: error.message,
+      message: error.message,
       timestamp: new Date().toISOString()
     });
-    // Only show toast if one hasn't been shown for this error already
-    if (!error.message.includes("timeout")) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    }
     throw error;
   }
 }
