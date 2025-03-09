@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -5,7 +6,8 @@ export async function createChat() {
   try {
     console.log("[createChat] Starting...");
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const session = sessionData?.session;
 
     if (sessionError || !session?.user) {
       console.error("[createChat] Session error or no user:", {
@@ -56,7 +58,8 @@ export async function saveMessage(chatId: string, message: string, userId: strin
   });
 
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const session = sessionData?.session;
     
     if (sessionError || !session?.user) {
       console.error("[saveMessage] Auth error:", {
@@ -155,7 +158,8 @@ export async function fetchMessages(chatId: string) {
   console.log("[fetchMessages] Starting for chat:", chatId);
   
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData?.session;
     
     if (!session?.user) {
       console.error("[fetchMessages] No session");
