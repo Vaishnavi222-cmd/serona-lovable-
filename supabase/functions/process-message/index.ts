@@ -33,7 +33,7 @@ serve(async (req) => {
     const currentDate = new Date().toISOString().split('T')[0];
 
     // Check for active paid plan first
-    const { data: activePlan } = await supabaseClient
+    const { data: activePlan, error: planError } = await supabaseClient
       .from('user_plans')
       .select('*')
       .eq('user_id', user.id)
@@ -43,41 +43,58 @@ serve(async (req) => {
       .limit(1)
       .single();
 
+    if (planError) {
+      console.error('Error checking plan:', planError);
+    }
+
     // Handle free plan usage tracking
+    let usageRecord;
     if (!activePlan) {
       console.log('No active plan found, checking usage limits...');
 
-      // Get or create usage record atomically
-      const { data: usage, error: usageError } = await supabaseClient
+      // Get current usage first
+      const { data: currentUsage, error: currentUsageError } = await supabaseClient
         .from('user_daily_usage')
-        .upsert({
-          user_id: user.id,
-          date: currentDate,
-          responses_count: 0,
-          input_tokens_used: 0,
-          output_tokens_used: 0,
-          last_usage_time: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,date'
-        })
-        .select()
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', currentDate)
         .maybeSingle();
 
-      if (usageError) {
-        console.error('Error getting/creating usage record:', usageError);
-        throw usageError;
+      if (currentUsageError) {
+        console.error('Error getting current usage:', currentUsageError);
+        throw currentUsageError;
       }
 
-      if (!usage) {
-        console.error('Failed to get or create usage record');
-        throw new Error('Failed to get or create usage record');
+      // If no usage record exists, create one
+      if (!currentUsage) {
+        const { data: newUsage, error: createError } = await supabaseClient
+          .from('user_daily_usage')
+          .insert({
+            user_id: user.id,
+            date: currentDate,
+            responses_count: 0,
+            input_tokens_used: 0,
+            output_tokens_used: 0,
+            last_usage_time: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating usage record:', createError);
+          throw createError;
+        }
+
+        usageRecord = newUsage;
+      } else {
+        usageRecord = currentUsage;
       }
 
       // Check response limit
-      const newResponseCount = (usage.responses_count || 0) + 1;
+      const newResponseCount = (usageRecord.responses_count || 0) + 1;
       if (newResponseCount > 7) {
-        console.log('Free plan limit exceeded:', { 
-          currentResponses: usage.responses_count,
+        console.log('Free plan limit exceeded:', {
+          currentResponses: usageRecord.responses_count,
           newResponseCount,
           userId: user.id
         });
@@ -93,24 +110,31 @@ serve(async (req) => {
         );
       }
 
-      // Calculate input tokens before processing
+      // Calculate input tokens
       const inputTokens = Math.ceil(content.length / 4);
 
-      // Update usage BEFORE processing
+      // Update usage record with input tokens and response count
       const { error: updateError } = await supabaseClient
         .from('user_daily_usage')
         .update({
           responses_count: newResponseCount,
-          input_tokens_used: (usage.input_tokens_used || 0) + inputTokens,
+          input_tokens_used: (usageRecord.input_tokens_used || 0) + inputTokens,
           last_usage_time: new Date().toISOString()
         })
         .eq('user_id', user.id)
         .eq('date', currentDate);
 
       if (updateError) {
-        console.error('Error updating usage before processing:', updateError);
+        console.error('Error updating usage record:', updateError);
         throw updateError;
       }
+
+      console.log('Updated usage record with new response count and input tokens:', {
+        userId: user.id,
+        newResponseCount,
+        inputTokens,
+        date: currentDate
+      });
     }
 
     // Process OpenAI request
@@ -147,19 +171,23 @@ serve(async (req) => {
       // For free plan users, update output tokens
       if (!activePlan) {
         const outputTokens = Math.ceil(aiResponse.length / 4);
-        console.log('Updating output tokens for free plan user:', {
-          userId: user.id,
+        console.log('Calculating output tokens for response:', {
           outputTokens,
-          date: currentDate
+          responseLength: aiResponse.length
         });
 
-        // Get current usage first to ensure accurate update
-        const { data: currentUsage } = await supabaseClient
+        // Get latest usage record
+        const { data: currentUsage, error: currentUsageError } = await supabaseClient
           .from('user_daily_usage')
           .select('output_tokens_used')
           .eq('user_id', user.id)
           .eq('date', currentDate)
           .single();
+
+        if (currentUsageError) {
+          console.error('Error getting current usage for output tokens:', currentUsageError);
+          throw currentUsageError;
+        }
 
         // Update output tokens
         const { error: updateError } = await supabaseClient
@@ -173,7 +201,15 @@ serve(async (req) => {
 
         if (updateError) {
           console.error('Error updating output tokens:', updateError);
+          throw updateError;
         }
+
+        console.log('Successfully updated output tokens:', {
+          userId: user.id,
+          outputTokens,
+          date: currentDate,
+          newTotal: (currentUsage?.output_tokens_used || 0) + outputTokens
+        });
       }
 
       // Save AI message to database
@@ -191,18 +227,20 @@ serve(async (req) => {
         throw messageError;
       }
 
+      console.log('Successfully saved AI message and updated all records');
+
       return new Response(
         JSON.stringify({ content: aiResponse }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
     } catch (error) {
-      console.error('OpenAI error:', error);
+      console.error('OpenAI or database error:', error);
       throw error;
     }
 
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Process message error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
