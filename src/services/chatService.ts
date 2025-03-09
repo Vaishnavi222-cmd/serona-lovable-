@@ -71,6 +71,28 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       throw new Error("Authentication required");
     }
 
+    // Check plan limits before sending message
+    const response = await fetch(
+      `https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/check-plan-limits`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          input_tokens: Math.ceil(message.length / 4), // Estimate input tokens
+          output_tokens: 800 // Max possible output tokens
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const data = await response.json();
+      console.error("[saveMessage] Plan limit check failed:", data);
+      throw new Error(data.error || "Plan limit reached");
+    }
+
     // Save user message
     const { data: userMessage, error: userMessageError } = await supabase
       .from('messages')
@@ -84,15 +106,12 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       .maybeSingle();
 
     if (userMessageError) {
-      console.error("[saveMessage] User message insert error:", {
-        error: userMessageError,
-        timestamp: new Date().toISOString()
-      });
+      console.error("[saveMessage] User message insert error:", userMessageError);
       throw userMessageError;
     }
 
     // Call the edge function with non-streaming response
-    const response = await fetch(
+    const aiResponse = await fetch(
       `https://ptpxhzfjfssaxilyuwzd.supabase.co/functions/v1/process-message`,
       {
         method: 'POST',
@@ -107,11 +126,11 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       }
     );
 
-    if (!response.ok) {
+    if (!aiResponse.ok) {
       throw new Error('Failed to get AI response');
     }
 
-    const aiResponseData = await response.json();
+    const aiResponseData = await aiResponse.json();
 
     if (aiResponseData.error) {
       console.error("[saveMessage] AI response error:", aiResponseData);
@@ -125,11 +144,6 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       }
       
       throw new Error(aiResponseData.error);
-    }
-
-    if (!aiResponseData.content) {
-      console.error("[saveMessage] No content in AI response");
-      throw new Error('Invalid AI response format');
     }
 
     console.log("[saveMessage] Success - AI response received");
