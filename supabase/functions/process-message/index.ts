@@ -30,11 +30,9 @@ serve(async (req) => {
     }
 
     const { content, chat_session_id } = await req.json();
-
-    // Get current date for usage tracking
     const currentDate = new Date().toISOString().split('T')[0];
 
-    // IMPORTANT: First check if user has an active paid plan
+    // Check for active paid plan first
     const { data: activePlan } = await supabaseClient
       .from('user_plans')
       .select('*')
@@ -45,40 +43,44 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    // If no active paid plan, we need to check and enforce free plan limits
+    // Handle free plan usage tracking
     if (!activePlan) {
-      // Get the current day's usage, create if doesn't exist
-      const { data: currentUsage, error: usageError } = await supabaseClient
+      console.log('No active plan found, checking usage limits...');
+
+      // Get or create usage record atomically
+      const { data: usage, error: usageError } = await supabaseClient
         .from('user_daily_usage')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', currentDate)
+        .upsert({
+          user_id: user.id,
+          date: currentDate,
+          responses_count: 0,
+          input_tokens_used: 0,
+          output_tokens_used: 0,
+          last_usage_time: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,date'
+        })
+        .select()
         .maybeSingle();
 
       if (usageError) {
+        console.error('Error getting/creating usage record:', usageError);
         throw usageError;
       }
 
-      // If no usage record exists for today, create one
-      if (!currentUsage) {
-        const { error: insertError } = await supabaseClient
-          .from('user_daily_usage')
-          .insert({
-            user_id: user.id,
-            date: currentDate,
-            responses_count: 0,
-            input_tokens_used: 0,
-            output_tokens_used: 0
-          });
-
-        if (insertError) throw insertError;
+      if (!usage) {
+        console.error('Failed to get or create usage record');
+        throw new Error('Failed to get or create usage record');
       }
 
-      // Get updated usage count
-      const responses_count = (currentUsage?.responses_count || 0) + 1;
-      
-      // Check if free plan limit is exceeded
-      if (responses_count > 7) {
+      // Check response limit
+      const newResponseCount = (usage.responses_count || 0) + 1;
+      if (newResponseCount > 7) {
+        console.log('Free plan limit exceeded:', { 
+          currentResponses: usage.responses_count,
+          newResponseCount,
+          userId: user.id
+        });
         return new Response(
           JSON.stringify({
             error: 'Daily response limit exceeded for free plan',
@@ -91,21 +93,27 @@ serve(async (req) => {
         );
       }
 
-      // Update daily usage BEFORE processing to ensure limit is respected
+      // Calculate input tokens before processing
+      const inputTokens = Math.ceil(content.length / 4);
+
+      // Update usage BEFORE processing
       const { error: updateError } = await supabaseClient
         .from('user_daily_usage')
-        .upsert({
-          user_id: user.id,
-          date: currentDate,
-          responses_count: responses_count,
-          input_tokens_used: (currentUsage?.input_tokens_used || 0) + Math.ceil(content.length / 4),
+        .update({
+          responses_count: newResponseCount,
+          input_tokens_used: (usage.input_tokens_used || 0) + inputTokens,
           last_usage_time: new Date().toISOString()
-        });
+        })
+        .eq('user_id', user.id)
+        .eq('date', currentDate);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating usage before processing:', updateError);
+        throw updateError;
+      }
     }
 
-    // OpenAI Request with non-streaming
+    // Process OpenAI request
     try {
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -136,19 +144,36 @@ serve(async (req) => {
       const responseData = await openAIResponse.json();
       const aiResponse = responseData.choices[0].message.content;
 
-      // Calculate token usage
-      const inputTokens = Math.ceil(content.length / 4); // Approximate token count
-      const outputTokens = Math.ceil(aiResponse.length / 4); // Approximate token count
-
-      // Update usage statistics only for free plan users
+      // For free plan users, update output tokens
       if (!activePlan) {
-        await supabaseClient
+        const outputTokens = Math.ceil(aiResponse.length / 4);
+        console.log('Updating output tokens for free plan user:', {
+          userId: user.id,
+          outputTokens,
+          date: currentDate
+        });
+
+        // Get current usage first to ensure accurate update
+        const { data: currentUsage } = await supabaseClient
+          .from('user_daily_usage')
+          .select('output_tokens_used')
+          .eq('user_id', user.id)
+          .eq('date', currentDate)
+          .single();
+
+        // Update output tokens
+        const { error: updateError } = await supabaseClient
           .from('user_daily_usage')
           .update({
-            output_tokens_used: currentUsage?.output_tokens_used + outputTokens
+            output_tokens_used: (currentUsage?.output_tokens_used || 0) + outputTokens,
+            last_usage_time: new Date().toISOString()
           })
           .eq('user_id', user.id)
           .eq('date', currentDate);
+
+        if (updateError) {
+          console.error('Error updating output tokens:', updateError);
+        }
       }
 
       // Save AI message to database
