@@ -395,6 +395,7 @@ const Chat = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('[Realtime] Setting up message subscription');
     const channel = supabase
       .channel('chat-updates')
       .on(
@@ -403,17 +404,32 @@ const Chat = () => {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `user_id=eq.${user.id}`
+          filter: `chat_session_id=eq.${currentChatId}`,
         },
-        () => {
-          if (currentChatId) {
-            loadChatMessages(currentChatId);
+        (payload) => {
+          console.log('[Realtime] Received message update:', payload);
+          if (payload.eventType === 'INSERT') {
+            // Only add the message if it's not already in the list
+            setMessages(prev => {
+              const exists = prev.some(msg => msg.id === payload.new.id);
+              if (!exists) {
+                return [...prev, {
+                  id: payload.new.id,
+                  content: payload.new.content,
+                  sender: payload.new.sender as 'user' | 'ai'
+                }];
+              }
+              return prev;
+            });
           }
         }
       )
       .subscribe();
 
+    console.log('[Realtime] Subscription active for chat:', currentChatId);
+
     return () => {
+      console.log('[Realtime] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
   }, [user, currentChatId]);
