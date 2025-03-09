@@ -4,8 +4,18 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://ptpxhzfjfssaxilyuwzd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0cHhoemZqZnNzYXhpbHl1d3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkwMjQ1MDUsImV4cCI6MjA1NDYwMDUwNX0.IlH5fNAwIS3H_D3zeaR90mrYjtHFc55B1nSFGBQPwcQ";
 
-// Cache the session in memory
+// Cache the session in memory and localStorage
 let cachedSession: any = null;
+
+// Try to load initial session from localStorage
+try {
+  const storedSession = localStorage.getItem('sb-session');
+  if (storedSession) {
+    cachedSession = JSON.parse(storedSession);
+  }
+} catch (error) {
+  console.error("Error loading stored session:", error);
+}
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -19,18 +29,22 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Enhanced debug listener for auth state changes with session caching
+// Enhanced debug listener for auth state changes with improved session persistence
 supabase.auth.onAuthStateChange(async (event, session) => {
-  console.log("🔄 Auth state changed:", event);
+  console.log("🔄 Auth state changed:", event, session?.user?.email);
   
   if (session) {
+    localStorage.setItem('sb-session', JSON.stringify(session));
     cachedSession = session;
-  }
-
-  if (event === 'SIGNED_IN' && session?.user) {
-    initializeDailyUsage(session.user.id).catch(error => {
-      console.error("Background task error:", error);
-    });
+    
+    if (event === 'SIGNED_IN') {
+      initializeDailyUsage(session.user.id).catch(error => {
+        console.error("Background task error:", error);
+      });
+    }
+  } else {
+    localStorage.removeItem('sb-session');
+    cachedSession = null;
   }
 });
 
@@ -72,29 +86,38 @@ async function initializeDailyUsage(userId: string) {
   }
 }
 
-// Enhanced helper function to get current user with session caching
+// Enhanced helper function to get current user with improved session handling
 export const getCurrentUser = async () => {
   console.log("🔍 DEBUG - getCurrentUser started");
   
   try {
     // First try to use cached session
     if (cachedSession?.user) {
-      console.log("✅ Using cached session");
-      return { user: cachedSession.user, error: null };
+      // Validate cached session expiry
+      const expiresAt = cachedSession.expires_at;
+      if (expiresAt && new Date(expiresAt * 1000) > new Date()) {
+        console.log("✅ Using valid cached session");
+        return { user: cachedSession.user, error: null };
+      }
+      console.log("⚠️ Cached session expired, refreshing...");
     }
 
-    // If no cached session, try to refresh
+    // Try to refresh the session
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
     
-    if (refreshError) {
-      console.error("❌ Session refresh error:", refreshError);
-      // Don't throw error here - try getting session first
-    }
-
     if (refreshData?.session) {
       cachedSession = refreshData.session;
+      localStorage.setItem('sb-session', JSON.stringify(refreshData.session));
       console.log("✅ Session refreshed successfully");
       return { user: refreshData.session.user, error: null };
+    }
+
+    if (refreshError) {
+      console.error("❌ Session refresh error:", refreshError);
+      // Clear invalid session data
+      localStorage.removeItem('sb-session');
+      cachedSession = null;
+      return { user: null, error: refreshError };
     }
 
     // Last resort - get current session
@@ -102,6 +125,7 @@ export const getCurrentUser = async () => {
     
     if (session) {
       cachedSession = session;
+      localStorage.setItem('sb-session', JSON.stringify(session));
       console.log("✅ Got current session");
       return { user: session.user, error: null };
     }
