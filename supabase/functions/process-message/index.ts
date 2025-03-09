@@ -31,7 +31,7 @@ serve(async (req) => {
 
     const { content, chat_session_id } = await req.json();
 
-    // Check for active paid plan
+    // Enhanced active plan check with expiry validation
     const { data: activePlan, error: planError } = await supabaseClient
       .from('user_plans')
       .select('*')
@@ -41,6 +41,34 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    // If they had a plan but it's expired, return specific error
+    const { data: expiredPlan } = await supabaseClient
+      .from('user_plans')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .lte('end_time', new Date().toISOString())
+      .maybeSingle();
+
+    if (expiredPlan) {
+      // Update plan status to expired
+      await supabaseClient
+        .from('user_plans')
+        .update({ status: 'expired' })
+        .eq('id', expiredPlan.id);
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Your plan has expired. Please upgrade to continue using Serona AI.',
+          planExpired: true
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
 
     // Handle free plan limits
     if (!activePlan) {

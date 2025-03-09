@@ -80,16 +80,28 @@ export async function saveMessage(chatId: string, message: string, userId: strin
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          input_tokens: Math.ceil(message.length / 4), // Estimate input tokens
-          output_tokens: 800 // Max possible output tokens
+          input_tokens: Math.ceil(message.length / 4),
+          output_tokens: 800
         })
       }
     );
 
+    const planCheckData = await response.json();
+    
     if (!response.ok) {
-      const data = await response.json();
-      console.error("[saveMessage] Plan limit check failed:", data);
-      throw new Error(data.error || "Plan limit reached");
+      console.error("[saveMessage] Plan limit check failed:", planCheckData);
+      
+      if (planCheckData.planExpired) {
+        // Use toast to show expiry message
+        toast({
+          title: "Plan Expired",
+          description: "Your plan has expired. Please upgrade to continue using Serona AI.",
+          variant: "destructive",
+        });
+        return { error: planCheckData.error, planExpired: true };
+      }
+      
+      throw new Error(planCheckData.error || "Plan limit reached");
     }
 
     // Save user message
