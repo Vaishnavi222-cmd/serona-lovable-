@@ -119,25 +119,42 @@ export async function saveMessage(chatId: string, message: string, userId: strin
       }
     );
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("[saveMessage] AI response error:", error);
+    const aiResponseData = await response.json();
+
+    // Check if we have a valid AI response
+    if (!response.ok || (aiResponseData.error && !aiResponseData.content)) {
+      console.error("[saveMessage] AI response error:", aiResponseData);
+      
+      // If it's a limit reached error, don't show error toast
+      if (aiResponseData.limitReached) {
+        return {
+          userMessage,
+          aiMessage: null,
+          limitReached: true
+        };
+      }
+
       toast({
         title: "Error",
         description: "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
-      throw new Error(error);
+      throw new Error(aiResponseData.error || "Failed to get AI response");
     }
 
-    const aiResponseData = await response.json();
+    // Log successful AI response
+    console.log("[saveMessage] AI response received:", {
+      hasContent: !!aiResponseData.content,
+      timestamp: new Date().toISOString()
+    });
+
     return {
       userMessage,
-      aiMessage: {
+      aiMessage: aiResponseData.content ? {
         id: Date.now().toString(),
         content: aiResponseData.content,
         sender: 'ai' as const
-      }
+      } : null
     };
 
   } catch (error: any) {

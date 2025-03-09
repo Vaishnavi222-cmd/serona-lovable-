@@ -284,12 +284,20 @@ const Chat = () => {
         return;
       }
 
+      // Handle limit reached case
+      if (response.limitReached) {
+        setShowLimitReachedDialog(true);
+        setIsTyping(false);
+        return;
+      }
+
+      // Update messages with both user and AI response
       setMessages(prev => [
         ...prev.map(msg => msg.id === tempMessageId ? {
           ...msg,
           id: response.userMessage.id,
         } : msg),
-        response.aiMessage
+        ...(response.aiMessage ? [response.aiMessage] : [])
       ]);
 
     } catch (error: any) {
