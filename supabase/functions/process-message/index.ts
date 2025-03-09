@@ -34,19 +34,7 @@ serve(async (req) => {
     // Get current date for usage tracking
     const currentDate = new Date().toISOString().split('T')[0];
 
-    // Get or create daily usage record
-    const { data: dailyUsage, error: usageError } = await supabaseClient
-      .from('user_daily_usage')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', currentDate)
-      .single();
-
-    if (usageError && usageError.code !== 'PGRST116') {
-      throw usageError;
-    }
-
-    // Check active plan
+    // IMPORTANT: First check if user has an active paid plan
     const { data: activePlan } = await supabaseClient
       .from('user_plans')
       .select('*')
@@ -57,14 +45,43 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    // If no active paid plan, enforce free plan limits
+    // If no active paid plan, we need to check and enforce free plan limits
     if (!activePlan) {
-      const responses_count = (dailyUsage?.responses_count || 0) + 1;
+      // Get the current day's usage, create if doesn't exist
+      const { data: currentUsage, error: usageError } = await supabaseClient
+        .from('user_daily_usage')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', currentDate)
+        .maybeSingle();
+
+      if (usageError) {
+        throw usageError;
+      }
+
+      // If no usage record exists for today, create one
+      if (!currentUsage) {
+        const { error: insertError } = await supabaseClient
+          .from('user_daily_usage')
+          .insert({
+            user_id: user.id,
+            date: currentDate,
+            responses_count: 0,
+            input_tokens_used: 0,
+            output_tokens_used: 0
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Get updated usage count
+      const responses_count = (currentUsage?.responses_count || 0) + 1;
       
+      // Check if free plan limit is exceeded
       if (responses_count > 7) {
         return new Response(
           JSON.stringify({
-            error: 'Daily response limit exceeded',
+            error: 'Daily response limit exceeded for free plan',
             limitReached: true,
           }),
           {
@@ -74,17 +91,18 @@ serve(async (req) => {
         );
       }
 
-      // Update daily usage before processing to ensure limit is respected
-      await supabaseClient
+      // Update daily usage BEFORE processing to ensure limit is respected
+      const { error: updateError } = await supabaseClient
         .from('user_daily_usage')
         .upsert({
           user_id: user.id,
           date: currentDate,
           responses_count: responses_count,
+          input_tokens_used: (currentUsage?.input_tokens_used || 0) + Math.ceil(content.length / 4),
           last_usage_time: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .eq('date', currentDate);
+        });
+
+      if (updateError) throw updateError;
     }
 
     // OpenAI Request with non-streaming
@@ -122,19 +140,16 @@ serve(async (req) => {
       const inputTokens = Math.ceil(content.length / 4); // Approximate token count
       const outputTokens = Math.ceil(aiResponse.length / 4); // Approximate token count
 
-      // Update usage statistics
-      await supabaseClient
-        .from('user_daily_usage')
-        .upsert({
-          user_id: user.id,
-          date: currentDate,
-          responses_count: (dailyUsage?.responses_count || 0) + 1,
-          input_tokens_used: (dailyUsage?.input_tokens_used || 0) + inputTokens,
-          output_tokens_used: (dailyUsage?.output_tokens_used || 0) + outputTokens,
-          last_usage_time: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .eq('date', currentDate);
+      // Update usage statistics only for free plan users
+      if (!activePlan) {
+        await supabaseClient
+          .from('user_daily_usage')
+          .update({
+            output_tokens_used: currentUsage?.output_tokens_used + outputTokens
+          })
+          .eq('user_id', user.id)
+          .eq('date', currentDate);
+      }
 
       // Save AI message to database
       const { error: messageError } = await supabaseClient
