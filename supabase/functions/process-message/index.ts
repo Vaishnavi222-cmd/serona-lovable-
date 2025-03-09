@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -57,77 +56,56 @@ serve(async (req) => {
     if (!activePlan) {
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // First get the current daily usage
-      const { data: currentUsage, error: currentUsageError } = await supabaseClient
+      // Get current usage record for today
+      const { data: currentUsage, error: usageError } = await supabaseClient
         .from('user_daily_usage')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', currentDate)
-        .maybeSingle();
+        .single();
 
-      if (currentUsageError) {
-        console.error('Error fetching current usage:', currentUsageError);
-        throw currentUsageError;
+      if (usageError && usageError.code !== 'PGRST116') { // Not found error
+        console.error('Error checking usage:', usageError);
+        throw usageError;
       }
 
-      // If no usage record exists, create one
-      if (!currentUsage) {
-        const { data: newUsage, error: insertError } = await supabaseClient
-          .from('user_daily_usage')
-          .insert({
-            user_id: user.id,
-            date: currentDate,
-            responses_count: 1,  // Start with 1 for first message
-            output_tokens_used: 0,
-            input_tokens_used: 0,
-            last_usage_time: new Date().toISOString()
-          })
-          .select()
-          .single();
+      // Calculate new response count
+      const newCount = currentUsage ? currentUsage.responses_count + 1 : 1;
+      
+      // Check limit before making any updates
+      if (newCount > 7) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Daily response limit exceeded',
+            limitReached: true 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429
+          }
+        );
+      }
 
-        if (insertError) {
-          console.error('Error creating usage record:', insertError);
-          throw insertError;
-        }
+      // Update or create usage record
+      const { error: updateError } = await supabaseClient
+        .from('user_daily_usage')
+        .upsert({
+          user_id: user.id,
+          date: currentDate,
+          responses_count: newCount,
+          last_usage_time: new Date().toISOString(),
+          ...(currentUsage ? {} : { output_tokens_used: 0, input_tokens_used: 0 })
+        }, {
+          onConflict: 'user_id,date'
+        });
 
-        // Use the new usage record for further checks
-        currentUsage = newUsage;
-      } else {
-        // Increment the existing usage count
-        const { data: updatedUsage, error: updateError } = await supabaseClient
-          .from('user_daily_usage')
-          .update({ 
-            responses_count: (currentUsage.responses_count || 0) + 1,
-            last_usage_time: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-          .eq('date', currentDate)
-          .select()
-          .single();
-
-        if (updateError) {
-          console.error('Error updating usage:', updateError);
-          throw updateError;
-        }
-
-        // Check limits using the updated count
-        const maxResponses = 7;
-        if (updatedUsage.responses_count > maxResponses) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Daily response limit exceeded',
-              limitReached: true
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 429
-            }
-          );
-        }
+      if (updateError) {
+        console.error('Error updating usage:', updateError);
+        throw updateError;
       }
     }
 
-    // OpenAI Request with non-streaming
+    // OpenAI Request (keeping existing implementation)
     try {
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
