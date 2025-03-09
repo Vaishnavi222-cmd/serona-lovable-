@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -56,79 +57,73 @@ serve(async (req) => {
     if (!activePlan) {
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // First get or create the daily usage record
-      const { data: dailyUsage, error: upsertError } = await supabaseClient
+      // First get the current daily usage
+      const { data: currentUsage, error: currentUsageError } = await supabaseClient
         .from('user_daily_usage')
-        .upsert(
-          {
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', currentDate)
+        .maybeSingle();
+
+      if (currentUsageError) {
+        console.error('Error fetching current usage:', currentUsageError);
+        throw currentUsageError;
+      }
+
+      // If no usage record exists, create one
+      if (!currentUsage) {
+        const { data: newUsage, error: insertError } = await supabaseClient
+          .from('user_daily_usage')
+          .insert({
             user_id: user.id,
             date: currentDate,
-            responses_count: 0,  // Start with 0, will increment in next step
+            responses_count: 1,  // Start with 1 for first message
             output_tokens_used: 0,
             input_tokens_used: 0,
             last_usage_time: new Date().toISOString()
-          },
-          {
-            onConflict: 'user_id,date',
-            defaultOptions: {
-              returning: 'representation'
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating usage record:', insertError);
+          throw insertError;
+        }
+
+        // Use the new usage record for further checks
+        currentUsage = newUsage;
+      } else {
+        // Increment the existing usage count
+        const { data: updatedUsage, error: updateError } = await supabaseClient
+          .from('user_daily_usage')
+          .update({ 
+            responses_count: (currentUsage.responses_count || 0) + 1,
+            last_usage_time: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .eq('date', currentDate)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Error updating usage:', updateError);
+          throw updateError;
+        }
+
+        // Check limits using the updated count
+        const maxResponses = 7;
+        if (updatedUsage.responses_count > maxResponses) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Daily response limit exceeded',
+              limitReached: true
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 429
             }
-          }
-        )
-        .select()
-        .single();
-
-      if (upsertError) {
-        console.error('Error upserting daily usage:', upsertError);
-        throw upsertError;
-      }
-
-      // Now safely increment the responses_count
-      const { data: updatedUsage, error: updateError } = await supabaseClient
-        .from('user_daily_usage')
-        .update({ 
-          responses_count: dailyUsage.responses_count + 1,
-          last_usage_time: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .eq('date', currentDate)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('Error updating daily usage:', updateError);
-        throw updateError;
-      }
-
-      // Check limits using the updated count
-      const maxResponses = 7;
-      const baseMaxOutputTokens = 400;
-      const absoluteMaxOutputTokens = 800;
-
-      if (updatedUsage.responses_count > maxResponses) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Daily response limit exceeded',
-            limitReached: true
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429
-          }
-        );
-      }
-
-      if (updatedUsage.output_tokens_used >= absoluteMaxOutputTokens) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Token limit exceeded',
-            limitReached: true
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429
-          }
-        );
+          );
+        }
       }
     }
 
