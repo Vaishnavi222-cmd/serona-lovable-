@@ -6,14 +6,24 @@ export async function createChat() {
     console.log("[createChat] Starting...");
     
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const session = sessionData?.session;
+    let session = sessionData?.session;
 
-    if (sessionError || !session?.user) {
-      console.error("[createChat] Session error or no user:", {
-        error: sessionError,
-        hasSession: !!session,
-        hasUser: session?.user ? true : false
-      });
+    // Try to refresh session if not found
+    if (!session || sessionError) {
+      console.log("[createChat] No session found, attempting refresh...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session) {
+        console.error("[createChat] Session refresh failed:", refreshError);
+        return { error: "Authentication error", data: null };
+      }
+      
+      session = refreshData.session;
+      console.log("[createChat] Session refreshed successfully");
+    }
+
+    if (!session?.user) {
+      console.error("[createChat] No user in session");
       return { error: "Authentication error", data: null };
     }
 
@@ -57,17 +67,21 @@ export async function saveMessage(chatId: string, message: string, userId: strin
   });
 
   try {
+    // Get current session and attempt refresh if needed
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-    
-    if (sessionError || !session?.user) {
-      console.error("[saveMessage] Auth error:", {
-        error: sessionError,
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        timestamp: new Date().toISOString()
-      });
-      throw new Error("Authentication required");
+    let session = sessionData?.session;
+
+    if (!session || sessionError) {
+      console.log("[saveMessage] No session found, attempting refresh...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session) {
+        console.error("[saveMessage] Session refresh failed:", refreshError);
+        throw new Error("Authentication required");
+      }
+      
+      session = refreshData.session;
+      console.log("[saveMessage] Session refreshed successfully");
     }
 
     // Check plan limits before sending message
@@ -183,12 +197,21 @@ export async function fetchMessages(chatId: string) {
   console.log("[fetchMessages] Starting for chat:", chatId);
   
   try {
+    // Get current session and attempt refresh if needed
     const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-    
-    if (!session?.user) {
-      console.error("[fetchMessages] No session");
-      throw new Error("Authentication required");
+    let session = sessionData?.session;
+
+    if (!session) {
+      console.log("[fetchMessages] No session found, attempting refresh...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session) {
+        console.error("[fetchMessages] Session refresh failed:", refreshError);
+        throw new Error("Authentication required");
+      }
+      
+      session = refreshData.session;
+      console.log("[fetchMessages] Session refreshed successfully");
     }
 
     console.log("[fetchMessages] Fetching messages...");
@@ -216,11 +239,19 @@ export async function fetchChats(userId: string) {
   console.log("[fetchChats] Starting for user:", userId);
   
   try {
+    // Get current session and attempt refresh if needed
     const { data: { session } } = await supabase.auth.getSession();
     
-    if (!session?.user) {
-      console.error("[fetchChats] No session");
-      return [];
+    if (!session) {
+      console.log("[fetchChats] No session found, attempting refresh...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session) {
+        console.error("[fetchChats] Session refresh failed");
+        return [];
+      }
+      
+      console.log("[fetchChats] Session refreshed successfully");
     }
 
     console.log("[fetchChats] Fetching chats...");
