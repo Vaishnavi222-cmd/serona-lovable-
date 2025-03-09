@@ -7,14 +7,26 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Cache the session in memory and localStorage
 let cachedSession: any = null;
 
-// Try to load initial session from localStorage
+// Try to load initial session from localStorage with validity check
 try {
   const storedSession = localStorage.getItem('sb-session');
   if (storedSession) {
-    cachedSession = JSON.parse(storedSession);
+    const parsedSession = JSON.parse(storedSession);
+    // Check if session is expired
+    const expiresAt = parsedSession.expires_at;
+    if (expiresAt && new Date(expiresAt * 1000) > new Date()) {
+      console.log("✅ Using valid cached session");
+      cachedSession = parsedSession;
+    } else {
+      console.log("⚠️ Cached session expired, clearing...");
+      localStorage.removeItem('sb-session');
+      cachedSession = null;
+    }
   }
 } catch (error) {
   console.error("Error loading stored session:", error);
+  localStorage.removeItem('sb-session');
+  cachedSession = null;
 }
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -34,13 +46,17 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   console.log("🔄 Auth state changed:", event, session?.user?.email);
   
   if (session) {
-    localStorage.setItem('sb-session', JSON.stringify(session));
-    cachedSession = session;
-    
-    if (event === 'SIGNED_IN') {
-      initializeDailyUsage(session.user.id).catch(error => {
-        console.error("Background task error:", error);
-      });
+    try {
+      localStorage.setItem('sb-session', JSON.stringify(session));
+      cachedSession = session;
+      
+      if (event === 'SIGNED_IN') {
+        initializeDailyUsage(session.user.id).catch(error => {
+          console.error("Background task error:", error);
+        });
+      }
+    } catch (error) {
+      console.error("Error saving session:", error);
     }
   } else {
     localStorage.removeItem('sb-session');
@@ -48,45 +64,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-// Separate function to handle daily usage initialization
-async function initializeDailyUsage(userId: string) {
-  try {
-    const todayDate = new Date().toISOString().split('T')[0];
-    
-    const { data: existingUsage, error: checkError } = await supabase
-      .from('user_daily_usage')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', todayDate)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error("Error checking existing usage:", checkError);
-      return;
-    }
-
-    if (!existingUsage) {
-      const { error: insertError } = await supabase
-        .from('user_daily_usage')
-        .insert([{
-          user_id: userId,
-          date: todayDate,
-          responses_count: 0,
-          output_tokens_used: 0,
-          input_tokens_used: 0,
-          last_usage_time: new Date().toISOString()
-        }]);
-
-      if (insertError) {
-        console.error("Error creating daily usage record:", insertError);
-      }
-    }
-  } catch (error) {
-    console.error("Unexpected error in daily usage tracking:", error);
-  }
-}
-
-// Enhanced helper function to get current user with improved session handling
+// Enhanced getCurrentUser with better session handling
 export const getCurrentUser = async () => {
   console.log("🔍 DEBUG - getCurrentUser started");
   
@@ -137,3 +115,41 @@ export const getCurrentUser = async () => {
     return { user: null, error };
   }
 };
+
+// Separate function to handle daily usage initialization
+async function initializeDailyUsage(userId: string) {
+  try {
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    const { data: existingUsage, error: checkError } = await supabase
+      .from('user_daily_usage')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', todayDate)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Error checking existing usage:", checkError);
+      return;
+    }
+
+    if (!existingUsage) {
+      const { error: insertError } = await supabase
+        .from('user_daily_usage')
+        .insert([{
+          user_id: userId,
+          date: todayDate,
+          responses_count: 0,
+          output_tokens_used: 0,
+          input_tokens_used: 0,
+          last_usage_time: new Date().toISOString()
+        }]);
+
+      if (insertError) {
+        console.error("Error creating daily usage record:", insertError);
+      }
+    }
+  } catch (error) {
+    console.error("Unexpected error in daily usage tracking:", error);
+  }
+}
