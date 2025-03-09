@@ -112,6 +112,20 @@ const Chat = () => {
     }
   };
 
+  const initializeChat = async (user: User) => {
+    try {
+      console.log("[initializeChat] Starting initialization for user:", user.email);
+      await loadChats();
+    } catch (error) {
+      console.error("[initializeChat] Error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize chat. Please try refreshing the page.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Add handleNewChat function
   const handleNewChat = async () => {
     if (!user) {
